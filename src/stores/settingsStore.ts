@@ -12,6 +12,7 @@ interface SettingsState {
   autoStart: boolean;
   pasteAndClose: boolean;
   locale: string;
+  isPinned: boolean; // non-persisted, controls auto-hide on blur
 
   loadSettings: () => Promise<void>;
   setTheme: (theme: Theme) => Promise<void>;
@@ -19,6 +20,7 @@ interface SettingsState {
   setAutoStart: (enabled: boolean) => Promise<void>;
   setPasteAndClose: (enabled: boolean) => Promise<void>;
   setLocale: (locale: string) => Promise<void>;
+  setIsPinned: (pinned: boolean) => void;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -27,6 +29,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   autoStart: false,
   pasteAndClose: true,
   locale: "zh-CN",
+  isPinned: true,
 
   loadSettings: async () => {
     try {
@@ -93,5 +96,9 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     } catch (err) {
       console.error("Failed to save locale:", err);
     }
+  },
+
+  setIsPinned: (pinned: boolean) => {
+    set({ isPinned: pinned });
   },
 }));

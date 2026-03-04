@@ -6,6 +6,7 @@ import type { ClipboardEntry } from "@/types";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { TranslateDialog } from "@/components/TranslateDialog";
+import { toast } from "sonner";
 
 function formatTimeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -48,8 +49,10 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
 
   const handleClick = useCallback(() => selectEntry(entry.id), [entry.id, selectEntry]);
   const handleDoubleClick = useCallback(() => {
-    pasteEntry(entry.id).catch(console.error);
-  }, [entry.id]);
+    pasteEntry(entry.id)
+      .then(() => toast.success(t("toast.pasted")))
+      .catch(() => toast.error(t("toast.pasteFailed")));
+  }, [entry.id, t]);
 
   return (
     <div

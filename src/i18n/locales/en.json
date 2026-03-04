@@ -20,7 +20,7 @@
     "noEntries": "No clipboard entries yet",
     "copyToStart": "Copy something to get started",
     "items": "{{count}} items",
-    "pasteHint": "\u21B5 paste \u00B7 esc close"
+    "pasteHint": "↵ paste · esc close"
   },
   "settings": {
     "title": "Settings",
@@ -33,7 +33,12 @@
     "autoClose": "Auto-close after paste",
     "hidePanel": "Hide panel after pasting",
     "language": "Language",
-    "languageDesc": "Interface display language"
+    "languageDesc": "Interface display language",
+    "dataManagement": "Data Management",
+    "export": "Export",
+    "import": "Import",
+    "clearHistory": "Clear History",
+    "clearHistoryDesc": "Clear all non-favorite entries"
   },
   "translate": {
     "title": "Translate",
@@ -55,5 +60,15 @@
     "testConnection": "Test",
     "noEngines": "No translation engines configured",
     "configureHint": "Configure API keys in Settings"
+  },
+  "toast": {
+    "pasted": "Pasted",
+    "pasteFailed": "Paste failed",
+    "exported": "Export successful",
+    "exportFailed": "Export failed",
+    "imported": "Imported {{count}} entries",
+    "importFailed": "Import failed",
+    "cleared": "History cleared",
+    "clearFailed": "Clear failed"
   }
 }

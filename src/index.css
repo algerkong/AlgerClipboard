@@ -138,9 +138,9 @@
   background: oklch(0.5 0 0);
 }
 
-/* Smooth transitions */
-* {
-  transition-property: background-color, border-color, color, opacity;
+/* Smooth transitions for interactive elements only */
+button, a, input, [role="button"] {
+  transition-property: background-color, border-color, color, opacity, transform, box-shadow;
   transition-duration: 150ms;
   transition-timing-function: ease;
 }
@@ -155,4 +155,44 @@ html, body, #root {
 body {
   border-radius: 8px;
   overflow: hidden;
+}
+
+/* Entry card hover animation */
+.group:hover {
+  background-color: var(--accent);
+}
+
+/* Fade-in animation for page transitions */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Slide-in from right for settings */
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-slide-in {
+  animation: slideInRight 0.2s ease-out;
+}
+
+/* Toast styling */
+[data-sonner-toaster] {
+  --normal-bg: var(--card);
+  --normal-text: var(--foreground);
+  --normal-border: var(--border);
+  font-size: 12px !important;
+}
+
+/* Focus visible ring for accessibility */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 4px;
 }

@@ -1,12 +1,13 @@
 import { useEffect, useRef } from "react";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
-import { Settings, FileText } from "lucide-react";
+import { Settings, FileText, ClipboardList } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { TypeFilter } from "@/components/TypeFilter";
 import { EntryCard } from "@/components/EntryCard";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { pasteEntry } from "@/services/clipboardService";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 interface Props {
   onOpenSettings: () => void;
@@ -46,7 +47,9 @@ export function ClipboardPanel({ onOpenSettings, onOpenTemplates }: Props) {
         virtuosoRef.current?.scrollIntoView({ index: prev, behavior: "auto" });
       } else if (e.key === "Enter" && selectedId) {
         e.preventDefault();
-        pasteEntry(selectedId).catch(console.error);
+        pasteEntry(selectedId)
+          .then(() => toast.success(t("toast.pasted")))
+          .catch(() => toast.error(t("toast.pasteFailed")));
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -86,9 +89,12 @@ export function ClipboardPanel({ onOpenSettings, onOpenTemplates }: Props) {
       {/* Entry list */}
       <div className="flex-1 min-h-0">
         {displayEntries.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground/40">
-            <p className="text-xs">{t("clipboardPanel.noEntries")}</p>
-            <p className="text-[10px]">{t("clipboardPanel.copyToStart")}</p>
+          <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground/40">
+            <ClipboardList className="w-10 h-10 text-muted-foreground/20" />
+            <div className="text-center">
+              <p className="text-xs">{t("clipboardPanel.noEntries")}</p>
+              <p className="text-[10px] mt-1">{t("clipboardPanel.copyToStart")}</p>
+            </div>
           </div>
         ) : (
           <Virtuoso
