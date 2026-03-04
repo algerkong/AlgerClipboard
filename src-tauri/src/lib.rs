@@ -3,6 +3,7 @@ mod commands;
 mod paste;
 mod storage;
 mod translate;
+mod sync;
 
 use clipboard::monitor::ClipboardMonitor;
 use commands::clipboard_cmd::AppDatabase;
@@ -15,6 +16,7 @@ use tauri::Manager;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 use tauri::tray::{TrayIconBuilder, MouseButton, MouseButtonState};
 use tauri::menu::{Menu, MenuItem};
+use tauri_plugin_autostart::MacosLauncher;
 
 fn get_device_id() -> String {
     let hostname = hostname::get()
@@ -28,6 +30,7 @@ pub fn run() {
     env_logger::init();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec!["--minimized"])))
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
@@ -121,12 +124,18 @@ pub fn run() {
             commands::clipboard_cmd::get_entry,
             commands::clipboard_cmd::delete_entries,
             commands::clipboard_cmd::toggle_favorite,
+            commands::clipboard_cmd::toggle_pin,
             commands::clipboard_cmd::clear_history,
             commands::clipboard_cmd::export_data,
             commands::clipboard_cmd::import_data,
             commands::clipboard_cmd::get_entry_count,
+            commands::clipboard_cmd::get_thumbnail_base64,
+            commands::clipboard_cmd::get_cache_info,
+            commands::clipboard_cmd::cleanup_cache,
             commands::settings_cmd::get_settings,
             commands::settings_cmd::update_settings,
+            commands::settings_cmd::set_auto_start,
+            commands::settings_cmd::get_auto_start,
             commands::paste_cmd::paste_entry,
             commands::template_cmd::get_templates,
             commands::template_cmd::create_template,
@@ -136,6 +145,15 @@ pub fn run() {
             commands::translate_cmd::translate_text,
             commands::translate_cmd::get_translate_engines,
             commands::translate_cmd::configure_translate_engine,
+            commands::sync_cmd::get_sync_accounts,
+            commands::sync_cmd::create_sync_account,
+            commands::sync_cmd::update_sync_account,
+            commands::sync_cmd::delete_sync_account,
+            commands::sync_cmd::test_sync_connection,
+            commands::sync_cmd::trigger_sync,
+            commands::sync_cmd::set_sync_passphrase,
+            commands::sync_cmd::resolve_sync_conflict,
+            commands::sync_cmd::start_oauth_flow,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

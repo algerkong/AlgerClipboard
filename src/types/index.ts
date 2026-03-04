@@ -12,11 +12,13 @@ export interface ClipboardEntry {
   source_app: string | null;
   device_id: string;
   is_favorite: boolean;
+  is_pinned: boolean;
   tags: string[];
   created_at: string;
   updated_at: string;
   synced_at: string | null;
   sync_status: SyncStatus;
+  sync_version: number;
 }
 
 export interface HistoryQuery {
@@ -41,6 +43,27 @@ export interface TranslateEngineConfig {
   api_key: string;
   api_secret: string;
   enabled: boolean;
+}
+
+export interface SyncAccount {
+  id: string;
+  provider: "webdav" | "google_drive" | "onedrive";
+  config: string;
+  sync_frequency: "realtime" | "interval" | "manual";
+  interval_minutes: number | null;
+  encryption_enabled: boolean;
+  last_sync_at: string | null;
+  last_sync_version: number;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SyncResult {
+  pushed: number;
+  pulled: number;
+  conflicts: number;
+  errors: string[];
 }
 
 export interface Template {
