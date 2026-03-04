@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell.exe:*)",
+      "Bash(export:*)",
+      "Bash(node:*)"
+    ]
+  }
+}
