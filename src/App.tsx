@@ -35,6 +35,11 @@ function App() {
   const theme = useSettingsStore((s) => s.theme);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
 
+  // Apply dark theme immediately on first render (before settings load)
+  useEffect(() => {
+    document.documentElement.classList.add("dark");
+  }, []);
+
   // Load settings and initial history on mount
   useEffect(() => {
     loadSettings();

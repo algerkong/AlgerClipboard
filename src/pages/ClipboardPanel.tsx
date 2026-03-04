@@ -1,20 +1,17 @@
 import { useEffect, useRef } from "react";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import { Settings } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { SearchBar } from "@/components/SearchBar";
 import { TypeFilter } from "@/components/TypeFilter";
 import { EntryCard } from "@/components/EntryCard";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { pasteEntry } from "@/services/clipboardService";
 
-interface ClipboardPanelProps {
+interface Props {
   onOpenSettings: () => void;
 }
 
-export function ClipboardPanel({ onOpenSettings }: ClipboardPanelProps) {
+export function ClipboardPanel({ onOpenSettings }: Props) {
   const entries = useClipboardStore((s) => s.entries);
   const showFavoritesOnly = useClipboardStore((s) => s.showFavoritesOnly);
   const selectedId = useClipboardStore((s) => s.selectedId);
@@ -25,51 +22,35 @@ export function ClipboardPanel({ onOpenSettings }: ClipboardPanelProps) {
     ? entries.filter((e) => e.is_favorite)
     : entries;
 
-  // Global keyboard handler for arrow navigation and Enter to paste
-  // Uses window-level listener so it works even when search input is focused
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (displayEntries.length === 0) return;
+      // Don't interfere with typing in search
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" && e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "Enter") return;
 
-      const currentIndex = selectedId
-        ? displayEntries.findIndex((entry) => entry.id === selectedId)
-        : -1;
+      const idx = selectedId ? displayEntries.findIndex((x) => x.id === selectedId) : -1;
 
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        const nextIndex = Math.min(currentIndex + 1, displayEntries.length - 1);
-        const nextEntry = displayEntries[nextIndex];
-        if (nextEntry) {
-          selectEntry(nextEntry.id);
-          virtuosoRef.current?.scrollIntoView({
-            index: nextIndex,
-            behavior: "smooth",
-          });
-        }
+        const next = Math.min(idx + 1, displayEntries.length - 1);
+        selectEntry(displayEntries[next].id);
+        virtuosoRef.current?.scrollIntoView({ index: next, behavior: "auto" });
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        const prevIndex = Math.max(currentIndex - 1, 0);
-        const prevEntry = displayEntries[prevIndex];
-        if (prevEntry) {
-          selectEntry(prevEntry.id);
-          virtuosoRef.current?.scrollIntoView({
-            index: prevIndex,
-            behavior: "smooth",
-          });
-        }
+        const prev = Math.max(idx - 1, 0);
+        selectEntry(displayEntries[prev].id);
+        virtuosoRef.current?.scrollIntoView({ index: prev, behavior: "auto" });
       } else if (e.key === "Enter" && selectedId) {
         e.preventDefault();
-        pasteEntry(selectedId).catch((err) =>
-          console.error("Failed to paste:", err)
-        );
+        pasteEntry(selectedId).catch(console.error);
       }
     };
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [displayEntries, selectedId, selectEntry]);
 
-  // Auto-select first entry when entries change and nothing is selected
+  // Auto-select first entry
   useEffect(() => {
     if (!selectedId && displayEntries.length > 0) {
       selectEntry(displayEntries[0].id);
@@ -77,63 +58,44 @@ export function ClipboardPanel({ onOpenSettings }: ClipboardPanelProps) {
   }, [displayEntries, selectedId, selectEntry]);
 
   return (
-    <TooltipProvider>
-      <div className="flex flex-col h-full bg-background">
-        {/* Header */}
-        <div className="flex items-center gap-2 p-2 shrink-0">
-          <div className="flex-1">
-            <SearchBar />
-          </div>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={onOpenSettings}
-            title="Settings"
-          >
-            <Settings className="size-4" />
-          </Button>
-        </div>
-        <Separator />
-
-        {/* Content */}
-        <div className="flex flex-1 min-h-0">
-          {/* Sidebar */}
-          <div className="w-[100px] shrink-0 border-r border-border">
-            <TypeFilter />
-          </div>
-
-          {/* Entry list */}
-          <div className="flex-1 min-w-0">
-            {displayEntries.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-                No clipboard entries
-              </div>
-            ) : (
-              <Virtuoso
-                ref={virtuosoRef}
-                data={displayEntries}
-                itemContent={(_index, entry) => (
-                  <EntryCard entry={entry} />
-                )}
-                overscan={200}
-                className="h-full"
-              />
-            )}
-          </div>
-        </div>
-
-        {/* Status bar */}
-        <Separator />
-        <div className="flex items-center justify-between px-3 py-1 text-xs text-muted-foreground shrink-0">
-          <span>
-            {displayEntries.length} item
-            {displayEntries.length !== 1 ? "s" : ""}
-          </span>
-          <span className="text-[10px]">
-            Press Enter to paste, Esc to close
-          </span>
-        </div>
+    <div className="flex flex-col h-full">
+      {/* Header: Search + Settings */}
+      <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-border/30">
+        <SearchBar />
+        <button
+          onClick={onOpenSettings}
+          className="flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground/50 hover:text-foreground hover:bg-accent/50 transition-colors shrink-0"
+        >
+          <Settings className="w-3.5 h-3.5" />
+        </button>
       </div>
-    </TooltipProvider>
+
+      {/* Type filter tabs */}
+      <TypeFilter />
+
+      {/* Entry list */}
+      <div className="flex-1 min-h-0">
+        {displayEntries.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground/40">
+            <p className="text-xs">No clipboard entries yet</p>
+            <p className="text-[10px]">Copy something to get started</p>
+          </div>
+        ) : (
+          <Virtuoso
+            ref={virtuosoRef}
+            data={displayEntries}
+            itemContent={(_, entry) => <EntryCard entry={entry} />}
+            overscan={100}
+            className="h-full"
+          />
+        )}
+      </div>
+
+      {/* Status bar */}
+      <div className="flex items-center justify-between px-3 py-1 text-[10px] text-muted-foreground/40 border-t border-border/20 shrink-0">
+        <span>{displayEntries.length} items</span>
+        <span>&#8629; paste &middot; esc close</span>
+      </div>
+    </div>
   );
 }

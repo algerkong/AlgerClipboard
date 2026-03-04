@@ -1,166 +1,102 @@
 import { memo, useCallback } from "react";
-import { Star, Trash2, FileText, Image, FolderOpen } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Star, Trash2, FileText, ImageIcon, FolderOpen } from "lucide-react";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { pasteEntry } from "@/services/clipboardService";
 import type { ClipboardEntry } from "@/types";
 import { cn } from "@/lib/utils";
 
 function formatTimeAgo(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffSec = Math.floor(diffMs / 1000);
-
-  if (diffSec < 60) return "just now";
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  const diffDay = Math.floor(diffHr / 24);
-  if (diffDay < 30) return `${diffDay}d ago`;
-  return date.toLocaleDateString();
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const sec = Math.floor(diff / 1000);
+  if (sec < 60) return "now";
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h`;
+  const d = Math.floor(hr / 24);
+  return `${d}d`;
 }
 
-function getPreviewText(entry: ClipboardEntry): string {
-  if (
-    entry.content_type === "PlainText" ||
-    entry.content_type === "RichText"
-  ) {
+function getPreview(entry: ClipboardEntry): string {
+  if (entry.content_type === "PlainText" || entry.content_type === "RichText") {
     const text = entry.text_content ?? "";
-    return text.length > 200 ? text.substring(0, 200) + "..." : text;
+    return text.length > 120 ? text.substring(0, 120) + "\u2026" : text;
   }
-  if (entry.content_type === "Image") return "[Image]";
-  if (entry.content_type === "FilePaths") {
-    const text = entry.text_content ?? "[File]";
-    return text.length > 200 ? text.substring(0, 200) + "..." : text;
-  }
-  return "[Unknown]";
+  if (entry.content_type === "Image") return "Image";
+  return entry.text_content ?? "File";
 }
 
-function getTypeIcon(entry: ClipboardEntry) {
-  switch (entry.content_type) {
-    case "PlainText":
-    case "RichText":
-      return <FileText className="size-3 text-muted-foreground" />;
-    case "Image":
-      return <Image className="size-3 text-muted-foreground" />;
-    case "FilePaths":
-      return <FolderOpen className="size-3 text-muted-foreground" />;
-    default:
-      return null;
+function getIcon(type: string) {
+  switch (type) {
+    case "Image": return <ImageIcon className="w-3 h-3 text-blue-400/70" />;
+    case "FilePaths": return <FolderOpen className="w-3 h-3 text-amber-400/70" />;
+    default: return <FileText className="w-3 h-3 text-muted-foreground/40" />;
   }
 }
 
-interface EntryCardProps {
-  entry: ClipboardEntry;
-}
-
-export const EntryCard = memo(function EntryCard({ entry }: EntryCardProps) {
+export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEntry }) {
   const selectedId = useClipboardStore((s) => s.selectedId);
   const selectEntry = useClipboardStore((s) => s.selectEntry);
   const toggleFavorite = useClipboardStore((s) => s.toggleFavorite);
   const deleteEntries = useClipboardStore((s) => s.deleteEntries);
-
   const isSelected = selectedId === entry.id;
 
-  const handleClick = useCallback(() => {
-    selectEntry(entry.id);
-  }, [entry.id, selectEntry]);
-
+  const handleClick = useCallback(() => selectEntry(entry.id), [entry.id, selectEntry]);
   const handleDoubleClick = useCallback(() => {
-    pasteEntry(entry.id).catch((err) =>
-      console.error("Failed to paste:", err)
-    );
+    pasteEntry(entry.id).catch(console.error);
   }, [entry.id]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        pasteEntry(entry.id).catch((err) =>
-          console.error("Failed to paste:", err)
-        );
-      }
-    },
-    [entry.id]
-  );
-
-  const handleToggleFavorite = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      toggleFavorite(entry.id);
-    },
-    [entry.id, toggleFavorite]
-  );
-
-  const handleDelete = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      deleteEntries([entry.id]);
-    },
-    [entry.id, deleteEntries]
-  );
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      className={cn(
-        "group flex flex-col gap-1 px-3 py-2 cursor-pointer border-b border-border transition-colors",
-        "hover:bg-accent/50",
-        isSelected && "bg-accent"
-      )}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
-      onKeyDown={handleKeyDown}
+      className={cn(
+        "group relative px-3 py-2 cursor-pointer transition-colors border-b border-border/20",
+        isSelected
+          ? "bg-primary/10 border-l-2 border-l-primary"
+          : "hover:bg-accent/30 border-l-2 border-l-transparent"
+      )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-sm leading-snug break-all line-clamp-3 flex-1">
-          {getPreviewText(entry)}
-        </p>
-        <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={handleToggleFavorite}
-            className="hover:bg-transparent"
-          >
-            <Star
-              className={cn(
-                "size-3.5",
-                entry.is_favorite
-                  ? "fill-yellow-400 text-yellow-400"
-                  : "text-muted-foreground"
-              )}
-            />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={handleDelete}
-            className="hover:bg-transparent hover:text-destructive"
-          >
-            <Trash2 className="size-3.5 text-muted-foreground" />
-          </Button>
+      {/* Content */}
+      <div className="flex items-start gap-2 min-w-0">
+        <div className="mt-0.5 shrink-0">{getIcon(entry.content_type)}</div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[12px] leading-relaxed text-foreground/90 line-clamp-2 break-all">
+            {getPreview(entry)}
+          </p>
+          <div className="flex items-center gap-1.5 mt-1 text-[10px] text-muted-foreground/50">
+            <span>{formatTimeAgo(entry.created_at)}</span>
+            {entry.source_app && (
+              <>
+                <span>·</span>
+                <span className="truncate max-w-[80px]">{entry.source_app}</span>
+              </>
+            )}
+            {entry.is_favorite && (
+              <Star className="w-2.5 h-2.5 fill-yellow-400/80 text-yellow-400/80 ml-auto" />
+            )}
+          </div>
         </div>
       </div>
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        {getTypeIcon(entry)}
-        <span>{entry.content_type}</span>
-        {entry.source_app && (
-          <>
-            <span className="text-border">|</span>
-            <span className="truncate max-w-[100px]">
-              {entry.source_app}
-            </span>
-          </>
-        )}
-        <span className="ml-auto">{formatTimeAgo(entry.created_at)}</span>
+
+      {/* Hover actions */}
+      <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={(e) => { e.stopPropagation(); toggleFavorite(entry.id); }}
+          className={cn(
+            "p-1 rounded transition-colors",
+            entry.is_favorite ? "text-yellow-400" : "text-muted-foreground/40 hover:text-yellow-400"
+          )}
+        >
+          <Star className={cn("w-3 h-3", entry.is_favorite && "fill-current")} />
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); deleteEntries([entry.id]); }}
+          className="p-1 rounded text-muted-foreground/40 hover:text-red-400 transition-colors"
+        >
+          <Trash2 className="w-3 h-3" />
+        </button>
       </div>
-      {entry.is_favorite && (
-        <Star className="absolute top-2 right-2 size-3 fill-yellow-400 text-yellow-400 hidden" />
-      )}
     </div>
   );
 });

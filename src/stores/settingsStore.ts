@@ -20,7 +20,7 @@ interface SettingsState {
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
-  theme: "system",
+  theme: "dark",
   maxHistory: 500,
   autoStart: false,
   pasteAndClose: true,
@@ -35,7 +35,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       ]);
 
       set({
-        theme: (theme as Theme) ?? "system",
+        theme: (theme as Theme) ?? "dark",
         maxHistory: maxHistory ? parseInt(maxHistory, 10) : 500,
         autoStart: autoStart === "true",
         pasteAndClose: pasteAndClose !== "false",

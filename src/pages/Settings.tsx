@@ -1,15 +1,14 @@
 import { ArrowLeft, Sun, Moon, Monitor } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { cn } from "@/lib/utils";
 
-interface SettingsProps {
+type Theme = "light" | "dark" | "system";
+
+interface Props {
   onBack: () => void;
 }
 
-export function SettingsPage({ onBack }: SettingsProps) {
+export function SettingsPage({ onBack }: Props) {
   const theme = useSettingsStore((s) => s.theme);
   const maxHistory = useSettingsStore((s) => s.maxHistory);
   const pasteAndClose = useSettingsStore((s) => s.pasteAndClose);
@@ -17,109 +16,92 @@ export function SettingsPage({ onBack }: SettingsProps) {
   const setMaxHistory = useSettingsStore((s) => s.setMaxHistory);
   const setPasteAndClose = useSettingsStore((s) => s.setPasteAndClose);
 
+  const themes: { value: Theme; label: string; icon: React.ReactNode }[] = [
+    { value: "light", label: "Light", icon: <Sun className="w-3.5 h-3.5" /> },
+    { value: "dark", label: "Dark", icon: <Moon className="w-3.5 h-3.5" /> },
+    { value: "system", label: "Auto", icon: <Monitor className="w-3.5 h-3.5" /> },
+  ];
+
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center gap-2 p-2 shrink-0">
-        <Button variant="ghost" size="icon-sm" onClick={onBack}>
-          <ArrowLeft className="size-4" />
-        </Button>
-        <h2 className="text-sm font-semibold">Settings</h2>
+      <div className="flex items-center gap-2 px-2 py-1.5 border-b border-border/30 shrink-0">
+        <button
+          onClick={onBack}
+          className="flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground/50 hover:text-foreground hover:bg-accent/50 transition-colors"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+        </button>
+        <span className="text-xs font-medium">Settings</span>
       </div>
-      <Separator />
 
-      {/* Settings content */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 space-y-5">
         {/* Theme */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Theme</label>
-          <div className="flex gap-2">
-            <Button
-              variant={theme === "light" ? "default" : "outline"}
-              size="sm"
-              className={cn("flex-1 gap-1.5")}
-              onClick={() => setTheme("light")}
-            >
-              <Sun className="size-3.5" />
-              Light
-            </Button>
-            <Button
-              variant={theme === "dark" ? "default" : "outline"}
-              size="sm"
-              className={cn("flex-1 gap-1.5")}
-              onClick={() => setTheme("dark")}
-            >
-              <Moon className="size-3.5" />
-              Dark
-            </Button>
-            <Button
-              variant={theme === "system" ? "default" : "outline"}
-              size="sm"
-              className={cn("flex-1 gap-1.5")}
-              onClick={() => setTheme("system")}
-            >
-              <Monitor className="size-3.5" />
-              System
-            </Button>
+        <section>
+          <label className="text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider">Theme</label>
+          <div className="flex gap-1.5 mt-2">
+            {themes.map((t) => (
+              <button
+                key={t.value}
+                onClick={() => setTheme(t.value)}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-colors",
+                  theme === t.value
+                    ? "bg-primary/15 text-primary ring-1 ring-primary/30"
+                    : "bg-muted/30 text-muted-foreground/60 hover:bg-muted/50 hover:text-foreground"
+                )}
+              >
+                {t.icon}
+                {t.label}
+              </button>
+            ))}
           </div>
-        </div>
-
-        <Separator />
+        </section>
 
         {/* Max history */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium" htmlFor="max-history">
-            Maximum history entries
+        <section>
+          <label className="text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider">
+            History Limit
           </label>
-          <Input
-            id="max-history"
+          <input
             type="number"
             min={10}
             max={10000}
             value={maxHistory}
             onChange={(e) => {
-              const val = parseInt(e.target.value, 10);
-              if (!isNaN(val) && val > 0) {
-                setMaxHistory(val);
-              }
+              const v = parseInt(e.target.value, 10);
+              if (!isNaN(v) && v > 0) setMaxHistory(v);
             }}
-            className="w-32 h-8"
+            className="mt-2 w-24 h-7 px-2 text-xs bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
           />
-          <p className="text-xs text-muted-foreground">
-            Number of clipboard entries to keep in history
-          </p>
-        </div>
-
-        <Separator />
+          <p className="mt-1 text-[10px] text-muted-foreground/40">Maximum entries to keep</p>
+        </section>
 
         {/* Paste and close */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <label className="text-sm font-medium" htmlFor="paste-close">
-              Close panel after paste
-            </label>
-            <p className="text-xs text-muted-foreground">
-              Automatically hide the panel after pasting an entry
-            </p>
-          </div>
-          <button
-            id="paste-close"
-            role="switch"
-            aria-checked={pasteAndClose}
-            onClick={() => setPasteAndClose(!pasteAndClose)}
-            className={cn(
-              "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors",
-              pasteAndClose ? "bg-primary" : "bg-input"
-            )}
-          >
-            <span
+        <section>
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider">
+                Auto-close after paste
+              </label>
+              <p className="mt-0.5 text-[10px] text-muted-foreground/40">Hide panel after pasting</p>
+            </div>
+            <button
+              onClick={() => setPasteAndClose(!pasteAndClose)}
               className={cn(
-                "pointer-events-none block size-4 rounded-full bg-background shadow-lg ring-0 transition-transform",
-                pasteAndClose ? "translate-x-4" : "translate-x-0"
+                "relative w-8 h-[18px] rounded-full transition-colors",
+                pasteAndClose ? "bg-primary/80" : "bg-muted"
               )}
-            />
-          </button>
-        </div>
+            >
+              <span
+                className={cn(
+                  "absolute top-[2px] left-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-transform",
+                  pasteAndClose && "translate-x-[14px]"
+                )}
+              />
+            </button>
+          </div>
+        </section>
       </div>
     </div>
   );
