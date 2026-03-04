@@ -1,3 +1,4 @@
+import { useEffect, useCallback } from "react";
 import { AlignLeft, Image, FolderOpen, Star, LayoutGrid } from "lucide-react";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import type { ContentType } from "@/types";
@@ -28,11 +29,37 @@ export function TypeFilter() {
     }
   };
 
+  const getActiveIndex = useCallback(() => {
+    if (showFavoritesOnly) return filters.findIndex((f) => f.isFavorites);
+    return filters.findIndex((f) => !f.isFavorites && f.filter === typeFilter);
+  }, [typeFilter, showFavoritesOnly]);
+
   const isActive = (item: typeof filters[0]) => {
     if (item.isFavorites) return showFavoritesOnly;
     if (showFavoritesOnly) return false;
     return typeFilter === item.filter;
   };
+
+  // Left/Right arrow keys to switch tabs
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
+
+      e.preventDefault();
+      const idx = getActiveIndex();
+      let next: number;
+      if (e.key === "ArrowLeft") {
+        next = idx <= 0 ? filters.length - 1 : idx - 1;
+      } else {
+        next = idx >= filters.length - 1 ? 0 : idx + 1;
+      }
+      handleClick(filters[next]);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [getActiveIndex, typeFilter, showFavoritesOnly]);
 
   return (
     <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-border/30">
@@ -44,7 +71,7 @@ export function TypeFilter() {
             "flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-colors",
             isActive(item)
               ? "bg-primary/15 text-primary"
-              : "text-muted-foreground/60 hover:text-foreground hover:bg-accent/50"
+              : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
           )}
         >
           {item.icon}

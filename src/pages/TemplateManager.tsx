@@ -18,6 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useTemplateStore } from "@/stores/templateStore";
+import { useTranslation } from "react-i18next";
 import type { Template } from "@/types";
 
 interface Props {
@@ -25,6 +26,7 @@ interface Props {
 }
 
 export function TemplateManager({ onBack }: Props) {
+  const { t } = useTranslation();
   const templates = useTemplateStore((s) => s.templates);
   const loading = useTemplateStore((s) => s.loading);
   const fetchTemplates = useTemplateStore((s) => s.fetchTemplates);
@@ -46,10 +48,10 @@ export function TemplateManager({ onBack }: Props) {
 
   const grouped = useMemo(() => {
     const map: Record<string, Template[]> = {};
-    for (const t of templates) {
-      const g = t.group_name || "default";
+    for (const tmpl of templates) {
+      const g = tmpl.group_name || "default";
       if (!map[g]) map[g] = [];
-      map[g].push(t);
+      map[g].push(tmpl);
     }
     return map;
   }, [templates]);
@@ -62,11 +64,11 @@ export function TemplateManager({ onBack }: Props) {
     setDialogOpen(true);
   };
 
-  const openEdit = (t: Template) => {
-    setEditingTemplate(t);
-    setTitle(t.title);
-    setContent(t.content);
-    setGroupName(t.group_name);
+  const openEdit = (tmpl: Template) => {
+    setEditingTemplate(tmpl);
+    setTitle(tmpl.title);
+    setContent(tmpl.content);
+    setGroupName(tmpl.group_name);
     setDialogOpen(true);
   };
 
@@ -89,10 +91,10 @@ export function TemplateManager({ onBack }: Props) {
     try {
       const result = await applyTemplate(id);
       await navigator.clipboard.writeText(result);
-      toast.success("Template applied to clipboard");
+      toast.success(t("template.applied"));
     } catch (err) {
       console.error("Failed to apply template:", err);
-      toast.error("Failed to apply template");
+      toast.error(t("template.applyFailed"));
     }
   };
 
@@ -102,69 +104,69 @@ export function TemplateManager({ onBack }: Props) {
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border/30">
         <button
           onClick={onBack}
-          className="flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-accent/50 transition-colors"
+          className="flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
         </button>
-        <span className="text-xs font-medium text-foreground">Templates</span>
+        <span className="text-xs font-medium text-foreground">{t("template.title")}</span>
         <div className="flex-1" />
         <Button size="xs" onClick={openCreate}>
           <Plus className="w-3 h-3" />
-          New
+          {t("template.new")}
         </Button>
       </div>
 
       {/* Content */}
       <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2">
         {loading ? (
-          <div className="flex items-center justify-center h-full text-xs text-muted-foreground/50">
-            Loading...
+          <div className="flex items-center justify-center h-full text-xs text-muted-foreground">
+            {t("template.loading")}
           </div>
         ) : templates.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground/40">
+          <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground/70">
             <FileText className="w-8 h-8" />
-            <p className="text-xs">No templates yet</p>
-            <p className="text-[10px]">Create a template to get started</p>
+            <p className="text-xs">{t("template.noTemplates")}</p>
+            <p className="text-[10px]">{t("template.createHint")}</p>
           </div>
         ) : (
           Object.entries(grouped).map(([group, items]) => (
             <div key={group} className="mb-3">
-              <div className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wider px-1 mb-1">
+              <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-1 mb-1">
                 {group}
               </div>
               <div className="space-y-1">
-                {items.map((t) => (
+                {items.map((tmpl) => (
                   <div
-                    key={t.id}
+                    key={tmpl.id}
                     className="flex items-start gap-2 px-2 py-1.5 rounded-md border border-border/30 bg-card/50 hover:bg-accent/30 transition-colors group"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-medium text-foreground truncate">
-                        {t.title}
+                        {tmpl.title}
                       </div>
-                      <div className="text-[10px] text-muted-foreground/60 line-clamp-2 mt-0.5">
-                        {t.content}
+                      <div className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">
+                        {tmpl.content}
                       </div>
                     </div>
                     <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                       <button
-                        onClick={() => handleApply(t.id)}
-                        className="flex items-center justify-center w-6 h-6 rounded text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors"
-                        title="Apply template"
+                        onClick={() => handleApply(tmpl.id)}
+                        className="flex items-center justify-center w-6 h-6 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                        title={t("template.apply")}
                       >
                         <Copy className="w-3 h-3" />
                       </button>
                       <button
-                        onClick={() => openEdit(t)}
-                        className="flex items-center justify-center w-6 h-6 rounded text-muted-foreground/60 hover:text-foreground hover:bg-accent/50 transition-colors"
-                        title="Edit"
+                        onClick={() => openEdit(tmpl)}
+                        className="flex items-center justify-center w-6 h-6 rounded text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+                        title={t("template.edit")}
                       >
                         <Pencil className="w-3 h-3" />
                       </button>
                       <button
-                        onClick={() => setDeleteConfirmId(t.id)}
-                        className="flex items-center justify-center w-6 h-6 rounded text-muted-foreground/60 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                        title="Delete"
+                        onClick={() => setDeleteConfirmId(tmpl.id)}
+                        className="flex items-center justify-center w-6 h-6 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        title={t("template.delete")}
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
@@ -178,8 +180,8 @@ export function TemplateManager({ onBack }: Props) {
       </div>
 
       {/* Hint bar */}
-      <div className="px-3 py-1 text-[10px] text-muted-foreground/40 border-t border-border/20 shrink-0">
-        Variables: {"{date}"} {"{time}"} {"{datetime}"} {"{clipboard}"}
+      <div className="px-3 py-1 text-[10px] text-muted-foreground/70 border-t border-border/20 shrink-0">
+        {t("template.variables")}: {"{date}"} {"{time}"} {"{datetime}"} {"{clipboard}"}
       </div>
 
       {/* Create / Edit Dialog */}
@@ -187,36 +189,36 @@ export function TemplateManager({ onBack }: Props) {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-sm">
-              {editingTemplate ? "Edit Template" : "New Template"}
+              {editingTemplate ? t("template.editTemplate") : t("template.newTemplate")}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div>
               <label className="text-[11px] text-muted-foreground mb-1 block">
-                Title
+                {t("template.titleField")}
               </label>
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Template title"
+                placeholder={t("template.titlePlaceholder")}
                 className="h-8 text-xs"
               />
             </div>
             <div>
               <label className="text-[11px] text-muted-foreground mb-1 block">
-                Content
+                {t("template.content")}
               </label>
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="Template content... Use {date}, {time}, {datetime}, {clipboard} as variables"
+                placeholder={t("template.contentPlaceholder")}
                 rows={5}
                 className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 resize-none dark:bg-input/30"
               />
             </div>
             <div>
               <label className="text-[11px] text-muted-foreground mb-1 block">
-                Group
+                {t("template.group")}
               </label>
               <Input
                 value={groupName}
@@ -232,10 +234,10 @@ export function TemplateManager({ onBack }: Props) {
               size="sm"
               onClick={() => setDialogOpen(false)}
             >
-              Cancel
+              {t("template.cancel")}
             </Button>
             <Button size="sm" onClick={handleSave} disabled={!title.trim() || !content.trim()}>
-              {editingTemplate ? "Save" : "Create"}
+              {editingTemplate ? t("template.save") : t("template.create")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -250,11 +252,10 @@ export function TemplateManager({ onBack }: Props) {
       >
         <DialogContent className="max-w-xs">
           <DialogHeader>
-            <DialogTitle className="text-sm">Delete Template</DialogTitle>
+            <DialogTitle className="text-sm">{t("template.deleteTemplate")}</DialogTitle>
           </DialogHeader>
           <p className="text-xs text-muted-foreground">
-            Are you sure you want to delete this template? This action cannot be
-            undone.
+            {t("template.deleteConfirm")}
           </p>
           <DialogFooter>
             <Button
@@ -262,14 +263,14 @@ export function TemplateManager({ onBack }: Props) {
               size="sm"
               onClick={() => setDeleteConfirmId(null)}
             >
-              Cancel
+              {t("template.cancel")}
             </Button>
             <Button
               variant="destructive"
               size="sm"
               onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}
             >
-              Delete
+              {t("template.delete")}
             </Button>
           </DialogFooter>
         </DialogContent>

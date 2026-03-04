@@ -1,9 +1,10 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import { Settings, FileText, ClipboardList } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { TypeFilter } from "@/components/TypeFilter";
 import { EntryCard } from "@/components/EntryCard";
+import { TemplateQuickPicker } from "@/components/TemplateQuickPicker";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { pasteEntry } from "@/services/clipboardService";
 import { useTranslation } from "react-i18next";
@@ -21,6 +22,7 @@ export function ClipboardPanel({ onOpenSettings, onOpenTemplates }: Props) {
   const selectedId = useClipboardStore((s) => s.selectedId);
   const selectEntry = useClipboardStore((s) => s.selectEntry);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
 
   const displayEntries = showFavoritesOnly
     ? entries.filter((e) => e.is_favorite)
@@ -68,16 +70,21 @@ export function ClipboardPanel({ onOpenSettings, onOpenTemplates }: Props) {
       {/* Header: Search + Settings */}
       <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-border/30">
         <SearchBar />
-        <button
-          onClick={onOpenTemplates}
-          className="flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground/50 hover:text-foreground hover:bg-accent/50 transition-colors shrink-0"
-          title="Templates"
-        >
-          <FileText className="w-3.5 h-3.5" />
-        </button>
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setShowTemplatePicker((v) => !v)}
+            className="flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+            title={t("template.title")}
+          >
+            <FileText className="w-3.5 h-3.5" />
+          </button>
+          {showTemplatePicker && (
+            <TemplateQuickPicker onClose={() => setShowTemplatePicker(false)} />
+          )}
+        </div>
         <button
           onClick={onOpenSettings}
-          className="flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground/50 hover:text-foreground hover:bg-accent/50 transition-colors shrink-0"
+          className="flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors shrink-0"
         >
           <Settings className="w-3.5 h-3.5" />
         </button>
@@ -89,8 +96,8 @@ export function ClipboardPanel({ onOpenSettings, onOpenTemplates }: Props) {
       {/* Entry list */}
       <div className="flex-1 min-h-0">
         {displayEntries.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground/40">
-            <ClipboardList className="w-10 h-10 text-muted-foreground/20" />
+          <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground/70">
+            <ClipboardList className="w-10 h-10 text-muted-foreground/50" />
             <div className="text-center">
               <p className="text-xs">{t("clipboardPanel.noEntries")}</p>
               <p className="text-[10px] mt-1">{t("clipboardPanel.copyToStart")}</p>
@@ -108,7 +115,7 @@ export function ClipboardPanel({ onOpenSettings, onOpenTemplates }: Props) {
       </div>
 
       {/* Status bar */}
-      <div className="flex items-center justify-between px-3 py-1 text-[10px] text-muted-foreground/40 border-t border-border/20 shrink-0">
+      <div className="flex items-center justify-between px-3 py-1 text-[10px] text-muted-foreground/70 border-t border-border/20 shrink-0">
         <span>{t("clipboardPanel.items", { count: displayEntries.length })}</span>
         <span>{t("clipboardPanel.pasteHint")}</span>
       </div>
