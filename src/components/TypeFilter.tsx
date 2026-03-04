@@ -2,16 +2,18 @@ import { AlignLeft, Image, FolderOpen, Star, LayoutGrid } from "lucide-react";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import type { ContentType } from "@/types";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
-const filters: { label: string; icon: React.ReactNode; filter: ContentType | null; isFavorites?: boolean }[] = [
-  { label: "All", icon: <LayoutGrid className="w-3 h-3" />, filter: null },
-  { label: "Text", icon: <AlignLeft className="w-3 h-3" />, filter: "PlainText" },
-  { label: "Image", icon: <Image className="w-3 h-3" />, filter: "Image" },
-  { label: "File", icon: <FolderOpen className="w-3 h-3" />, filter: "FilePaths" },
-  { label: "Starred", icon: <Star className="w-3 h-3" />, filter: null, isFavorites: true },
+const filters: { labelKey: string; icon: React.ReactNode; filter: ContentType | null; isFavorites?: boolean }[] = [
+  { labelKey: "typeFilter.all", icon: <LayoutGrid className="w-3 h-3" />, filter: null },
+  { labelKey: "typeFilter.text", icon: <AlignLeft className="w-3 h-3" />, filter: "PlainText" },
+  { labelKey: "typeFilter.image", icon: <Image className="w-3 h-3" />, filter: "Image" },
+  { labelKey: "typeFilter.file", icon: <FolderOpen className="w-3 h-3" />, filter: "FilePaths" },
+  { labelKey: "typeFilter.starred", icon: <Star className="w-3 h-3" />, filter: null, isFavorites: true },
 ];
 
 export function TypeFilter() {
+  const { t } = useTranslation();
   const typeFilter = useClipboardStore((s) => s.typeFilter);
   const showFavoritesOnly = useClipboardStore((s) => s.showFavoritesOnly);
   const setTypeFilter = useClipboardStore((s) => s.setTypeFilter);
@@ -36,7 +38,7 @@ export function TypeFilter() {
     <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-border/30">
       {filters.map((item) => (
         <button
-          key={item.label}
+          key={item.labelKey}
           onClick={() => handleClick(item)}
           className={cn(
             "flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-colors",
@@ -46,7 +48,7 @@ export function TypeFilter() {
           )}
         >
           {item.icon}
-          <span>{item.label}</span>
+          <span>{t(item.labelKey)}</span>
         </button>
       ))}
     </div>

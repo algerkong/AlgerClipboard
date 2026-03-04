@@ -4,6 +4,7 @@ import { useClipboardStore } from "@/stores/clipboardStore";
 import { pasteEntry } from "@/services/clipboardService";
 import type { ClipboardEntry } from "@/types";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 function formatTimeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -17,13 +18,13 @@ function formatTimeAgo(dateStr: string): string {
   return `${d}d`;
 }
 
-function getPreview(entry: ClipboardEntry): string {
+function getPreview(entry: ClipboardEntry, t: (key: string) => string): string {
   if (entry.content_type === "PlainText" || entry.content_type === "RichText") {
     const text = entry.text_content ?? "";
     return text.length > 120 ? text.substring(0, 120) + "\u2026" : text;
   }
-  if (entry.content_type === "Image") return "Image";
-  return entry.text_content ?? "File";
+  if (entry.content_type === "Image") return t("entryCard.image");
+  return entry.text_content ?? t("entryCard.file");
 }
 
 function getIcon(type: string) {
@@ -35,6 +36,7 @@ function getIcon(type: string) {
 }
 
 export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEntry }) {
+  const { t } = useTranslation();
   const selectedId = useClipboardStore((s) => s.selectedId);
   const selectEntry = useClipboardStore((s) => s.selectEntry);
   const toggleFavorite = useClipboardStore((s) => s.toggleFavorite);
@@ -62,7 +64,7 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
         <div className="mt-0.5 shrink-0">{getIcon(entry.content_type)}</div>
         <div className="flex-1 min-w-0">
           <p className="text-[12px] leading-relaxed text-foreground/90 line-clamp-2 break-all">
-            {getPreview(entry)}
+            {getPreview(entry, t)}
           </p>
           <div className="flex items-center gap-1.5 mt-1 text-[10px] text-muted-foreground/50">
             <span>{formatTimeAgo(entry.created_at)}</span>

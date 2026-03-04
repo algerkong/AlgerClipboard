@@ -6,12 +6,14 @@ import { TypeFilter } from "@/components/TypeFilter";
 import { EntryCard } from "@/components/EntryCard";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { pasteEntry } from "@/services/clipboardService";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   onOpenSettings: () => void;
 }
 
 export function ClipboardPanel({ onOpenSettings }: Props) {
+  const { t } = useTranslation();
   const entries = useClipboardStore((s) => s.entries);
   const showFavoritesOnly = useClipboardStore((s) => s.showFavoritesOnly);
   const selectedId = useClipboardStore((s) => s.selectedId);
@@ -77,8 +79,8 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
       <div className="flex-1 min-h-0">
         {displayEntries.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground/40">
-            <p className="text-xs">No clipboard entries yet</p>
-            <p className="text-[10px]">Copy something to get started</p>
+            <p className="text-xs">{t("clipboardPanel.noEntries")}</p>
+            <p className="text-[10px]">{t("clipboardPanel.copyToStart")}</p>
           </div>
         ) : (
           <Virtuoso
@@ -93,8 +95,8 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
 
       {/* Status bar */}
       <div className="flex items-center justify-between px-3 py-1 text-[10px] text-muted-foreground/40 border-t border-border/20 shrink-0">
-        <span>{displayEntries.length} items</span>
-        <span>&#8629; paste &middot; esc close</span>
+        <span>{t("clipboardPanel.items", { count: displayEntries.length })}</span>
+        <span>{t("clipboardPanel.pasteHint")}</span>
       </div>
     </div>
   );

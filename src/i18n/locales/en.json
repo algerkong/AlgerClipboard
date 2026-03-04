@@ -1,0 +1,38 @@
+{
+  "titleBar": {
+    "clipboard": "Clipboard"
+  },
+  "searchBar": {
+    "placeholder": "Search..."
+  },
+  "typeFilter": {
+    "all": "All",
+    "text": "Text",
+    "image": "Image",
+    "file": "File",
+    "starred": "Starred"
+  },
+  "entryCard": {
+    "image": "Image",
+    "file": "File"
+  },
+  "clipboardPanel": {
+    "noEntries": "No clipboard entries yet",
+    "copyToStart": "Copy something to get started",
+    "items": "{{count}} items",
+    "pasteHint": "\u21B5 paste \u00B7 esc close"
+  },
+  "settings": {
+    "title": "Settings",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "auto": "Auto",
+    "historyLimit": "History Limit",
+    "maxEntries": "Maximum entries to keep",
+    "autoClose": "Auto-close after paste",
+    "hidePanel": "Hide panel after pasting",
+    "language": "Language",
+    "languageDesc": "Interface display language"
+  }
+}

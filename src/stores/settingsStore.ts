@@ -11,12 +11,14 @@ interface SettingsState {
   maxHistory: number;
   autoStart: boolean;
   pasteAndClose: boolean;
+  locale: string;
 
   loadSettings: () => Promise<void>;
   setTheme: (theme: Theme) => Promise<void>;
   setMaxHistory: (max: number) => Promise<void>;
   setAutoStart: (enabled: boolean) => Promise<void>;
   setPasteAndClose: (enabled: boolean) => Promise<void>;
+  setLocale: (locale: string) => Promise<void>;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -24,14 +26,16 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   maxHistory: 500,
   autoStart: false,
   pasteAndClose: true,
+  locale: "zh-CN",
 
   loadSettings: async () => {
     try {
-      const [theme, maxHistory, autoStart, pasteAndClose] = await Promise.all([
+      const [theme, maxHistory, autoStart, pasteAndClose, locale] = await Promise.all([
         getSetting("theme"),
         getSetting("max_history"),
         getSetting("auto_start"),
         getSetting("paste_and_close"),
+        getSetting("locale"),
       ]);
 
       set({
@@ -39,6 +43,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         maxHistory: maxHistory ? parseInt(maxHistory, 10) : 500,
         autoStart: autoStart === "true",
         pasteAndClose: pasteAndClose !== "false",
+        locale: locale ?? "zh-CN",
       });
     } catch (err) {
       console.error("Failed to load settings:", err);
@@ -78,6 +83,15 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       await updateSetting("paste_and_close", String(enabled));
     } catch (err) {
       console.error("Failed to save paste_and_close:", err);
+    }
+  },
+
+  setLocale: async (locale: string) => {
+    set({ locale });
+    try {
+      await updateSetting("locale", locale);
+    } catch (err) {
+      console.error("Failed to save locale:", err);
     }
   },
 }));

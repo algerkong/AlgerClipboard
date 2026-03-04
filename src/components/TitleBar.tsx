@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { X, Minus, Pin, PinOff } from "lucide-react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { useTranslation } from "react-i18next";
 
 export function TitleBar() {
+  const { t } = useTranslation();
   const [isPinned, setIsPinned] = useState(true);
 
   const handleClose = () => getCurrentWebviewWindow().hide();
@@ -17,7 +19,7 @@ export function TitleBar() {
   return (
     <div data-tauri-drag-region className="flex items-center justify-between h-8 px-3 bg-card/80 backdrop-blur-sm border-b border-border/50 select-none shrink-0">
       <span data-tauri-drag-region className="text-[11px] font-medium text-muted-foreground/70 tracking-wide uppercase">
-        Clipboard
+        {t("titleBar.clipboard")}
       </span>
       <div className="flex items-center gap-0.5 -mr-1">
         <button

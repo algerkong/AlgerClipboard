@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { useTranslation } from "react-i18next";
 import { Toaster } from "sonner";
 import { TitleBar } from "@/components/TitleBar";
 import { ClipboardPanel } from "@/pages/ClipboardPanel";
@@ -29,10 +30,12 @@ function applyTheme(theme: "light" | "dark" | "system") {
 }
 
 function App() {
+  const { i18n } = useTranslation();
   const [showSettings, setShowSettings] = useState(false);
   const fetchHistory = useClipboardStore((s) => s.fetchHistory);
   const addEntry = useClipboardStore((s) => s.addEntry);
   const theme = useSettingsStore((s) => s.theme);
+  const locale = useSettingsStore((s) => s.locale);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
 
   // Apply dark theme immediately on first render (before settings load)
@@ -45,6 +48,13 @@ function App() {
     loadSettings();
     fetchHistory();
   }, [loadSettings, fetchHistory]);
+
+  // Sync i18n language with stored locale
+  useEffect(() => {
+    if (locale && i18n.language !== locale) {
+      i18n.changeLanguage(locale);
+    }
+  }, [locale, i18n]);
 
   // Apply theme whenever it changes
   useEffect(() => {
