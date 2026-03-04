@@ -1,5 +1,5 @@
 import { memo, useCallback, useState, useEffect } from "react";
-import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages, Pin, Eye, Copy, ClipboardPaste, Maximize2, Cloud, Upload, CloudAlert } from "lucide-react";
+import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages, Pin, Eye, Copy, ClipboardPaste, Maximize2, Cloud, Upload, CloudAlert, ScanText } from "lucide-react";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { pasteEntry, getThumbnailBase64 } from "@/services/clipboardService";
 import type { ClipboardEntry } from "@/types";
@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { TranslateDialog } from "@/components/TranslateDialog";
 import { TextViewer } from "@/components/TextViewer";
+import { openImageViewer } from "@/services/imageViewerService";
 import { ContextMenu, type ContextMenuItem } from "@/components/ContextMenu";
 import { toast } from "sonner";
 
@@ -117,6 +118,12 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
       .catch(() => toast.error(t("toast.pasteFailed")));
   }, [entry.id, t]);
 
+  const handleOpenImageViewer = useCallback(() => {
+    const blobPath = entry.blob_path;
+    if (!blobPath) return;
+    openImageViewer(blobPath);
+  }, [entry.blob_path]);
+
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -126,6 +133,14 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
 
   const getContextMenuItems = (): ContextMenuItem[] => {
     const items: ContextMenuItem[] = [];
+
+    if (isImage) {
+      items.push({
+        label: t("contextMenu.viewImage"),
+        icon: <Eye className="w-3.5 h-3.5" />,
+        onClick: handleOpenImageViewer,
+      });
+    }
 
     if (hasText && entry.text_content) {
       if (isLongText) {
@@ -207,8 +222,9 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
             <img
               src={imageSrc}
               alt=""
-              className="max-h-[60px] max-w-full rounded object-cover"
+              className="max-h-[60px] max-w-full rounded object-cover cursor-zoom-in"
               draggable={false}
+              onClick={(e) => { e.stopPropagation(); handleOpenImageViewer(); }}
             />
           ) : (
             <p className="text-[12px] leading-relaxed text-foreground line-clamp-2 break-all">
@@ -255,6 +271,15 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
 
       {/* Hover actions */}
       <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-background/90 backdrop-blur-sm rounded-md shadow-sm border border-border/30 px-0.5">
+        {isImage && (
+          <button
+            onClick={(e) => { e.stopPropagation(); openImageViewer(); }}
+            className="p-1 rounded text-muted-foreground hover:text-blue-400 transition-colors"
+            title={t("imageViewer.extractText")}
+          >
+            <ScanText className="w-3 h-3" />
+          </button>
+        )}
         {hasText && isLongText && (
           <button
             onClick={(e) => { e.stopPropagation(); setShowViewer(true); }}

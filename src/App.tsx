@@ -7,10 +7,15 @@ import { TitleBar } from "@/components/TitleBar";
 import { ClipboardPanel } from "@/pages/ClipboardPanel";
 import { SettingsPage } from "@/pages/Settings";
 import { TemplateManager } from "@/pages/TemplateManager";
+import { ImageViewerPage } from "@/components/ImageViewer";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useSyncStore } from "@/stores/syncStore";
 import type { ClipboardEntry } from "@/types";
+
+// Detect if this window is an image viewer
+const searchParams = new URLSearchParams(window.location.search);
+const isImageViewer = searchParams.get("window") === "image-viewer";
 
 function applyTheme(theme: "light" | "dark" | "system") {
   const root = document.documentElement;
@@ -32,6 +37,15 @@ function applyTheme(theme: "light" | "dark" | "system") {
 }
 
 function App() {
+  // If this is an image viewer window, render the standalone viewer
+  if (isImageViewer) {
+    return <ImageViewerPage />;
+  }
+
+  return <MainApp />;
+}
+
+function MainApp() {
   const { i18n } = useTranslation();
   const [showSettings, setShowSettings] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);

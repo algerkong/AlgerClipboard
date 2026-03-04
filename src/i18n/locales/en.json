@@ -156,8 +156,21 @@
     "copy": "Copy",
     "translateHint": "Translate"
   },
+  "imageViewer": {
+    "title": "Image Preview",
+    "extractText": "Extract Text",
+    "extracting": "Extracting text...",
+    "noText": "No text detected",
+    "translateText": "Translate Text",
+    "copyText": "Copy Text",
+    "zoomIn": "Zoom In",
+    "zoomOut": "Zoom Out",
+    "resetZoom": "Reset",
+    "ocrResult": "OCR Result"
+  },
   "contextMenu": {
     "viewFull": "View Full Text",
+    "viewImage": "View Image",
     "copy": "Copy",
     "paste": "Paste",
     "pin": "Pin to Top",

@@ -121,6 +121,18 @@ pub fn get_thumbnail_base64(
 }
 
 #[tauri::command]
+pub async fn extract_text_from_image(
+    blob_store: State<'_, AppBlobStore>,
+    relative_path: String,
+) -> Result<String, String> {
+    let full_path = blob_store.0.get_blob_path(&relative_path);
+    let path_str = full_path.to_string_lossy().to_string();
+    tokio::task::spawn_blocking(move || crate::ocr::extract_text(&path_str))
+        .await
+        .map_err(|e| format!("OCR task failed: {}", e))?
+}
+
+#[tauri::command]
 pub fn get_cache_info(
     blob_store: State<'_, AppBlobStore>,
 ) -> Result<CacheInfo, String> {

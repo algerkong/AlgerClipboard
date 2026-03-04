@@ -65,6 +65,10 @@ export async function getThumbnailBase64(relativePath: string): Promise<string> 
   return invoke("get_thumbnail_base64", { relativePath });
 }
 
+export async function extractTextFromImage(relativePath: string): Promise<string> {
+  return invoke("extract_text_from_image", { relativePath });
+}
+
 export async function getCacheInfo(): Promise<CacheInfo> {
   return invoke("get_cache_info");
 }

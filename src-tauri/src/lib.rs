@@ -1,5 +1,6 @@
 mod clipboard;
 mod commands;
+mod ocr;
 mod paste;
 mod storage;
 mod translate;
@@ -130,6 +131,7 @@ pub fn run() {
             commands::clipboard_cmd::import_data,
             commands::clipboard_cmd::get_entry_count,
             commands::clipboard_cmd::get_thumbnail_base64,
+            commands::clipboard_cmd::extract_text_from_image,
             commands::clipboard_cmd::get_cache_info,
             commands::clipboard_cmd::cleanup_cache,
             commands::settings_cmd::get_settings,

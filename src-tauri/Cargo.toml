@@ -57,3 +57,11 @@ windows-sys = { version = "0.59", features = [
     "Win32_Foundation",
     "Win32_UI_Shell",
 ] }
+windows = { version = "0.58", features = [
+    "Media_Ocr",
+    "Graphics_Imaging",
+    "Storage",
+    "Storage_Streams",
+    "Foundation",
+    "Globalization",
+] }
