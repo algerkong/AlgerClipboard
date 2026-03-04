@@ -1,0 +1,38 @@
+import { invoke } from "@tauri-apps/api/core";
+import type { ClipboardEntry, HistoryQuery } from "@/types";
+
+export async function getClipboardHistory(
+  query: HistoryQuery = {}
+): Promise<ClipboardEntry[]> {
+  return invoke("get_clipboard_history", {
+    limit: query.limit ?? 50,
+    offset: query.offset ?? 0,
+    typeFilter: query.type_filter ?? null,
+    keyword: query.keyword ?? null,
+  });
+}
+
+export async function getEntry(
+  id: string
+): Promise<ClipboardEntry | null> {
+  return invoke("get_entry", { id });
+}
+
+export async function deleteEntries(ids: string[]): Promise<void> {
+  return invoke("delete_entries", { ids });
+}
+
+export async function toggleFavorite(id: string): Promise<boolean> {
+  return invoke("toggle_favorite", { id });
+}
+
+export async function clearHistory(keepFavorites: boolean): Promise<void> {
+  return invoke("clear_history", { keepFavorites });
+}
+
+export async function pasteEntry(
+  id: string,
+  mode?: string
+): Promise<void> {
+  return invoke("paste_entry", { id, mode: mode ?? null });
+}
