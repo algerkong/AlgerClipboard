@@ -10,3 +10,11 @@ export async function updateSetting(
 ): Promise<void> {
   return invoke("update_settings", { key, value });
 }
+
+export async function setAutoStart(enabled: boolean): Promise<void> {
+  return invoke("set_auto_start", { enabled });
+}
+
+export async function getAutoStart(): Promise<boolean> {
+  return invoke("get_auto_start");
+}

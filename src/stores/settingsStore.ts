@@ -2,9 +2,22 @@ import { create } from "zustand";
 import {
   getSetting,
   updateSetting,
+  setAutoStart as setAutoStartApi,
+  getAutoStart,
 } from "@/services/settingsService";
 
 type Theme = "light" | "dark" | "system";
+export type FontSize = "small" | "medium" | "large";
+
+const FONT_SIZE_MAP: Record<FontSize, string> = {
+  small: "12px",
+  medium: "13px",
+  large: "14px",
+};
+
+function applyFontSize(size: FontSize) {
+  document.documentElement.style.setProperty("--app-font-size", FONT_SIZE_MAP[size]);
+}
 
 interface SettingsState {
   theme: Theme;
@@ -12,6 +25,7 @@ interface SettingsState {
   autoStart: boolean;
   pasteAndClose: boolean;
   locale: string;
+  fontSize: FontSize;
   isPinned: boolean; // non-persisted, controls auto-hide on blur
 
   loadSettings: () => Promise<void>;
@@ -20,6 +34,7 @@ interface SettingsState {
   setAutoStart: (enabled: boolean) => Promise<void>;
   setPasteAndClose: (enabled: boolean) => Promise<void>;
   setLocale: (locale: string) => Promise<void>;
+  setFontSize: (size: FontSize) => Promise<void>;
   setIsPinned: (pinned: boolean) => void;
 }
 
@@ -29,24 +44,30 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   autoStart: false,
   pasteAndClose: true,
   locale: "zh-CN",
+  fontSize: "medium" as FontSize,
   isPinned: true,
 
   loadSettings: async () => {
     try {
-      const [theme, maxHistory, autoStart, pasteAndClose, locale] = await Promise.all([
+      const [theme, maxHistory, pasteAndClose, locale, fontSize, autoStartEnabled] = await Promise.all([
         getSetting("theme"),
         getSetting("max_history"),
-        getSetting("auto_start"),
         getSetting("paste_and_close"),
         getSetting("locale"),
+        getSetting("font_size"),
+        getAutoStart(),
       ]);
+
+      const fs = (fontSize as FontSize) || "medium";
+      applyFontSize(fs);
 
       set({
         theme: (theme as Theme) ?? "dark",
         maxHistory: maxHistory ? parseInt(maxHistory, 10) : 500,
-        autoStart: autoStart === "true",
+        autoStart: autoStartEnabled,
         pasteAndClose: pasteAndClose !== "false",
         locale: locale ?? "zh-CN",
+        fontSize: fs,
       });
     } catch (err) {
       console.error("Failed to load settings:", err);
@@ -74,7 +95,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   setAutoStart: async (enabled: boolean) => {
     set({ autoStart: enabled });
     try {
-      await updateSetting("auto_start", String(enabled));
+      await setAutoStartApi(enabled);
     } catch (err) {
       console.error("Failed to save auto_start:", err);
     }
@@ -95,6 +116,16 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       await updateSetting("locale", locale);
     } catch (err) {
       console.error("Failed to save locale:", err);
+    }
+  },
+
+  setFontSize: async (size: FontSize) => {
+    applyFontSize(size);
+    set({ fontSize: size });
+    try {
+      await updateSetting("font_size", size);
+    } catch (err) {
+      console.error("Failed to save font_size:", err);
     }
   },
 
