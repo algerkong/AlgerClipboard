@@ -69,9 +69,11 @@ pub struct ClipboardEntry {
     pub source_app: Option<String>,
     pub device_id: String,
     pub is_favorite: bool,
+    pub is_pinned: bool,
     pub tags: Vec<String>,
     pub created_at: String,
     pub updated_at: String,
     pub synced_at: Option<String>,
     pub sync_status: SyncStatus,
+    pub sync_version: i64,
 }
