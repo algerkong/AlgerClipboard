@@ -1,7 +1,19 @@
 use crate::clipboard::entry::{ClipboardEntry, ContentType, SyncStatus};
 use rusqlite::{params, Connection};
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::sync::Mutex;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Template {
+    pub id: String,
+    pub title: String,
+    pub content: String,
+    pub group_name: String,
+    pub sort_order: i64,
+    pub created_at: String,
+    pub updated_at: String,
+}
 
 pub struct Database {
     conn: Mutex<Connection>,
@@ -357,6 +369,153 @@ impl Database {
         }
 
         Ok(result)
+    }
+
+    // --- Template CRUD ---
+
+    pub fn create_template(
+        &self,
+        title: &str,
+        content: &str,
+        group_name: &str,
+    ) -> Result<Template, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        let id = uuid::Uuid::new_v4().to_string();
+        let now = now_iso();
+
+        conn.execute(
+            "INSERT INTO templates (id, title, content, group_name, sort_order, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, 0, ?5, ?5)",
+            params![id, title, content, group_name, now],
+        )
+        .map_err(|e| format!("Failed to create template: {}", e))?;
+
+        Ok(Template {
+            id,
+            title: title.to_string(),
+            content: content.to_string(),
+            group_name: group_name.to_string(),
+            sort_order: 0,
+            created_at: now.clone(),
+            updated_at: now,
+        })
+    }
+
+    pub fn get_templates(&self, group: Option<&str>) -> Result<Vec<Template>, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+        let (sql, param_values): (String, Vec<Box<dyn rusqlite::types::ToSql>>) = match group {
+            Some(g) => (
+                "SELECT id, title, content, group_name, sort_order, created_at, updated_at FROM templates WHERE group_name = ? ORDER BY sort_order, created_at DESC".to_string(),
+                vec![Box::new(g.to_string()) as Box<dyn rusqlite::types::ToSql>],
+            ),
+            None => (
+                "SELECT id, title, content, group_name, sort_order, created_at, updated_at FROM templates ORDER BY sort_order, created_at DESC".to_string(),
+                vec![],
+            ),
+        };
+
+        let params_refs: Vec<&dyn rusqlite::types::ToSql> =
+            param_values.iter().map(|p| p.as_ref()).collect();
+
+        let mut stmt = conn.prepare(&sql).map_err(|e| format!("Prepare error: {}", e))?;
+
+        let rows = stmt
+            .query_map(params_refs.as_slice(), |row| {
+                Ok(Template {
+                    id: row.get("id")?,
+                    title: row.get("title")?,
+                    content: row.get("content")?,
+                    group_name: row.get("group_name")?,
+                    sort_order: row.get("sort_order")?,
+                    created_at: row.get("created_at")?,
+                    updated_at: row.get("updated_at")?,
+                })
+            })
+            .map_err(|e| format!("Query error: {}", e))?;
+
+        let mut result = Vec::new();
+        for row in rows {
+            result.push(row.map_err(|e| format!("Row error: {}", e))?);
+        }
+
+        Ok(result)
+    }
+
+    pub fn get_template(&self, id: &str) -> Result<Option<Template>, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+        let result = conn.query_row(
+            "SELECT id, title, content, group_name, sort_order, created_at, updated_at FROM templates WHERE id = ?1",
+            params![id],
+            |row| {
+                Ok(Template {
+                    id: row.get("id")?,
+                    title: row.get("title")?,
+                    content: row.get("content")?,
+                    group_name: row.get("group_name")?,
+                    sort_order: row.get("sort_order")?,
+                    created_at: row.get("created_at")?,
+                    updated_at: row.get("updated_at")?,
+                })
+            },
+        );
+
+        match result {
+            Ok(t) => Ok(Some(t)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(format!("Failed to get template: {}", e)),
+        }
+    }
+
+    pub fn update_template(
+        &self,
+        id: &str,
+        title: &str,
+        content: &str,
+        group_name: &str,
+    ) -> Result<Template, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        let now = now_iso();
+
+        let rows_affected = conn
+            .execute(
+                "UPDATE templates SET title = ?1, content = ?2, group_name = ?3, updated_at = ?4 WHERE id = ?5",
+                params![title, content, group_name, now, id],
+            )
+            .map_err(|e| format!("Failed to update template: {}", e))?;
+
+        if rows_affected == 0 {
+            return Err("Template not found".to_string());
+        }
+
+        // Read back the full row
+        let t = conn.query_row(
+            "SELECT id, title, content, group_name, sort_order, created_at, updated_at FROM templates WHERE id = ?1",
+            params![id],
+            |row| {
+                Ok(Template {
+                    id: row.get("id")?,
+                    title: row.get("title")?,
+                    content: row.get("content")?,
+                    group_name: row.get("group_name")?,
+                    sort_order: row.get("sort_order")?,
+                    created_at: row.get("created_at")?,
+                    updated_at: row.get("updated_at")?,
+                })
+            },
+        ).map_err(|e| format!("Failed to read updated template: {}", e))?;
+
+        Ok(t)
+    }
+
+    pub fn delete_template(&self, id: &str) -> Result<(), String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+        conn.execute("DELETE FROM templates WHERE id = ?1", params![id])
+            .map_err(|e| format!("Failed to delete template: {}", e))?;
+
+        Ok(())
     }
 }
 

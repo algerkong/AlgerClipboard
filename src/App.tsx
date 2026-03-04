@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 import { TitleBar } from "@/components/TitleBar";
 import { ClipboardPanel } from "@/pages/ClipboardPanel";
 import { SettingsPage } from "@/pages/Settings";
+import { TemplateManager } from "@/pages/TemplateManager";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import type { ClipboardEntry } from "@/types";
@@ -32,6 +33,7 @@ function applyTheme(theme: "light" | "dark" | "system") {
 function App() {
   const { i18n } = useTranslation();
   const [showSettings, setShowSettings] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
   const fetchHistory = useClipboardStore((s) => s.fetchHistory);
   const addEntry = useClipboardStore((s) => s.addEntry);
   const theme = useSettingsStore((s) => s.theme);
@@ -93,6 +95,8 @@ function App() {
         e.preventDefault();
         if (showSettings) {
           setShowSettings(false);
+        } else if (showTemplates) {
+          setShowTemplates(false);
         } else {
           getCurrentWebviewWindow().hide();
         }
@@ -100,10 +104,12 @@ function App() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showSettings]);
+  }, [showSettings, showTemplates]);
 
   const handleOpenSettings = useCallback(() => setShowSettings(true), []);
   const handleCloseSettings = useCallback(() => setShowSettings(false), []);
+  const handleOpenTemplates = useCallback(() => setShowTemplates(true), []);
+  const handleCloseTemplates = useCallback(() => setShowTemplates(false), []);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -111,8 +117,10 @@ function App() {
       <div className="flex-1 min-h-0">
         {showSettings ? (
           <SettingsPage onBack={handleCloseSettings} />
+        ) : showTemplates ? (
+          <TemplateManager onBack={handleCloseTemplates} />
         ) : (
-          <ClipboardPanel onOpenSettings={handleOpenSettings} />
+          <ClipboardPanel onOpenSettings={handleOpenSettings} onOpenTemplates={handleOpenTemplates} />
         )}
       </div>
       <Toaster position="bottom-center" richColors />

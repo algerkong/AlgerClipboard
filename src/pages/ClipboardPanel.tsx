@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
-import { Settings } from "lucide-react";
+import { Settings, FileText } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { TypeFilter } from "@/components/TypeFilter";
 import { EntryCard } from "@/components/EntryCard";
@@ -10,9 +10,10 @@ import { useTranslation } from "react-i18next";
 
 interface Props {
   onOpenSettings: () => void;
+  onOpenTemplates: () => void;
 }
 
-export function ClipboardPanel({ onOpenSettings }: Props) {
+export function ClipboardPanel({ onOpenSettings, onOpenTemplates }: Props) {
   const { t } = useTranslation();
   const entries = useClipboardStore((s) => s.entries);
   const showFavoritesOnly = useClipboardStore((s) => s.showFavoritesOnly);
@@ -64,6 +65,13 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
       {/* Header: Search + Settings */}
       <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-border/30">
         <SearchBar />
+        <button
+          onClick={onOpenTemplates}
+          className="flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground/50 hover:text-foreground hover:bg-accent/50 transition-colors shrink-0"
+          title="Templates"
+        >
+          <FileText className="w-3.5 h-3.5" />
+        </button>
         <button
           onClick={onOpenSettings}
           className="flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground/50 hover:text-foreground hover:bg-accent/50 transition-colors shrink-0"
