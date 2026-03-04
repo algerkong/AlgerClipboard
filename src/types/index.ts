@@ -25,3 +25,30 @@ export interface HistoryQuery {
   type_filter?: ContentType;
   keyword?: string;
 }
+
+export interface TranslateResult {
+  text: string;
+  translated: string;
+  from_lang: string;
+  to_lang: string;
+  engine: string;
+}
+
+export type TranslateEngineName = "baidu" | "youdao" | "google";
+
+export interface TranslateEngineConfig {
+  engine: string;
+  api_key: string;
+  api_secret: string;
+  enabled: boolean;
+}
+
+export interface Template {
+  id: string;
+  title: string;
+  content: string;
+  group_name: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}

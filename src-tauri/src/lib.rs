@@ -2,6 +2,7 @@ mod clipboard;
 mod commands;
 mod paste;
 mod storage;
+mod translate;
 
 use clipboard::monitor::ClipboardMonitor;
 use commands::clipboard_cmd::AppDatabase;
@@ -124,6 +125,14 @@ pub fn run() {
             commands::settings_cmd::get_settings,
             commands::settings_cmd::update_settings,
             commands::paste_cmd::paste_entry,
+            commands::template_cmd::get_templates,
+            commands::template_cmd::create_template,
+            commands::template_cmd::update_template,
+            commands::template_cmd::delete_template,
+            commands::template_cmd::apply_template,
+            commands::translate_cmd::translate_text,
+            commands::translate_cmd::get_translate_engines,
+            commands::translate_cmd::configure_translate_engine,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

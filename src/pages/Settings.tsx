@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import { ArrowLeft, Sun, Moon, Monitor } from "lucide-react";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { useTranslateStore } from "@/stores/translateStore";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 
@@ -14,6 +16,12 @@ const languages = [
   { value: "en", label: "English" },
 ];
 
+const ENGINE_LIST = [
+  { id: "baidu", label: "Baidu", hasSecret: true },
+  { id: "youdao", label: "Youdao", hasSecret: true },
+  { id: "google", label: "Google", hasSecret: false },
+] as const;
+
 export function SettingsPage({ onBack }: Props) {
   const { t, i18n } = useTranslation();
   const theme = useSettingsStore((s) => s.theme);
@@ -24,6 +32,38 @@ export function SettingsPage({ onBack }: Props) {
   const setMaxHistory = useSettingsStore((s) => s.setMaxHistory);
   const setPasteAndClose = useSettingsStore((s) => s.setPasteAndClose);
   const setLocale = useSettingsStore((s) => s.setLocale);
+
+  const engines = useTranslateStore((s) => s.engines);
+  const loadEngines = useTranslateStore((s) => s.loadEngines);
+  const saveEngine = useTranslateStore((s) => s.saveEngine);
+
+  const [engineForms, setEngineForms] = useState<Record<string, { apiKey: string; apiSecret: string; enabled: boolean }>>({});
+  const [savedEngine, setSavedEngine] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadEngines();
+  }, [loadEngines]);
+
+  useEffect(() => {
+    const forms: Record<string, { apiKey: string; apiSecret: string; enabled: boolean }> = {};
+    for (const eng of ENGINE_LIST) {
+      const existing = engines.find((e) => e.engine === eng.id);
+      forms[eng.id] = {
+        apiKey: existing?.api_key ?? "",
+        apiSecret: existing?.api_secret ?? "",
+        enabled: existing?.enabled ?? false,
+      };
+    }
+    setEngineForms(forms);
+  }, [engines]);
+
+  const handleSaveEngine = async (engineId: string) => {
+    const form = engineForms[engineId];
+    if (!form) return;
+    await saveEngine(engineId, form.apiKey, form.apiSecret, form.enabled);
+    setSavedEngine(engineId);
+    setTimeout(() => setSavedEngine(null), 1500);
+  };
 
   const themes: { value: Theme; labelKey: string; icon: React.ReactNode }[] = [
     { value: "light", labelKey: "settings.light", icon: <Sun className="w-3.5 h-3.5" /> },
@@ -140,6 +180,77 @@ export function SettingsPage({ onBack }: Props) {
                 )}
               />
             </button>
+          </div>
+        </section>
+
+        {/* Translation engine config */}
+        <section>
+          <label className="text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider">
+            {t("translate.engineConfig")}
+          </label>
+          <div className="mt-2 space-y-3">
+            {ENGINE_LIST.map((eng) => {
+              const form = engineForms[eng.id];
+              if (!form) return null;
+              return (
+                <div key={eng.id} className="bg-muted/20 rounded-md p-2.5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-foreground/80">{eng.label}</span>
+                    <button
+                      onClick={() => {
+                        setEngineForms((prev) => ({
+                          ...prev,
+                          [eng.id]: { ...prev[eng.id], enabled: !prev[eng.id].enabled },
+                        }));
+                      }}
+                      className={cn(
+                        "relative w-7 h-[16px] rounded-full transition-colors",
+                        form.enabled ? "bg-primary/80" : "bg-muted"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "absolute top-[2px] left-[2px] w-[12px] h-[12px] rounded-full bg-white shadow transition-transform",
+                          form.enabled && "translate-x-[11px]"
+                        )}
+                      />
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder={t("translate.apiKey")}
+                    value={form.apiKey}
+                    onChange={(e) =>
+                      setEngineForms((prev) => ({
+                        ...prev,
+                        [eng.id]: { ...prev[eng.id], apiKey: e.target.value },
+                      }))
+                    }
+                    className="w-full h-6 px-2 text-[11px] bg-background border border-border/50 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+                  />
+                  {eng.hasSecret && (
+                    <input
+                      type="password"
+                      placeholder={t("translate.apiSecret")}
+                      value={form.apiSecret}
+                      onChange={(e) =>
+                        setEngineForms((prev) => ({
+                          ...prev,
+                          [eng.id]: { ...prev[eng.id], apiSecret: e.target.value },
+                        }))
+                      }
+                      className="w-full h-6 px-2 text-[11px] bg-background border border-border/50 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+                    />
+                  )}
+                  <button
+                    onClick={() => handleSaveEngine(eng.id)}
+                    className="h-6 px-3 text-[10px] font-medium bg-primary/15 text-primary hover:bg-primary/25 rounded transition-colors"
+                  >
+                    {savedEngine === eng.id ? t("translate.saved") : t("translate.save")}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </section>
       </div>
