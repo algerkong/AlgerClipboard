@@ -11,6 +11,9 @@ use storage::database::Database;
 use std::sync::Arc;
 use tauri::Emitter;
 use tauri::Manager;
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
+use tauri::tray::{TrayIconBuilder, MouseButton, MouseButtonState};
+use tauri::menu::{Menu, MenuItem};
 
 fn get_device_id() -> String {
     let hostname = hostname::get()
@@ -51,6 +54,54 @@ pub fn run() {
             monitor.start(db.clone(), blob_store, move |entry| {
                 let _ = app_handle.emit("clipboard-changed", &entry);
             });
+
+            // Global shortcut: CmdOrCtrl+Shift+V to toggle window visibility
+            let shortcut_window = app.get_webview_window("main").unwrap();
+            let shortcut: Shortcut = "CmdOrCtrl+Shift+V".parse().unwrap();
+            app.global_shortcut().on_shortcut(shortcut, move |_app, _shortcut, event| {
+                if event.state == ShortcutState::Pressed {
+                    if shortcut_window.is_visible().unwrap_or(false) {
+                        let _ = shortcut_window.hide();
+                    } else {
+                        let _ = shortcut_window.show();
+                        let _ = shortcut_window.set_focus();
+                    }
+                }
+            })?;
+
+            // System tray with Show + Quit menu
+            let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let show = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show, &quit])?;
+
+            let tray_window = app.get_webview_window("main").unwrap();
+            TrayIconBuilder::new()
+                .menu(&menu)
+                .on_menu_event(move |app: &tauri::AppHandle, event| {
+                    match event.id.as_ref() {
+                        "quit" => app.exit(0),
+                        "show" => {
+                            let _ = tray_window.show();
+                            let _ = tray_window.set_focus();
+                        }
+                        _ => {}
+                    }
+                })
+                .on_tray_icon_event(|tray: &tauri::tray::TrayIcon, event| {
+                    if let tauri::tray::TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        let app = tray.app_handle();
+                        if let Some(win) = app.get_webview_window("main") {
+                            let _ = win.show();
+                            let _ = win.set_focus();
+                        }
+                    }
+                })
+                .build(app)?;
 
             Ok(())
         })

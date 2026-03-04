@@ -13,10 +13,15 @@
     "windows": [
       {
         "title": "AlgerClipboard",
-        "width": 800,
-        "height": 600,
+        "width": 600,
+        "height": 500,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "visible": true,
+        "skipTaskbar": true,
+        "center": true
       }
     ],
     "security": {
