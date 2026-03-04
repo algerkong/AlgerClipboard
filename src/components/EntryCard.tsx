@@ -273,7 +273,7 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
       <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-background/90 backdrop-blur-sm rounded-md shadow-sm border border-border/30 px-0.5">
         {isImage && (
           <button
-            onClick={(e) => { e.stopPropagation(); openImageViewer(); }}
+            onClick={(e) => { e.stopPropagation(); handleOpenImageViewer(); }}
             className="p-1 rounded text-muted-foreground hover:text-blue-400 transition-colors"
             title={t("imageViewer.extractText")}
           >

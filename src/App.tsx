@@ -64,7 +64,6 @@ function MainApp() {
   const setSyncStatus = useSyncStore((s) => s.setSyncStatus);
   const triggerSync = useSyncStore((s) => s.triggerSync);
   const accounts = useSyncStore((s) => s.accounts);
-  const syncStatus = useSyncStore((s) => s.syncStatus);
 
   // Load settings, history, and sync accounts on mount
   useEffect(() => {

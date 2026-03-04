@@ -12,10 +12,10 @@ import { toast } from "sonner";
 
 interface Props {
   onOpenSettings: () => void;
-  onOpenTemplates: () => void;
+  onOpenTemplates?: () => void;
 }
 
-export function ClipboardPanel({ onOpenSettings, onOpenTemplates }: Props) {
+export function ClipboardPanel({ onOpenSettings }: Props) {
   const { t } = useTranslation();
   const entries = useClipboardStore((s) => s.entries);
   const showFavoritesOnly = useClipboardStore((s) => s.showFavoritesOnly);
