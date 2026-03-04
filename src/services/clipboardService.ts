@@ -26,6 +26,10 @@ export async function toggleFavorite(id: string): Promise<boolean> {
   return invoke("toggle_favorite", { id });
 }
 
+export async function togglePin(id: string): Promise<boolean> {
+  return invoke("toggle_pin", { id });
+}
+
 export async function clearHistory(keepFavorites: boolean): Promise<void> {
   return invoke("clear_history", { keepFavorites });
 }
@@ -47,4 +51,24 @@ export async function importData(jsonData: string): Promise<number> {
 
 export async function getEntryCount(): Promise<number> {
   return invoke("get_entry_count");
+}
+
+export interface CacheInfo {
+  cache_dir: string;
+  total_size_bytes: number;
+  file_count: number;
+  blob_count: number;
+  thumbnail_count: number;
+}
+
+export async function getThumbnailBase64(relativePath: string): Promise<string> {
+  return invoke("get_thumbnail_base64", { relativePath });
+}
+
+export async function getCacheInfo(): Promise<CacheInfo> {
+  return invoke("get_cache_info");
+}
+
+export async function cleanupCache(): Promise<number> {
+  return invoke("cleanup_cache");
 }

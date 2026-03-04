@@ -15,6 +15,21 @@ pub struct Template {
     pub updated_at: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SyncAccount {
+    pub id: String,
+    pub provider: String,
+    pub config: String,
+    pub sync_frequency: String,
+    pub interval_minutes: Option<i64>,
+    pub encryption_enabled: bool,
+    pub last_sync_at: Option<String>,
+    pub last_sync_version: i64,
+    pub enabled: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
 pub struct Database {
     conn: Mutex<Connection>,
 }
@@ -49,6 +64,7 @@ impl Database {
                 source_app TEXT,
                 device_id TEXT NOT NULL,
                 is_favorite INTEGER DEFAULT 0,
+                is_pinned INTEGER DEFAULT 0,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 synced_at TEXT,
@@ -86,6 +102,33 @@ impl Database {
         )
         .map_err(|e| format!("Failed to create tables: {}", e))?;
 
+        // Migration: add is_pinned column if it doesn't exist (for existing DBs)
+        let _ = conn.execute_batch(
+            "ALTER TABLE entries ADD COLUMN is_pinned INTEGER DEFAULT 0;"
+        );
+
+        // Migration: add sync_version column
+        let _ = conn.execute_batch(
+            "ALTER TABLE entries ADD COLUMN sync_version INTEGER DEFAULT 0;"
+        );
+
+        // Sync accounts table
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS sync_accounts (
+                id TEXT PRIMARY KEY,
+                provider TEXT NOT NULL,
+                config TEXT NOT NULL,
+                sync_frequency TEXT NOT NULL DEFAULT 'manual',
+                interval_minutes INTEGER,
+                encryption_enabled INTEGER DEFAULT 0,
+                last_sync_at TEXT,
+                last_sync_version INTEGER DEFAULT 0,
+                enabled INTEGER DEFAULT 1,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );"
+        ).map_err(|e| format!("Failed to create sync_accounts table: {}", e))?;
+
         Ok(())
     }
 
@@ -93,8 +136,8 @@ impl Database {
         let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
         conn.execute(
-            "INSERT OR REPLACE INTO entries (id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, device_id, is_favorite, created_at, updated_at, synced_at, sync_status, deleted)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, 0)",
+            "INSERT OR REPLACE INTO entries (id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, deleted)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, 0)",
             params![
                 entry.id,
                 entry.content_type.as_str(),
@@ -106,10 +149,12 @@ impl Database {
                 entry.source_app,
                 entry.device_id,
                 entry.is_favorite as i32,
+                entry.is_pinned as i32,
                 entry.created_at,
                 entry.updated_at,
                 entry.synced_at,
                 entry.sync_status.as_str(),
+                entry.sync_version,
             ],
         )
         .map_err(|e| format!("Failed to insert entry: {}", e))?;
@@ -131,7 +176,7 @@ impl Database {
 
         let mut stmt = conn
             .prepare(
-                "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, device_id, is_favorite, created_at, updated_at, synced_at, sync_status
+                "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version
                  FROM entries WHERE content_hash = ?1 AND deleted = 0 LIMIT 1",
             )
             .map_err(|e| format!("Prepare error: {}", e))?;
@@ -164,7 +209,7 @@ impl Database {
         let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
         let mut sql = String::from(
-            "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, device_id, is_favorite, created_at, updated_at, synced_at, sync_status
+            "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version
              FROM entries WHERE deleted = 0",
         );
         let mut param_values: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
@@ -179,7 +224,7 @@ impl Database {
             param_values.push(Box::new(format!("%{}%", kw)));
         }
 
-        sql.push_str(" ORDER BY created_at DESC LIMIT ? OFFSET ?");
+        sql.push_str(" ORDER BY is_pinned DESC, created_at DESC LIMIT ? OFFSET ?");
         param_values.push(Box::new(limit));
         param_values.push(Box::new(offset));
 
@@ -212,7 +257,7 @@ impl Database {
 
         let mut stmt = conn
             .prepare(
-                "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, device_id, is_favorite, created_at, updated_at, synced_at, sync_status
+                "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version
                  FROM entries WHERE id = ?1 AND deleted = 0",
             )
             .map_err(|e| format!("Prepare error: {}", e))?;
@@ -268,6 +313,29 @@ impl Database {
                 },
             )
             .map_err(|e| format!("Failed to read favorite state: {}", e))?;
+
+        Ok(new_state)
+    }
+
+    pub fn toggle_pin(&self, id: &str) -> Result<bool, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+        conn.execute(
+            "UPDATE entries SET is_pinned = CASE WHEN is_pinned = 0 THEN 1 ELSE 0 END, updated_at = ?1 WHERE id = ?2",
+            params![now_iso(), id],
+        )
+        .map_err(|e| format!("Failed to toggle pin: {}", e))?;
+
+        let new_state: bool = conn
+            .query_row(
+                "SELECT is_pinned FROM entries WHERE id = ?1",
+                params![id],
+                |row| {
+                    let val: i32 = row.get(0)?;
+                    Ok(val != 0)
+                },
+            )
+            .map_err(|e| format!("Failed to read pin state: {}", e))?;
 
         Ok(new_state)
     }
@@ -525,7 +593,7 @@ impl Database {
 
         let mut stmt = conn
             .prepare(
-                "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, device_id, is_favorite, created_at, updated_at, synced_at, sync_status
+                "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version
                  FROM entries WHERE deleted = 0 ORDER BY created_at DESC",
             )
             .map_err(|e| format!("Prepare error: {}", e))?;
@@ -564,8 +632,8 @@ impl Database {
             }
 
             conn.execute(
-                "INSERT OR IGNORE INTO entries (id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, device_id, is_favorite, created_at, updated_at, synced_at, sync_status, deleted)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, 0)",
+                "INSERT OR IGNORE INTO entries (id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, deleted)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, 0)",
                 params![
                     entry.id,
                     entry.content_type.as_str(),
@@ -577,6 +645,7 @@ impl Database {
                     entry.source_app,
                     entry.device_id,
                     entry.is_favorite as i32,
+                    entry.is_pinned as i32,
                     entry.created_at,
                     entry.updated_at,
                     entry.synced_at,
@@ -600,12 +669,227 @@ impl Database {
         )
         .map_err(|e| format!("Failed to count entries: {}", e))
     }
+
+    /// Get all blob_path and thumbnail_path values from non-deleted entries
+    pub fn get_all_blob_paths(&self) -> Result<(Vec<String>, Vec<String>), String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+        let mut stmt = conn
+            .prepare("SELECT blob_path, thumbnail_path FROM entries WHERE deleted = 0")
+            .map_err(|e| format!("Prepare error: {}", e))?;
+
+        let mut blob_paths = Vec::new();
+        let mut thumb_paths = Vec::new();
+
+        let rows = stmt
+            .query_map([], |row| {
+                let bp: Option<String> = row.get(0)?;
+                let tp: Option<String> = row.get(1)?;
+                Ok((bp, tp))
+            })
+            .map_err(|e| format!("Query error: {}", e))?;
+
+        for row in rows {
+            let (bp, tp) = row.map_err(|e| format!("Row error: {}", e))?;
+            if let Some(b) = bp {
+                blob_paths.push(b);
+            }
+            if let Some(t) = tp {
+                thumb_paths.push(t);
+            }
+        }
+
+        Ok((blob_paths, thumb_paths))
+    }
+
+    /// Get blob/thumbnail paths for entries that exceed the cache limit
+    /// Returns paths of the oldest non-favorite entries exceeding max_count
+    pub fn get_entries_to_cleanup(&self, max_count: i64) -> Result<(Vec<String>, Vec<String>), String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT blob_path, thumbnail_path FROM entries
+                 WHERE deleted = 0 AND is_favorite = 0 AND (blob_path IS NOT NULL OR thumbnail_path IS NOT NULL)
+                 ORDER BY created_at DESC
+                 LIMIT -1 OFFSET ?1"
+            )
+            .map_err(|e| format!("Prepare error: {}", e))?;
+
+        let mut blob_paths = Vec::new();
+        let mut thumb_paths = Vec::new();
+
+        let rows = stmt
+            .query_map(params![max_count], |row| {
+                let bp: Option<String> = row.get(0)?;
+                let tp: Option<String> = row.get(1)?;
+                Ok((bp, tp))
+            })
+            .map_err(|e| format!("Query error: {}", e))?;
+
+        for row in rows {
+            let (bp, tp) = row.map_err(|e| format!("Row error: {}", e))?;
+            if let Some(b) = bp {
+                blob_paths.push(b);
+            }
+            if let Some(t) = tp {
+                thumb_paths.push(t);
+            }
+        }
+
+        Ok((blob_paths, thumb_paths))
+    }
+
+    // --- Sync Account CRUD ---
+
+    pub fn create_sync_account(&self, account: &SyncAccount) -> Result<(), String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        conn.execute(
+            "INSERT INTO sync_accounts (id, provider, config, sync_frequency, interval_minutes, encryption_enabled, last_sync_at, last_sync_version, enabled, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            params![
+                account.id, account.provider, account.config, account.sync_frequency,
+                account.interval_minutes, account.encryption_enabled as i32,
+                account.last_sync_at, account.last_sync_version, account.enabled as i32,
+                account.created_at, account.updated_at
+            ],
+        ).map_err(|e| format!("Failed to create sync account: {}", e))?;
+        Ok(())
+    }
+
+    pub fn get_sync_accounts(&self) -> Result<Vec<SyncAccount>, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        let mut stmt = conn.prepare(
+            "SELECT id, provider, config, sync_frequency, interval_minutes, encryption_enabled, last_sync_at, last_sync_version, enabled, created_at, updated_at FROM sync_accounts ORDER BY created_at"
+        ).map_err(|e| format!("Prepare error: {}", e))?;
+
+        let rows = stmt.query_map([], |row| {
+            let enc: i32 = row.get("encryption_enabled")?;
+            let en: i32 = row.get("enabled")?;
+            Ok(SyncAccount {
+                id: row.get("id")?,
+                provider: row.get("provider")?,
+                config: row.get("config")?,
+                sync_frequency: row.get("sync_frequency")?,
+                interval_minutes: row.get("interval_minutes")?,
+                encryption_enabled: enc != 0,
+                last_sync_at: row.get("last_sync_at")?,
+                last_sync_version: row.get("last_sync_version")?,
+                enabled: en != 0,
+                created_at: row.get("created_at")?,
+                updated_at: row.get("updated_at")?,
+            })
+        }).map_err(|e| format!("Query error: {}", e))?;
+
+        let mut result = Vec::new();
+        for row in rows {
+            result.push(row.map_err(|e| format!("Row error: {}", e))?);
+        }
+        Ok(result)
+    }
+
+    pub fn get_sync_account(&self, id: &str) -> Result<Option<SyncAccount>, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        let result = conn.query_row(
+            "SELECT id, provider, config, sync_frequency, interval_minutes, encryption_enabled, last_sync_at, last_sync_version, enabled, created_at, updated_at FROM sync_accounts WHERE id = ?1",
+            params![id],
+            |row| {
+                let enc: i32 = row.get("encryption_enabled")?;
+                let en: i32 = row.get("enabled")?;
+                Ok(SyncAccount {
+                    id: row.get("id")?,
+                    provider: row.get("provider")?,
+                    config: row.get("config")?,
+                    sync_frequency: row.get("sync_frequency")?,
+                    interval_minutes: row.get("interval_minutes")?,
+                    encryption_enabled: enc != 0,
+                    last_sync_at: row.get("last_sync_at")?,
+                    last_sync_version: row.get("last_sync_version")?,
+                    enabled: en != 0,
+                    created_at: row.get("created_at")?,
+                    updated_at: row.get("updated_at")?,
+                })
+            },
+        );
+        match result {
+            Ok(a) => Ok(Some(a)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(format!("Failed to get sync account: {}", e)),
+        }
+    }
+
+    pub fn update_sync_account(&self, account: &SyncAccount) -> Result<(), String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        conn.execute(
+            "UPDATE sync_accounts SET config = ?1, sync_frequency = ?2, interval_minutes = ?3, encryption_enabled = ?4, last_sync_at = ?5, last_sync_version = ?6, enabled = ?7, updated_at = ?8 WHERE id = ?9",
+            params![
+                account.config, account.sync_frequency, account.interval_minutes,
+                account.encryption_enabled as i32, account.last_sync_at,
+                account.last_sync_version, account.enabled as i32, account.updated_at, account.id
+            ],
+        ).map_err(|e| format!("Failed to update sync account: {}", e))?;
+        Ok(())
+    }
+
+    pub fn delete_sync_account(&self, id: &str) -> Result<(), String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        conn.execute("DELETE FROM sync_accounts WHERE id = ?1", params![id])
+            .map_err(|e| format!("Failed to delete sync account: {}", e))?;
+        Ok(())
+    }
+
+    pub fn get_entries_since_version(&self, version: i64) -> Result<Vec<ClipboardEntry>, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        // Pick up entries that either:
+        //   - have a sync_version greater than the last synced version, OR
+        //   - have never been synced (sync_status = 'Local')
+        let mut stmt = conn.prepare(
+            "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version
+             FROM entries WHERE (sync_version > ?1 OR sync_status = 'local') AND deleted = 0 ORDER BY created_at ASC"
+        ).map_err(|e| format!("Prepare error: {}", e))?;
+
+        let entries = stmt.query_map(params![version], |row| Ok(row_to_entry_inner(row)))
+            .map_err(|e| format!("Query error: {}", e))?;
+
+        let mut result = Vec::new();
+        for entry_result in entries {
+            let mut entry = entry_result.map_err(|e| format!("Row error: {}", e))?;
+            let tags = self.get_tags_for_entry_with_conn(&conn, &entry.id)?;
+            entry.tags = tags;
+            result.push(entry);
+        }
+        Ok(result)
+    }
+
+    pub fn update_entry_sync_status(&self, id: &str, status: &str, synced_at: &str) -> Result<(), String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        conn.execute(
+            "UPDATE entries SET sync_status = ?1, synced_at = ?2, updated_at = ?3 WHERE id = ?4",
+            params![status, synced_at, now_iso(), id],
+        ).map_err(|e| format!("Failed to update sync status: {}", e))?;
+        Ok(())
+    }
+
+    pub fn increment_sync_version(&self, id: &str) -> Result<i64, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        conn.execute(
+            "UPDATE entries SET sync_version = sync_version + 1, updated_at = ?1 WHERE id = ?2",
+            params![now_iso(), id],
+        ).map_err(|e| format!("Failed to increment sync version: {}", e))?;
+        let version: i64 = conn.query_row(
+            "SELECT sync_version FROM entries WHERE id = ?1",
+            params![id],
+            |row| row.get(0),
+        ).map_err(|e| format!("Failed to read sync version: {}", e))?;
+        Ok(version)
+    }
 }
 
 fn row_to_entry_inner(row: &rusqlite::Row) -> ClipboardEntry {
     let content_type_str: String = row.get("content_type").unwrap_or_default();
     let sync_status_str: String = row.get("sync_status").unwrap_or_default();
     let is_fav: i32 = row.get("is_favorite").unwrap_or(0);
+    let is_pin: i32 = row.get("is_pinned").unwrap_or(0);
 
     ClipboardEntry {
         id: row.get("id").unwrap_or_default(),
@@ -618,11 +902,13 @@ fn row_to_entry_inner(row: &rusqlite::Row) -> ClipboardEntry {
         source_app: row.get("source_app").unwrap_or(None),
         device_id: row.get("device_id").unwrap_or_default(),
         is_favorite: is_fav != 0,
+        is_pinned: is_pin != 0,
         tags: Vec::new(), // tags are loaded separately
         created_at: row.get("created_at").unwrap_or_default(),
         updated_at: row.get("updated_at").unwrap_or_default(),
         synced_at: row.get("synced_at").unwrap_or(None),
         sync_status: SyncStatus::from_str(&sync_status_str),
+        sync_version: row.get("sync_version").unwrap_or(0),
     }
 }
 
