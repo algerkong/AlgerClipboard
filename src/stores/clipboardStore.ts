@@ -4,6 +4,7 @@ import {
   getClipboardHistory,
   deleteEntries as deleteEntriesApi,
   toggleFavorite as toggleFavoriteApi,
+  togglePin as togglePinApi,
 } from "@/services/clipboardService";
 
 interface ClipboardState {
@@ -20,6 +21,7 @@ interface ClipboardState {
   setShowFavoritesOnly: (show: boolean) => void;
   selectEntry: (id: string | null) => void;
   toggleFavorite: (id: string) => Promise<void>;
+  togglePin: (id: string) => Promise<void>;
   deleteEntries: (ids: string[]) => Promise<void>;
   addEntry: (entry: ClipboardEntry) => void;
 }
@@ -78,6 +80,21 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
       }));
     } catch (err) {
       console.error("Failed to toggle favorite:", err);
+    }
+  },
+
+  togglePin: async (id: string) => {
+    try {
+      const newValue = await togglePinApi(id);
+      set((state) => ({
+        entries: state.entries.map((e) =>
+          e.id === id ? { ...e, is_pinned: newValue } : e
+        ),
+      }));
+      // Re-fetch to get correct sort order (pinned first)
+      get().fetchHistory();
+    } catch (err) {
+      console.error("Failed to toggle pin:", err);
     }
   },
 

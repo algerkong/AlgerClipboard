@@ -36,18 +36,18 @@ export function SearchBar() {
 
   return (
     <div className="relative flex items-center flex-1">
-      <Search className="absolute left-2 w-3.5 h-3.5 text-muted-foreground/50 pointer-events-none" />
+      <Search className="absolute left-2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
       <input
         ref={inputRef}
         placeholder={t("searchBar.placeholder")}
         defaultValue={keyword}
         onChange={handleChange}
-        className="w-full h-7 pl-7 pr-7 text-xs bg-muted/50 border border-border/50 rounded-md text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-ring/30 focus:bg-muted"
+        className="w-full h-7 pl-7 pr-7 text-xs bg-muted/50 border border-border/50 rounded-md text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-ring/30 focus:bg-muted"
       />
       {keyword && (
         <button
           onClick={handleClear}
-          className="absolute right-1.5 p-0.5 rounded text-muted-foreground/50 hover:text-foreground"
+          className="absolute right-1.5 p-0.5 rounded text-muted-foreground hover:text-foreground"
         >
           <X className="w-3 h-3" />
         </button>

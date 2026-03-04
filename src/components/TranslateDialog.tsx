@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { X, Loader2 } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { X, Loader2, RefreshCw } from "lucide-react";
 import { useTranslateStore } from "@/stores/translateStore";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -33,6 +33,16 @@ export function TranslateDialog({ text, onClose }: Props) {
   const setToLang = useTranslateStore((s) => s.setToLang);
   const clearResult = useTranslateStore((s) => s.clearResult);
 
+  const autoTranslated = useRef(false);
+
+  // Auto-translate on open
+  useEffect(() => {
+    if (!autoTranslated.current) {
+      autoTranslated.current = true;
+      translate(text);
+    }
+  }, [text, translate]);
+
   useEffect(() => {
     return () => clearResult();
   }, [clearResult]);
@@ -47,7 +57,7 @@ export function TranslateDialog({ text, onClose }: Props) {
       onClick={(e) => { e.stopPropagation(); onClose(); }}
     >
       <div
-        className="bg-background border border-border/50 rounded-lg shadow-xl w-[340px] max-h-[400px] flex flex-col"
+        className="bg-background border border-border/50 rounded-lg shadow-xl w-[400px] max-h-[520px] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -55,7 +65,7 @@ export function TranslateDialog({ text, onClose }: Props) {
           <span className="text-xs font-medium">{t("translate.title")}</span>
           <button
             onClick={onClose}
-            className="p-0.5 rounded text-muted-foreground/50 hover:text-foreground transition-colors"
+            className="p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -65,16 +75,44 @@ export function TranslateDialog({ text, onClose }: Props) {
         <div className="flex-1 overflow-y-auto p-3 space-y-3">
           {/* Source text */}
           <div>
-            <p className="text-[10px] text-muted-foreground/60 mb-1">{t("translate.from")}</p>
-            <p className="text-[11px] text-foreground/80 bg-muted/20 rounded p-2 max-h-[80px] overflow-y-auto break-all leading-relaxed">
-              {text.length > 300 ? text.substring(0, 300) + "\u2026" : text}
+            <p className="text-[10px] text-muted-foreground mb-1">{t("translate.from")}</p>
+            <p className="text-[11px] text-foreground bg-muted/20 rounded p-2 max-h-[100px] overflow-y-auto break-all leading-relaxed">
+              {text.length > 500 ? text.substring(0, 500) + "\u2026" : text}
             </p>
           </div>
 
-          {/* Language selectors */}
+          {/* Result — shown directly when available */}
+          {loading && (
+            <div className="flex items-center justify-center gap-1.5 py-4 text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-[11px]">{t("translate.translating")}</span>
+            </div>
+          )}
+
+          {error && (
+            <p className="text-[10px] text-red-400 bg-red-400/10 rounded p-2">
+              {t("translate.error")}: {error}
+            </p>
+          )}
+
+          {result && (
+            <div>
+              <p className="text-[10px] text-muted-foreground mb-1">
+                {t("translate.result")}
+                {result.engine && (
+                  <span className="ml-1 text-primary/60">({result.engine})</span>
+                )}
+              </p>
+              <p className="text-[11px] text-foreground bg-primary/5 rounded p-2 max-h-[140px] overflow-y-auto break-all leading-relaxed select-text">
+                {result.translated}
+              </p>
+            </div>
+          )}
+
+          {/* Language selectors + re-translate */}
           <div className="flex items-center gap-2">
             <div className="flex-1">
-              <label className="text-[10px] text-muted-foreground/60">{t("translate.from")}</label>
+              <label className="text-[10px] text-muted-foreground">{t("translate.from")}</label>
               <select
                 value={fromLang}
                 onChange={(e) => setFromLang(e.target.value)}
@@ -87,9 +125,9 @@ export function TranslateDialog({ text, onClose }: Props) {
                 ))}
               </select>
             </div>
-            <span className="text-muted-foreground/40 mt-3">&rarr;</span>
+            <span className="text-muted-foreground mt-3">&rarr;</span>
             <div className="flex-1">
-              <label className="text-[10px] text-muted-foreground/60">{t("translate.to")}</label>
+              <label className="text-[10px] text-muted-foreground">{t("translate.to")}</label>
               <select
                 value={toLang}
                 onChange={(e) => setToLang(e.target.value)}
@@ -102,50 +140,21 @@ export function TranslateDialog({ text, onClose }: Props) {
                 ))}
               </select>
             </div>
+            <button
+              onClick={handleTranslate}
+              disabled={loading}
+              className={cn(
+                "mt-4 shrink-0 flex items-center gap-1 h-6 px-2.5 rounded text-[11px] font-medium transition-colors",
+                loading
+                  ? "bg-muted/50 text-muted-foreground cursor-not-allowed"
+                  : "bg-primary/15 text-primary hover:bg-primary/25"
+              )}
+              title={t("translate.translate")}
+            >
+              <RefreshCw className={cn("w-3 h-3", loading && "animate-spin")} />
+              {t("translate.translate")}
+            </button>
           </div>
-
-          {/* Translate button */}
-          <button
-            onClick={handleTranslate}
-            disabled={loading}
-            className={cn(
-              "w-full h-7 rounded-md text-[11px] font-medium transition-colors",
-              loading
-                ? "bg-muted/50 text-muted-foreground/50 cursor-not-allowed"
-                : "bg-primary/15 text-primary hover:bg-primary/25"
-            )}
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-1">
-                <Loader2 className="w-3 h-3 animate-spin" />
-                {t("translate.translating")}
-              </span>
-            ) : (
-              t("translate.translate")
-            )}
-          </button>
-
-          {/* Error */}
-          {error && (
-            <p className="text-[10px] text-red-400 bg-red-400/10 rounded p-2">
-              {t("translate.error")}: {error}
-            </p>
-          )}
-
-          {/* Result */}
-          {result && (
-            <div>
-              <p className="text-[10px] text-muted-foreground/60 mb-1">
-                {t("translate.result")}
-                {result.engine && (
-                  <span className="ml-1 text-primary/60">({result.engine})</span>
-                )}
-              </p>
-              <p className="text-[11px] text-foreground bg-primary/5 rounded p-2 max-h-[100px] overflow-y-auto break-all leading-relaxed">
-                {result.translated}
-              </p>
-            </div>
-          )}
         </div>
       </div>
     </div>
