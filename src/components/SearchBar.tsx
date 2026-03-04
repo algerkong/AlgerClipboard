@@ -1,5 +1,6 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Search, X } from "lucide-react";
+import { listen } from "@tauri-apps/api/event";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useClipboardStore } from "@/stores/clipboardStore";
@@ -9,6 +10,21 @@ export function SearchBar() {
   const setKeyword = useClipboardStore((s) => s.setKeyword);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Auto-focus search input on mount and when window gains focus
+  useEffect(() => {
+    // Focus on mount
+    inputRef.current?.focus();
+
+    // Focus when window becomes visible/focused via Tauri events
+    const unlistenFocus = listen("tauri://focus", () => {
+      inputRef.current?.focus();
+    });
+
+    return () => {
+      unlistenFocus.then((fn) => fn());
+    };
+  }, []);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {

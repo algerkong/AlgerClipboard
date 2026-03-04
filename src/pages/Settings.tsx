@@ -18,7 +18,7 @@ export function SettingsPage({ onBack }: SettingsProps) {
   const setPasteAndClose = useSettingsStore((s) => s.setPasteAndClose);
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <div className="flex items-center gap-2 p-2 shrink-0">
         <Button variant="ghost" size="icon-sm" onClick={onBack}>
