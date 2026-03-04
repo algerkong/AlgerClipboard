@@ -1,6 +1,7 @@
 import { ArrowLeft, Sun, Moon, Monitor } from "lucide-react";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 type Theme = "light" | "dark" | "system";
 
@@ -8,19 +9,32 @@ interface Props {
   onBack: () => void;
 }
 
+const languages = [
+  { value: "zh-CN", label: "\u4E2D\u6587" },
+  { value: "en", label: "English" },
+];
+
 export function SettingsPage({ onBack }: Props) {
+  const { t, i18n } = useTranslation();
   const theme = useSettingsStore((s) => s.theme);
   const maxHistory = useSettingsStore((s) => s.maxHistory);
   const pasteAndClose = useSettingsStore((s) => s.pasteAndClose);
+  const locale = useSettingsStore((s) => s.locale);
   const setTheme = useSettingsStore((s) => s.setTheme);
   const setMaxHistory = useSettingsStore((s) => s.setMaxHistory);
   const setPasteAndClose = useSettingsStore((s) => s.setPasteAndClose);
+  const setLocale = useSettingsStore((s) => s.setLocale);
 
-  const themes: { value: Theme; label: string; icon: React.ReactNode }[] = [
-    { value: "light", label: "Light", icon: <Sun className="w-3.5 h-3.5" /> },
-    { value: "dark", label: "Dark", icon: <Moon className="w-3.5 h-3.5" /> },
-    { value: "system", label: "Auto", icon: <Monitor className="w-3.5 h-3.5" /> },
+  const themes: { value: Theme; labelKey: string; icon: React.ReactNode }[] = [
+    { value: "light", labelKey: "settings.light", icon: <Sun className="w-3.5 h-3.5" /> },
+    { value: "dark", labelKey: "settings.dark", icon: <Moon className="w-3.5 h-3.5" /> },
+    { value: "system", labelKey: "settings.auto", icon: <Monitor className="w-3.5 h-3.5" /> },
   ];
+
+  const handleLocaleChange = (newLocale: string) => {
+    setLocale(newLocale);
+    i18n.changeLanguage(newLocale);
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -32,27 +46,53 @@ export function SettingsPage({ onBack }: Props) {
         >
           <ArrowLeft className="w-3.5 h-3.5" />
         </button>
-        <span className="text-xs font-medium">Settings</span>
+        <span className="text-xs font-medium">{t("settings.title")}</span>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-5">
-        {/* Theme */}
+        {/* Language */}
         <section>
-          <label className="text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider">Theme</label>
+          <label className="text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider">
+            {t("settings.language")}
+          </label>
           <div className="flex gap-1.5 mt-2">
-            {themes.map((t) => (
+            {languages.map((lang) => (
               <button
-                key={t.value}
-                onClick={() => setTheme(t.value)}
+                key={lang.value}
+                onClick={() => handleLocaleChange(lang.value)}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-colors",
-                  theme === t.value
+                  "flex-1 flex items-center justify-center py-1.5 rounded-md text-xs font-medium transition-colors",
+                  locale === lang.value
                     ? "bg-primary/15 text-primary ring-1 ring-primary/30"
                     : "bg-muted/30 text-muted-foreground/60 hover:bg-muted/50 hover:text-foreground"
                 )}
               >
-                {t.icon}
-                {t.label}
+                {lang.label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1 text-[10px] text-muted-foreground/40">{t("settings.languageDesc")}</p>
+        </section>
+
+        {/* Theme */}
+        <section>
+          <label className="text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider">
+            {t("settings.theme")}
+          </label>
+          <div className="flex gap-1.5 mt-2">
+            {themes.map((themeItem) => (
+              <button
+                key={themeItem.value}
+                onClick={() => setTheme(themeItem.value)}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-colors",
+                  theme === themeItem.value
+                    ? "bg-primary/15 text-primary ring-1 ring-primary/30"
+                    : "bg-muted/30 text-muted-foreground/60 hover:bg-muted/50 hover:text-foreground"
+                )}
+              >
+                {themeItem.icon}
+                {t(themeItem.labelKey)}
               </button>
             ))}
           </div>
@@ -61,7 +101,7 @@ export function SettingsPage({ onBack }: Props) {
         {/* Max history */}
         <section>
           <label className="text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider">
-            History Limit
+            {t("settings.historyLimit")}
           </label>
           <input
             type="number"
@@ -74,7 +114,7 @@ export function SettingsPage({ onBack }: Props) {
             }}
             className="mt-2 w-24 h-7 px-2 text-xs bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
           />
-          <p className="mt-1 text-[10px] text-muted-foreground/40">Maximum entries to keep</p>
+          <p className="mt-1 text-[10px] text-muted-foreground/40">{t("settings.maxEntries")}</p>
         </section>
 
         {/* Paste and close */}
@@ -82,9 +122,9 @@ export function SettingsPage({ onBack }: Props) {
           <div className="flex items-center justify-between">
             <div>
               <label className="text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider">
-                Auto-close after paste
+                {t("settings.autoClose")}
               </label>
-              <p className="mt-0.5 text-[10px] text-muted-foreground/40">Hide panel after pasting</p>
+              <p className="mt-0.5 text-[10px] text-muted-foreground/40">{t("settings.hidePanel")}</p>
             </div>
             <button
               onClick={() => setPasteAndClose(!pasteAndClose)}

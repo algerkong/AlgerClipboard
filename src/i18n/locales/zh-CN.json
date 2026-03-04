@@ -1,0 +1,38 @@
+{
+  "titleBar": {
+    "clipboard": "\u526A\u8D34\u677F"
+  },
+  "searchBar": {
+    "placeholder": "\u641C\u7D22..."
+  },
+  "typeFilter": {
+    "all": "\u5168\u90E8",
+    "text": "\u6587\u672C",
+    "image": "\u56FE\u7247",
+    "file": "\u6587\u4EF6",
+    "starred": "\u6536\u85CF"
+  },
+  "entryCard": {
+    "image": "\u56FE\u7247",
+    "file": "\u6587\u4EF6"
+  },
+  "clipboardPanel": {
+    "noEntries": "\u8FD8\u6CA1\u6709\u526A\u8D34\u677F\u8BB0\u5F55",
+    "copyToStart": "\u590D\u5236\u5185\u5BB9\u5373\u53EF\u5F00\u59CB",
+    "items": "{{count}} \u6761\u8BB0\u5F55",
+    "pasteHint": "\u21B5 \u7C98\u8D34 \u00B7 esc \u5173\u95ED"
+  },
+  "settings": {
+    "title": "\u8BBE\u7F6E",
+    "theme": "\u4E3B\u9898",
+    "light": "\u6D45\u8272",
+    "dark": "\u6DF1\u8272",
+    "auto": "\u81EA\u52A8",
+    "historyLimit": "\u5386\u53F2\u8BB0\u5F55\u4E0A\u9650",
+    "maxEntries": "\u6700\u5927\u4FDD\u5B58\u6761\u6570",
+    "autoClose": "\u7C98\u8D34\u540E\u81EA\u52A8\u5173\u95ED",
+    "hidePanel": "\u7C98\u8D34\u540E\u9690\u85CF\u9762\u677F",
+    "language": "\u8BED\u8A00",
+    "languageDesc": "\u754C\u9762\u663E\u793A\u8BED\u8A00"
+  }
+}
