@@ -57,17 +57,27 @@ pub fn run() {
 
             // Global shortcut: CmdOrCtrl+Shift+V to toggle window visibility
             let shortcut_window = app.get_webview_window("main").unwrap();
-            let shortcut: Shortcut = "CmdOrCtrl+Shift+V".parse().unwrap();
-            app.global_shortcut().on_shortcut(shortcut, move |_app, _shortcut, event| {
-                if event.state == ShortcutState::Pressed {
-                    if shortcut_window.is_visible().unwrap_or(false) {
-                        let _ = shortcut_window.hide();
-                    } else {
-                        let _ = shortcut_window.show();
-                        let _ = shortcut_window.set_focus();
+            let shortcut_str = "CmdOrCtrl+Shift+V";
+            match shortcut_str.parse::<Shortcut>() {
+                Ok(shortcut) => {
+                    log::info!("Registering global shortcut: {}", shortcut_str);
+                    match app.global_shortcut().on_shortcut(shortcut, move |_app, _shortcut, event| {
+                        if event.state == ShortcutState::Pressed {
+                            log::info!("Global shortcut triggered");
+                            if shortcut_window.is_visible().unwrap_or(false) {
+                                let _ = shortcut_window.hide();
+                            } else {
+                                let _ = shortcut_window.show();
+                                let _ = shortcut_window.set_focus();
+                            }
+                        }
+                    }) {
+                        Ok(_) => log::info!("Global shortcut registered successfully"),
+                        Err(e) => log::error!("Failed to register global shortcut: {:?}", e),
                     }
                 }
-            })?;
+                Err(e) => log::error!("Failed to parse shortcut '{}': {:?}", shortcut_str, e),
+            }
 
             // System tray with Show + Quit menu
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
