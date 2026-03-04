@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, Sun, Moon, Monitor } from "lucide-react";
+import { ArrowLeft, Sun, Moon, Monitor, Download, Upload, Trash2 } from "lucide-react";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useTranslateStore } from "@/stores/translateStore";
+import { useClipboardStore } from "@/stores/clipboardStore";
+import { exportData, importData, clearHistory } from "@/services/clipboardService";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 type Theme = "light" | "dark" | "system";
 
@@ -180,6 +183,78 @@ export function SettingsPage({ onBack }: Props) {
                 )}
               />
             </button>
+          </div>
+        </section>
+
+        {/* Data management */}
+        <section>
+          <label className="text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider">
+            {t("settings.dataManagement")}
+          </label>
+          <div className="flex flex-col gap-2 mt-2">
+            <div className="flex gap-2">
+              <button
+                onClick={async () => {
+                  try {
+                    const json = await exportData();
+                    const blob = new Blob([json], { type: "application/json" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `alger-clipboard-backup-${new Date().toISOString().slice(0, 10)}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    toast.success(t("toast.exported"));
+                  } catch {
+                    toast.error(t("toast.exportFailed"));
+                  }
+                }}
+                className="flex items-center gap-1.5 h-7 px-3 text-[11px] font-medium bg-muted/30 hover:bg-muted/50 rounded-md transition-colors"
+              >
+                <Download className="w-3 h-3" />
+                {t("settings.export")}
+              </button>
+              <button
+                onClick={() => {
+                  const input = document.createElement("input");
+                  input.type = "file";
+                  input.accept = ".json";
+                  input.onchange = async (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (!file) return;
+                    try {
+                      const text = await file.text();
+                      const count = await importData(text);
+                      toast.success(t("toast.imported", { count }));
+                      useClipboardStore.getState().fetchHistory();
+                    } catch {
+                      toast.error(t("toast.importFailed"));
+                    }
+                  };
+                  input.click();
+                }}
+                className="flex items-center gap-1.5 h-7 px-3 text-[11px] font-medium bg-muted/30 hover:bg-muted/50 rounded-md transition-colors"
+              >
+                <Upload className="w-3 h-3" />
+                {t("settings.import")}
+              </button>
+            </div>
+            <button
+              onClick={async () => {
+                try {
+                  await clearHistory(true);
+                  useClipboardStore.getState().fetchHistory();
+                  toast.success(t("toast.cleared"));
+                } catch {
+                  toast.error(t("toast.clearFailed"));
+                }
+              }}
+              className="flex items-center gap-1.5 h-7 px-3 text-[11px] font-medium text-destructive bg-destructive/10 hover:bg-destructive/20 rounded-md transition-colors w-fit"
+            >
+              <Trash2 className="w-3 h-3" />
+              {t("settings.clearHistory")}
+            </button>
+            <p className="text-[10px] text-muted-foreground/40">{t("settings.clearHistoryDesc")}</p>
           </div>
         </section>
 

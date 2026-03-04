@@ -88,6 +88,17 @@ function App() {
     };
   }, [addEntry]);
 
+  // Auto-hide when window loses focus (unless pinned)
+  const isPinned = useSettingsStore((s) => s.isPinned);
+  useEffect(() => {
+    const unlisten = listen("tauri://blur", () => {
+      if (!isPinned) {
+        getCurrentWebviewWindow().hide();
+      }
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, [isPinned]);
+
   // Escape key hides the window
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -116,14 +127,18 @@ function App() {
       <TitleBar />
       <div className="flex-1 min-h-0">
         {showSettings ? (
-          <SettingsPage onBack={handleCloseSettings} />
+          <div className="h-full animate-slide-in">
+            <SettingsPage onBack={handleCloseSettings} />
+          </div>
         ) : showTemplates ? (
-          <TemplateManager onBack={handleCloseTemplates} />
+          <div className="h-full animate-slide-in">
+            <TemplateManager onBack={handleCloseTemplates} />
+          </div>
         ) : (
           <ClipboardPanel onOpenSettings={handleOpenSettings} onOpenTemplates={handleOpenTemplates} />
         )}
       </div>
-      <Toaster position="bottom-center" richColors />
+      <Toaster position="bottom-center" richColors duration={2000} toastOptions={{ style: { fontSize: "12px", padding: "8px 12px" } }} />
     </div>
   );
 }

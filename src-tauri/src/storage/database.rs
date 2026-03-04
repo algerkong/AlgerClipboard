@@ -517,6 +517,89 @@ impl Database {
 
         Ok(())
     }
+
+    // --- Export / Import ---
+
+    pub fn export_all_entries(&self) -> Result<Vec<ClipboardEntry>, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, device_id, is_favorite, created_at, updated_at, synced_at, sync_status
+                 FROM entries WHERE deleted = 0 ORDER BY created_at DESC",
+            )
+            .map_err(|e| format!("Prepare error: {}", e))?;
+
+        let entries = stmt
+            .query_map([], |row| Ok(row_to_entry_inner(row)))
+            .map_err(|e| format!("Query error: {}", e))?;
+
+        let mut result = Vec::new();
+        for entry_result in entries {
+            let mut entry = entry_result.map_err(|e| format!("Row error: {}", e))?;
+            let tags = self.get_tags_for_entry_with_conn(&conn, &entry.id)?;
+            entry.tags = tags;
+            result.push(entry);
+        }
+
+        Ok(result)
+    }
+
+    pub fn import_entries(&self, entries: &[ClipboardEntry]) -> Result<usize, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        let mut count = 0;
+
+        for entry in entries {
+            // Skip if entry with same hash already exists
+            let exists: bool = conn
+                .query_row(
+                    "SELECT COUNT(*) > 0 FROM entries WHERE content_hash = ?1 AND deleted = 0",
+                    params![entry.content_hash],
+                    |row| row.get(0),
+                )
+                .unwrap_or(false);
+
+            if exists {
+                continue;
+            }
+
+            conn.execute(
+                "INSERT OR IGNORE INTO entries (id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, device_id, is_favorite, created_at, updated_at, synced_at, sync_status, deleted)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, 0)",
+                params![
+                    entry.id,
+                    entry.content_type.as_str(),
+                    entry.text_content,
+                    entry.html_content,
+                    entry.blob_path,
+                    entry.thumbnail_path,
+                    entry.content_hash,
+                    entry.source_app,
+                    entry.device_id,
+                    entry.is_favorite as i32,
+                    entry.created_at,
+                    entry.updated_at,
+                    entry.synced_at,
+                    entry.sync_status.as_str(),
+                ],
+            )
+            .map_err(|e| format!("Failed to import entry: {}", e))?;
+
+            count += 1;
+        }
+
+        Ok(count)
+    }
+
+    pub fn get_entry_count(&self) -> Result<i64, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        conn.query_row(
+            "SELECT COUNT(*) FROM entries WHERE deleted = 0",
+            [],
+            |row| row.get(0),
+        )
+        .map_err(|e| format!("Failed to count entries: {}", e))
+    }
 }
 
 fn row_to_entry_inner(row: &rusqlite::Row) -> ClipboardEntry {

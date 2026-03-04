@@ -1,59 +1,74 @@
 {
   "titleBar": {
-    "clipboard": "\u526A\u8D34\u677F"
+    "clipboard": "剪贴板"
   },
   "searchBar": {
-    "placeholder": "\u641C\u7D22..."
+    "placeholder": "搜索..."
   },
   "typeFilter": {
-    "all": "\u5168\u90E8",
-    "text": "\u6587\u672C",
-    "image": "\u56FE\u7247",
-    "file": "\u6587\u4EF6",
-    "starred": "\u6536\u85CF"
+    "all": "全部",
+    "text": "文本",
+    "image": "图片",
+    "file": "文件",
+    "starred": "收藏"
   },
   "entryCard": {
-    "image": "\u56FE\u7247",
-    "file": "\u6587\u4EF6"
+    "image": "图片",
+    "file": "文件"
   },
   "clipboardPanel": {
-    "noEntries": "\u8FD8\u6CA1\u6709\u526A\u8D34\u677F\u8BB0\u5F55",
-    "copyToStart": "\u590D\u5236\u5185\u5BB9\u5373\u53EF\u5F00\u59CB",
-    "items": "{{count}} \u6761\u8BB0\u5F55",
-    "pasteHint": "\u21B5 \u7C98\u8D34 \u00B7 esc \u5173\u95ED"
+    "noEntries": "还没有剪贴板记录",
+    "copyToStart": "复制内容即可开始",
+    "items": "{{count}} 条记录",
+    "pasteHint": "↵ 粘贴 · esc 关闭"
   },
   "settings": {
-    "title": "\u8BBE\u7F6E",
-    "theme": "\u4E3B\u9898",
-    "light": "\u6D45\u8272",
-    "dark": "\u6DF1\u8272",
-    "auto": "\u81EA\u52A8",
-    "historyLimit": "\u5386\u53F2\u8BB0\u5F55\u4E0A\u9650",
-    "maxEntries": "\u6700\u5927\u4FDD\u5B58\u6761\u6570",
-    "autoClose": "\u7C98\u8D34\u540E\u81EA\u52A8\u5173\u95ED",
-    "hidePanel": "\u7C98\u8D34\u540E\u9690\u85CF\u9762\u677F",
-    "language": "\u8BED\u8A00",
-    "languageDesc": "\u754C\u9762\u663E\u793A\u8BED\u8A00"
+    "title": "设置",
+    "theme": "主题",
+    "light": "浅色",
+    "dark": "深色",
+    "auto": "自动",
+    "historyLimit": "历史记录上限",
+    "maxEntries": "最大保存条数",
+    "autoClose": "粘贴后自动关闭",
+    "hidePanel": "粘贴后隐藏面板",
+    "language": "语言",
+    "languageDesc": "界面显示语言",
+    "dataManagement": "数据管理",
+    "export": "导出",
+    "import": "导入",
+    "clearHistory": "清空历史",
+    "clearHistoryDesc": "清空所有非收藏记录"
   },
   "translate": {
-    "title": "\u7FFB\u8BD1",
-    "translate": "\u7FFB\u8BD1",
-    "close": "\u5173\u95ED",
-    "translating": "\u7FFB\u8BD1\u4E2D...",
-    "error": "\u7FFB\u8BD1\u5931\u8D25",
-    "from": "\u6E90\u8BED\u8A00",
-    "to": "\u76EE\u6807\u8BED\u8A00",
-    "auto": "\u81EA\u52A8\u68C0\u6D4B",
-    "engine": "\u5F15\u64CE",
-    "result": "\u7FFB\u8BD1\u7ED3\u679C",
-    "engineConfig": "\u7FFB\u8BD1\u5F15\u64CE",
+    "title": "翻译",
+    "translate": "翻译",
+    "close": "关闭",
+    "translating": "翻译中...",
+    "error": "翻译失败",
+    "from": "源语言",
+    "to": "目标语言",
+    "auto": "自动检测",
+    "engine": "引擎",
+    "result": "翻译结果",
+    "engineConfig": "翻译引擎",
     "apiKey": "API Key",
     "apiSecret": "API Secret",
-    "enabled": "\u542F\u7528",
-    "save": "\u4FDD\u5B58",
-    "saved": "\u5DF2\u4FDD\u5B58",
-    "testConnection": "\u6D4B\u8BD5",
-    "noEngines": "\u672A\u914D\u7F6E\u7FFB\u8BD1\u5F15\u64CE",
-    "configureHint": "\u8BF7\u5728\u8BBE\u7F6E\u4E2D\u914D\u7F6E API \u5BC6\u94A5"
+    "enabled": "启用",
+    "save": "保存",
+    "saved": "已保存",
+    "testConnection": "测试",
+    "noEngines": "未配置翻译引擎",
+    "configureHint": "请在设置中配置 API 密钥"
+  },
+  "toast": {
+    "pasted": "已粘贴",
+    "pasteFailed": "粘贴失败",
+    "exported": "导出成功",
+    "exportFailed": "导出失败",
+    "imported": "成功导入 {{count}} 条记录",
+    "importFailed": "导入失败",
+    "cleared": "历史已清空",
+    "clearFailed": "清空失败"
   }
 }

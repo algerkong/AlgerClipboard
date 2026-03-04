@@ -1,11 +1,12 @@
-import { useState } from "react";
 import { X, Minus, Pin, PinOff } from "lucide-react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useTranslation } from "react-i18next";
+import { useSettingsStore } from "@/stores/settingsStore";
 
 export function TitleBar() {
   const { t } = useTranslation();
-  const [isPinned, setIsPinned] = useState(true);
+  const isPinned = useSettingsStore((s) => s.isPinned);
+  const setIsPinned = useSettingsStore((s) => s.setIsPinned);
 
   const handleClose = () => getCurrentWebviewWindow().hide();
   const handleMinimize = () => getCurrentWebviewWindow().minimize();

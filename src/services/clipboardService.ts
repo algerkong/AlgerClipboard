@@ -36,3 +36,15 @@ export async function pasteEntry(
 ): Promise<void> {
   return invoke("paste_entry", { id, mode: mode ?? null });
 }
+
+export async function exportData(): Promise<string> {
+  return invoke("export_data");
+}
+
+export async function importData(jsonData: string): Promise<number> {
+  return invoke("import_data", { jsonData });
+}
+
+export async function getEntryCount(): Promise<number> {
+  return invoke("get_entry_count");
+}
