@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { Toaster } from "sonner";
+import { TitleBar } from "@/components/TitleBar";
 import { ClipboardPanel } from "@/pages/ClipboardPanel";
 import { SettingsPage } from "@/pages/Settings";
 import { useClipboardStore } from "@/stores/clipboardStore";
@@ -90,14 +91,17 @@ function App() {
   const handleCloseSettings = useCallback(() => setShowSettings(false), []);
 
   return (
-    <>
-      {showSettings ? (
-        <SettingsPage onBack={handleCloseSettings} />
-      ) : (
-        <ClipboardPanel onOpenSettings={handleOpenSettings} />
-      )}
+    <div className="flex flex-col h-screen overflow-hidden">
+      <TitleBar />
+      <div className="flex-1 min-h-0">
+        {showSettings ? (
+          <SettingsPage onBack={handleCloseSettings} />
+        ) : (
+          <ClipboardPanel onOpenSettings={handleOpenSettings} />
+        )}
+      </div>
       <Toaster position="bottom-center" richColors />
-    </>
+    </div>
   );
 }
 

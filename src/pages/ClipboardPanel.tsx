@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import { Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,8 +25,10 @@ export function ClipboardPanel({ onOpenSettings }: ClipboardPanelProps) {
     ? entries.filter((e) => e.is_favorite)
     : entries;
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
+  // Global keyboard handler for arrow navigation and Enter to paste
+  // Uses window-level listener so it works even when search input is focused
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (displayEntries.length === 0) return;
 
       const currentIndex = selectedId
@@ -61,9 +63,11 @@ export function ClipboardPanel({ onOpenSettings }: ClipboardPanelProps) {
           console.error("Failed to paste:", err)
         );
       }
-    },
-    [displayEntries, selectedId, selectEntry]
-  );
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [displayEntries, selectedId, selectEntry]);
 
   // Auto-select first entry when entries change and nothing is selected
   useEffect(() => {
@@ -74,11 +78,7 @@ export function ClipboardPanel({ onOpenSettings }: ClipboardPanelProps) {
 
   return (
     <TooltipProvider>
-      <div
-        className="flex flex-col h-screen bg-background"
-        onKeyDown={handleKeyDown}
-        tabIndex={-1}
-      >
+      <div className="flex flex-col h-full bg-background">
         {/* Header */}
         <div className="flex items-center gap-2 p-2 shrink-0">
           <div className="flex-1">
