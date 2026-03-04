@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useTranslation } from "react-i18next";
@@ -9,6 +9,7 @@ import { SettingsPage } from "@/pages/Settings";
 import { TemplateManager } from "@/pages/TemplateManager";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { useSyncStore } from "@/stores/syncStore";
 import type { ClipboardEntry } from "@/types";
 
 function applyTheme(theme: "light" | "dark" | "system") {
@@ -45,11 +46,18 @@ function App() {
     document.documentElement.classList.add("dark");
   }, []);
 
-  // Load settings and initial history on mount
+  const loadAccounts = useSyncStore((s) => s.loadAccounts);
+  const setSyncStatus = useSyncStore((s) => s.setSyncStatus);
+  const triggerSync = useSyncStore((s) => s.triggerSync);
+  const accounts = useSyncStore((s) => s.accounts);
+  const syncStatus = useSyncStore((s) => s.syncStatus);
+
+  // Load settings, history, and sync accounts on mount
   useEffect(() => {
     loadSettings();
     fetchHistory();
-  }, [loadSettings, fetchHistory]);
+    loadAccounts();
+  }, [loadSettings, fetchHistory, loadAccounts]);
 
   // Sync i18n language with stored locale
   useEffect(() => {
@@ -78,15 +86,64 @@ function App() {
   }, [theme]);
 
   // Listen for clipboard-changed event from Rust backend
+  // Use ref to avoid re-subscribing the listener when accounts change
+  const realtimeSyncRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    realtimeSyncRef.current = () => {
+      const realtimeAccounts = useSyncStore.getState().accounts.filter(
+        (a) => a.enabled && a.sync_frequency === "realtime"
+      );
+      const status = useSyncStore.getState().syncStatus;
+      if (status !== "syncing") {
+        for (const acc of realtimeAccounts) {
+          useSyncStore.getState().triggerSync(acc.id);
+        }
+      }
+    };
+  }, []);
+
   useEffect(() => {
     const unlisten = listen<ClipboardEntry>("clipboard-changed", (event) => {
       addEntry(event.payload);
+      // Trigger realtime sync after a short debounce
+      setTimeout(() => realtimeSyncRef.current(), 500);
     });
 
     return () => {
       unlisten.then((fn) => fn());
     };
   }, [addEntry]);
+
+  // Interval-based auto sync
+  useEffect(() => {
+    const intervalAccounts = accounts.filter(
+      (a) => a.enabled && a.sync_frequency === "interval" && a.interval_minutes
+    );
+    if (intervalAccounts.length === 0) return;
+
+    const timers = intervalAccounts.map((acc) => {
+      const ms = (acc.interval_minutes ?? 15) * 60 * 1000;
+      return setInterval(() => {
+        if (useSyncStore.getState().syncStatus !== "syncing") {
+          triggerSync(acc.id);
+        }
+      }, ms);
+    });
+
+    return () => timers.forEach(clearInterval);
+  }, [accounts, triggerSync]);
+
+  // Listen for sync-status-changed events from Rust backend
+  useEffect(() => {
+    const unlisten = listen<{ status: string; error?: string }>("sync-status-changed", (event) => {
+      const { status, error } = event.payload;
+      setSyncStatus(status as "idle" | "syncing" | "synced" | "error", error ?? null);
+      if (status === "synced") {
+        fetchHistory();
+      }
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, [setSyncStatus, fetchHistory]);
 
   // Auto-hide when window loses focus (unless pinned)
   const isPinned = useSettingsStore((s) => s.isPinned);
