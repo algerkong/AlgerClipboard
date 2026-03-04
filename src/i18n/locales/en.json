@@ -34,5 +34,26 @@
     "hidePanel": "Hide panel after pasting",
     "language": "Language",
     "languageDesc": "Interface display language"
+  },
+  "translate": {
+    "title": "Translate",
+    "translate": "Translate",
+    "close": "Close",
+    "translating": "Translating...",
+    "error": "Translation failed",
+    "from": "From",
+    "to": "To",
+    "auto": "Auto Detect",
+    "engine": "Engine",
+    "result": "Translation Result",
+    "engineConfig": "Translation Engines",
+    "apiKey": "API Key",
+    "apiSecret": "API Secret",
+    "enabled": "Enabled",
+    "save": "Save",
+    "saved": "Saved",
+    "testConnection": "Test",
+    "noEngines": "No translation engines configured",
+    "configureHint": "Configure API keys in Settings"
   }
 }

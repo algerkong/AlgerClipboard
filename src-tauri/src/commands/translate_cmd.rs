@@ -1,0 +1,149 @@
+use crate::commands::clipboard_cmd::AppDatabase;
+use crate::translate::baidu::BaiduTranslator;
+use crate::translate::engine::{dispatch_translate, TranslateEngine, TranslateResult};
+use crate::translate::google::GoogleTranslator;
+use crate::translate::youdao::YoudaoTranslator;
+use serde::{Deserialize, Serialize};
+use tauri::State;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EngineConfig {
+    pub engine: String,
+    pub api_key: String,
+    pub api_secret: String,
+    pub enabled: bool,
+}
+
+fn load_engine_configs(db: &AppDatabase) -> Vec<EngineConfig> {
+    let json_str = db.0.get_setting("translate_engines").unwrap_or(None);
+    match json_str {
+        Some(s) => serde_json::from_str(&s).unwrap_or_default(),
+        None => Vec::new(),
+    }
+}
+
+fn save_engine_configs(db: &AppDatabase, configs: &[EngineConfig]) -> Result<(), String> {
+    let json = serde_json::to_string(configs)
+        .map_err(|e| format!("Failed to serialize engine configs: {}", e))?;
+    db.0.set_setting("translate_engines", &json)
+}
+
+fn build_engines(configs: &[EngineConfig]) -> Vec<Box<dyn TranslateEngine>> {
+    let mut engines: Vec<Box<dyn TranslateEngine>> = Vec::new();
+
+    for cfg in configs {
+        if !cfg.enabled || cfg.api_key.is_empty() {
+            continue;
+        }
+        match cfg.engine.as_str() {
+            "baidu" => {
+                engines.push(Box::new(BaiduTranslator::new(
+                    cfg.api_key.clone(),
+                    cfg.api_secret.clone(),
+                )));
+            }
+            "youdao" => {
+                engines.push(Box::new(YoudaoTranslator::new(
+                    cfg.api_key.clone(),
+                    cfg.api_secret.clone(),
+                )));
+            }
+            "google" => {
+                engines.push(Box::new(GoogleTranslator::new(cfg.api_key.clone())));
+            }
+            _ => {
+                log::warn!("Unknown translation engine: {}", cfg.engine);
+            }
+        }
+    }
+
+    engines
+}
+
+fn build_engines_for_specific(
+    configs: &[EngineConfig],
+    engine_name: &str,
+) -> Vec<Box<dyn TranslateEngine>> {
+    // Put the requested engine first, then others as fallback
+    let mut primary: Vec<Box<dyn TranslateEngine>> = Vec::new();
+    let mut fallbacks: Vec<Box<dyn TranslateEngine>> = Vec::new();
+
+    for cfg in configs {
+        if !cfg.enabled || cfg.api_key.is_empty() {
+            continue;
+        }
+        let engine: Box<dyn TranslateEngine> = match cfg.engine.as_str() {
+            "baidu" => Box::new(BaiduTranslator::new(
+                cfg.api_key.clone(),
+                cfg.api_secret.clone(),
+            )),
+            "youdao" => Box::new(YoudaoTranslator::new(
+                cfg.api_key.clone(),
+                cfg.api_secret.clone(),
+            )),
+            "google" => Box::new(GoogleTranslator::new(cfg.api_key.clone())),
+            _ => continue,
+        };
+
+        if cfg.engine == engine_name {
+            primary.push(engine);
+        } else {
+            fallbacks.push(engine);
+        }
+    }
+
+    primary.extend(fallbacks);
+    primary
+}
+
+#[tauri::command]
+pub async fn translate_text(
+    db: State<'_, AppDatabase>,
+    text: String,
+    from: String,
+    to: String,
+    engine: Option<String>,
+) -> Result<TranslateResult, String> {
+    let configs = load_engine_configs(&db);
+
+    let engines = match engine {
+        Some(ref name) => build_engines_for_specific(&configs, name),
+        None => build_engines(&configs),
+    };
+
+    dispatch_translate(&engines, &text, &from, &to).await
+}
+
+#[tauri::command]
+pub fn get_translate_engines(
+    db: State<'_, AppDatabase>,
+) -> Result<Vec<EngineConfig>, String> {
+    Ok(load_engine_configs(&db))
+}
+
+#[tauri::command]
+pub fn configure_translate_engine(
+    db: State<'_, AppDatabase>,
+    engine: String,
+    api_key: String,
+    api_secret: String,
+    enabled: bool,
+) -> Result<(), String> {
+    let mut configs = load_engine_configs(&db);
+
+    // Update existing or add new
+    if let Some(cfg) = configs.iter_mut().find(|c| c.engine == engine) {
+        cfg.api_key = api_key;
+        cfg.api_secret = api_secret;
+        cfg.enabled = enabled;
+    } else {
+        configs.push(EngineConfig {
+            engine,
+            api_key,
+            api_secret,
+            enabled,
+        });
+    }
+
+    save_engine_configs(&db, &configs)
+}

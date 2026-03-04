@@ -1,10 +1,11 @@
-import { memo, useCallback } from "react";
-import { Star, Trash2, FileText, ImageIcon, FolderOpen } from "lucide-react";
+import { memo, useCallback, useState } from "react";
+import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages } from "lucide-react";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { pasteEntry } from "@/services/clipboardService";
 import type { ClipboardEntry } from "@/types";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import { TranslateDialog } from "@/components/TranslateDialog";
 
 function formatTimeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -42,6 +43,8 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
   const toggleFavorite = useClipboardStore((s) => s.toggleFavorite);
   const deleteEntries = useClipboardStore((s) => s.deleteEntries);
   const isSelected = selectedId === entry.id;
+  const [showTranslate, setShowTranslate] = useState(false);
+  const hasText = entry.content_type === "PlainText" || entry.content_type === "RichText";
 
   const handleClick = useCallback(() => selectEntry(entry.id), [entry.id, selectEntry]);
   const handleDoubleClick = useCallback(() => {
@@ -83,6 +86,15 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
 
       {/* Hover actions */}
       <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        {hasText && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowTranslate(true); }}
+            className="p-1 rounded text-muted-foreground/40 hover:text-blue-400 transition-colors"
+            title={t("translate.translate")}
+          >
+            <Languages className="w-3 h-3" />
+          </button>
+        )}
         <button
           onClick={(e) => { e.stopPropagation(); toggleFavorite(entry.id); }}
           className={cn(
@@ -99,6 +111,13 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
           <Trash2 className="w-3 h-3" />
         </button>
       </div>
+
+      {showTranslate && entry.text_content && (
+        <TranslateDialog
+          text={entry.text_content}
+          onClose={() => setShowTranslate(false)}
+        />
+      )}
     </div>
   );
 });
