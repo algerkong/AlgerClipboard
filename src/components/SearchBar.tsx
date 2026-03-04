@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { Search, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { useClipboardStore } from "@/stores/clipboardStore";
 
 export function SearchBar() {
@@ -11,28 +9,19 @@ export function SearchBar() {
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Auto-focus search input on mount and when window gains focus
   useEffect(() => {
-    // Focus on mount
     inputRef.current?.focus();
-
-    // Focus when window becomes visible/focused via Tauri events
     const unlistenFocus = listen("tauri://focus", () => {
-      inputRef.current?.focus();
+      setTimeout(() => inputRef.current?.focus(), 50);
     });
-
-    return () => {
-      unlistenFocus.then((fn) => fn());
-    };
+    return () => { unlistenFocus.then((fn) => fn()); };
   }, []);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => {
-        setKeyword(value);
-      }, 300);
+      debounceRef.current = setTimeout(() => setKeyword(value), 200);
     },
     [setKeyword]
   );
@@ -40,27 +29,26 @@ export function SearchBar() {
   const handleClear = useCallback(() => {
     if (inputRef.current) inputRef.current.value = "";
     setKeyword("");
+    inputRef.current?.focus();
   }, [setKeyword]);
 
   return (
-    <div className="relative flex items-center">
-      <Search className="absolute left-2.5 size-4 text-muted-foreground pointer-events-none" />
-      <Input
+    <div className="relative flex items-center flex-1">
+      <Search className="absolute left-2 w-3.5 h-3.5 text-muted-foreground/50 pointer-events-none" />
+      <input
         ref={inputRef}
-        placeholder="Search clipboard..."
+        placeholder="Search..."
         defaultValue={keyword}
         onChange={handleChange}
-        className="pl-9 pr-8 h-8"
+        className="w-full h-7 pl-7 pr-7 text-xs bg-muted/50 border border-border/50 rounded-md text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-ring/30 focus:bg-muted"
       />
       {keyword && (
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          className="absolute right-1"
+        <button
           onClick={handleClear}
+          className="absolute right-1.5 p-0.5 rounded text-muted-foreground/50 hover:text-foreground"
         >
-          <X className="size-3" />
-        </Button>
+          <X className="w-3 h-3" />
+        </button>
       )}
     </div>
   );
