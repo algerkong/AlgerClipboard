@@ -7,12 +7,33 @@ use super::manifest::{ManifestEntry, SyncManifest};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
+/// Settings keys that are safe to sync across devices
+const SYNCABLE_SETTINGS: &[&str] = &[
+    "theme",
+    "max_history",
+    "expire_days",
+    "paste_and_close",
+    "locale",
+    "ui_scale",
+    "font_family",
+];
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SettingsSyncResult {
+    pub pushed: usize,
+    pub pulled: usize,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SyncResult {
     pub pushed: usize,
     pub pulled: usize,
     pub conflicts: usize,
     pub errors: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub settings_pushed: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub settings_pulled: Option<usize>,
 }
 
 pub struct SyncEngine {
@@ -40,6 +61,8 @@ impl SyncEngine {
             pulled: 0,
             conflicts: 0,
             errors: vec![],
+            settings_pushed: None,
+            settings_pulled: None,
         };
 
         // Ensure remote directory structure
@@ -177,20 +200,104 @@ impl SyncEngine {
         let remote_path = format!("AlgerClipboard/entries/{}.json", entry.id);
         self.adapter.upload(&remote_path, &entry_data).await?;
 
-        // Upload blob if exists
+        // Upload blob if exists (check file size limit)
         if let Some(ref blob_path) = entry.blob_path {
-            if let Ok(blob_data) = std::fs::read(blob_path) {
-                let blob_remote = format!("AlgerClipboard/blobs/{}.bin", entry.content_hash);
-                let blob_upload = if let Some(ref enc) = self.encryption {
-                    enc.encrypt(&blob_data)?.ciphertext
-                } else {
-                    blob_data
-                };
-                self.adapter.upload(&blob_remote, &blob_upload).await?;
+            let full_path = self.blob_store.get_blob_path(blob_path);
+            if let Ok(blob_data) = std::fs::read(&full_path) {
+                // Check sync file size limit
+                let max_file_mb = self.db.get_setting("sync_max_file_size_mb")
+                    .ok()
+                    .flatten()
+                    .and_then(|v| v.parse::<u64>().ok())
+                    .unwrap_or(0);
+
+                let skip_blob = max_file_mb > 0 && blob_data.len() as u64 > max_file_mb * 1024 * 1024;
+
+                if !skip_blob {
+                    let blob_remote = format!("AlgerClipboard/blobs/{}.bin", entry.content_hash);
+                    let blob_upload = if let Some(ref enc) = self.encryption {
+                        enc.encrypt(&blob_data)?.ciphertext
+                    } else {
+                        blob_data
+                    };
+                    self.adapter.upload(&blob_remote, &blob_upload).await?;
+                }
             }
         }
 
         Ok(())
+    }
+
+    /// Sync settings: merge remote settings with local, remote wins on conflict
+    pub async fn sync_settings(&self) -> Result<SettingsSyncResult, String> {
+        let _ = self.adapter.mkdir("AlgerClipboard").await;
+
+        // Load remote settings
+        let remote_settings: std::collections::HashMap<String, String> =
+            match self.adapter.download("AlgerClipboard/settings.json").await {
+                Ok(data) => {
+                    let json_data = if let Some(ref enc) = self.encryption {
+                        if let Ok(wrapper) = serde_json::from_slice::<super::encryption::EncryptedManifestWrapper>(&data) {
+                            if wrapper.encrypted {
+                                enc.decrypt_from_storage(&wrapper)?
+                            } else {
+                                data
+                            }
+                        } else {
+                            data
+                        }
+                    } else {
+                        data
+                    };
+                    serde_json::from_slice(&json_data).unwrap_or_default()
+                }
+                Err(_) => std::collections::HashMap::new(),
+            };
+
+        // Load local syncable settings
+        let mut local_settings = std::collections::HashMap::new();
+        for key in SYNCABLE_SETTINGS {
+            if let Ok(Some(val)) = self.db.get_setting(key) {
+                local_settings.insert(key.to_string(), val);
+            }
+        }
+
+        // Merge: remote overrides local
+        let mut pulled = 0usize;
+        for (key, remote_val) in &remote_settings {
+            if !SYNCABLE_SETTINGS.contains(&key.as_str()) {
+                continue;
+            }
+            let local_val = local_settings.get(key);
+            if local_val.map(|v| v.as_str()) != Some(remote_val.as_str()) {
+                let _ = self.db.set_setting(key, remote_val);
+                local_settings.insert(key.clone(), remote_val.clone());
+                pulled += 1;
+            }
+        }
+
+        // Push merged settings (local settings that remote doesn't have)
+        let mut pushed = 0usize;
+        for (key, _) in &local_settings {
+            if !remote_settings.contains_key(key) {
+                pushed += 1;
+            }
+        }
+
+        // Save merged settings to remote
+        let merged_json = serde_json::to_vec_pretty(&local_settings)
+            .map_err(|e| format!("Serialize settings: {}", e))?;
+        let upload_data = if let Some(ref enc) = self.encryption {
+            let salt = SyncEncryption::generate_salt();
+            let wrapper = enc.encrypt_for_storage(&merged_json, &salt)?;
+            serde_json::to_vec_pretty(&wrapper)
+                .map_err(|e| format!("Serialize wrapper: {}", e))?
+        } else {
+            merged_json
+        };
+        self.adapter.upload("AlgerClipboard/settings.json", &upload_data).await?;
+
+        Ok(SettingsSyncResult { pushed, pulled })
     }
 
     async fn pull_entry(&self, entry_id: &str) -> Result<(), String> {

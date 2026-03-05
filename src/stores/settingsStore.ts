@@ -5,6 +5,7 @@ import {
   setAutoStart as setAutoStartApi,
   getAutoStart,
 } from "@/services/settingsService";
+import { listen } from "@tauri-apps/api/event";
 
 type Theme = "light" | "dark" | "system";
 export type UIScale = "xs" | "sm" | "md" | "lg" | "xl";
@@ -213,3 +214,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     set({ isPinned: pinned });
   },
 }));
+
+// Listen for settings-changed event from sync
+listen("settings-changed", () => {
+  useSettingsStore.getState().loadSettings();
+}).catch(() => {});

@@ -10,6 +10,8 @@ interface SyncState {
   lastSyncTime: string | null;
   syncError: string | null;
   loading: boolean;
+  settingsSyncEnabled: boolean;
+  syncMaxFileSize: number; // 0 = unlimited, in MB
 
   loadAccounts: () => Promise<void>;
   addAccount: (
@@ -36,6 +38,9 @@ interface SyncState {
   ) => Promise<Record<string, unknown>>;
   setPassphrase: (passphrase: string) => Promise<void>;
   setSyncStatus: (status: SyncStatusType, error?: string | null) => void;
+  loadSyncSettings: () => Promise<void>;
+  setSettingsSyncEnabled: (enabled: boolean) => Promise<void>;
+  setSyncMaxFileSize: (maxSizeMb: number) => Promise<void>;
 }
 
 export const useSyncStore = create<SyncState>((set, get) => ({
@@ -44,6 +49,8 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   lastSyncTime: null,
   syncError: null,
   loading: false,
+  settingsSyncEnabled: false,
+  syncMaxFileSize: 0,
 
   loadAccounts: async () => {
     set({ loading: true });
@@ -112,5 +119,35 @@ export const useSyncStore = create<SyncState>((set, get) => ({
 
   setSyncStatus: (status, error = null) => {
     set({ syncStatus: status, syncError: error });
+  },
+
+  loadSyncSettings: async () => {
+    try {
+      const [enabled, maxSize] = await Promise.all([
+        syncService.getSettingsSyncEnabled(),
+        syncService.getSyncMaxFileSize(),
+      ]);
+      set({ settingsSyncEnabled: enabled, syncMaxFileSize: maxSize });
+    } catch (err) {
+      console.error("Failed to load sync settings:", err);
+    }
+  },
+
+  setSettingsSyncEnabled: async (enabled) => {
+    set({ settingsSyncEnabled: enabled });
+    try {
+      await syncService.setSettingsSyncEnabled(enabled);
+    } catch (err) {
+      console.error("Failed to save settings sync enabled:", err);
+    }
+  },
+
+  setSyncMaxFileSize: async (maxSizeMb) => {
+    set({ syncMaxFileSize: maxSizeMb });
+    try {
+      await syncService.setSyncMaxFileSize(maxSizeMb);
+    } catch (err) {
+      console.error("Failed to save sync max file size:", err);
+    }
   },
 }));

@@ -157,13 +157,35 @@ pub async fn trigger_sync(
     );
 
     match engine.sync(account.last_sync_version).await {
-        Ok(sync_result) => {
+        Ok(mut sync_result) => {
             // Update account's last sync info
             let mut updated = account.clone();
             updated.last_sync_at = Some(chrono::Utc::now().to_rfc3339());
             updated.last_sync_version = account.last_sync_version + sync_result.pushed as i64;
             updated.updated_at = chrono::Utc::now().to_rfc3339();
             let _ = db.0.update_sync_account(&updated);
+
+            // Settings sync if enabled
+            let settings_sync_enabled = db.0.get_setting("settings_sync_enabled")
+                .ok()
+                .flatten()
+                .map(|v| v == "true")
+                .unwrap_or(false);
+
+            if settings_sync_enabled {
+                match engine.sync_settings().await {
+                    Ok(settings_result) => {
+                        sync_result.settings_pushed = Some(settings_result.pushed);
+                        sync_result.settings_pulled = Some(settings_result.pulled);
+                        if settings_result.pulled > 0 {
+                            let _ = app.emit("settings-changed", serde_json::json!({}));
+                        }
+                    }
+                    Err(e) => {
+                        sync_result.errors.push(format!("Settings sync: {}", e));
+                    }
+                }
+            }
 
             let _ = app.emit("sync-status-changed", serde_json::json!({ "status": "synced" }));
             Ok(sync_result)
@@ -176,6 +198,40 @@ pub async fn trigger_sync(
             Err(e)
         }
     }
+}
+
+#[tauri::command]
+pub fn set_settings_sync_enabled(
+    db: State<'_, AppDatabase>,
+    enabled: bool,
+) -> Result<(), String> {
+    db.0.set_setting("settings_sync_enabled", if enabled { "true" } else { "false" })
+}
+
+#[tauri::command]
+pub fn get_settings_sync_enabled(
+    db: State<'_, AppDatabase>,
+) -> Result<bool, String> {
+    Ok(db.0.get_setting("settings_sync_enabled")?
+        .map(|v| v == "true")
+        .unwrap_or(false))
+}
+
+#[tauri::command]
+pub fn set_sync_max_file_size(
+    db: State<'_, AppDatabase>,
+    max_size_mb: i64,
+) -> Result<(), String> {
+    db.0.set_setting("sync_max_file_size_mb", &max_size_mb.to_string())
+}
+
+#[tauri::command]
+pub fn get_sync_max_file_size(
+    db: State<'_, AppDatabase>,
+) -> Result<i64, String> {
+    Ok(db.0.get_setting("sync_max_file_size_mb")?
+        .and_then(|v| v.parse::<i64>().ok())
+        .unwrap_or(0))
 }
 
 #[tauri::command]

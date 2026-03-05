@@ -74,3 +74,19 @@ export async function resolveSyncConflict(
 ): Promise<void> {
   return invoke("resolve_sync_conflict", { entryId, resolution });
 }
+
+export async function setSettingsSyncEnabled(enabled: boolean): Promise<void> {
+  return invoke("set_settings_sync_enabled", { enabled });
+}
+
+export async function getSettingsSyncEnabled(): Promise<boolean> {
+  return invoke("get_settings_sync_enabled");
+}
+
+export async function setSyncMaxFileSize(maxSizeMb: number): Promise<void> {
+  return invoke("set_sync_max_file_size", { maxSizeMb });
+}
+
+export async function getSyncMaxFileSize(): Promise<number> {
+  return invoke("get_sync_max_file_size");
+}

@@ -65,6 +65,8 @@ export interface SyncResult {
   pulled: number;
   conflicts: number;
   errors: string[];
+  settings_pushed?: number;
+  settings_pulled?: number;
 }
 
 export interface TypeCount {
