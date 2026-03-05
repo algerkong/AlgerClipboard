@@ -5,6 +5,12 @@ pub struct BlobStore {
 }
 
 #[derive(serde::Serialize)]
+pub struct MigrationResult {
+    pub files_copied: u64,
+    pub bytes_copied: u64,
+}
+
+#[derive(serde::Serialize)]
 pub struct CacheInfo {
     pub cache_dir: String,
     pub total_size_bytes: u64,
@@ -137,6 +143,75 @@ impl BlobStore {
                         freed += meta.len();
                     }
                     let _ = std::fs::remove_file(entry.path());
+                }
+            }
+        }
+
+        Ok(freed)
+    }
+
+    /// Migrate all blobs and thumbnails from old base to new base
+    pub fn migrate(old_base: &Path, new_base: &Path) -> Result<MigrationResult, String> {
+        let mut files_copied = 0u64;
+        let mut bytes_copied = 0u64;
+
+        for sub in &["blobs", "thumbnails"] {
+            let src_dir = old_base.join(sub);
+            let dst_dir = new_base.join(sub);
+            std::fs::create_dir_all(&dst_dir)
+                .map_err(|e| format!("Failed to create dir {}: {}", dst_dir.display(), e))?;
+
+            if let Ok(entries) = std::fs::read_dir(&src_dir) {
+                for entry in entries.flatten() {
+                    if let Ok(meta) = entry.metadata() {
+                        if meta.is_file() {
+                            let dst = dst_dir.join(entry.file_name());
+                            std::fs::copy(entry.path(), &dst)
+                                .map_err(|e| format!("Failed to copy {}: {}", entry.path().display(), e))?;
+                            files_copied += 1;
+                            bytes_copied += meta.len();
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(MigrationResult { files_copied, bytes_copied })
+    }
+
+    /// Delete oldest non-favorite blobs until total size is under max_bytes.
+    /// `oldest_entries` should be pre-sorted by created_at ASC, non-favorite only.
+    pub fn cleanup_by_size_limit(&self, max_bytes: u64, oldest_entries: &[(Option<String>, Option<String>)]) -> Result<u64, String> {
+        let info = self.get_cache_info()?;
+        if info.total_size_bytes <= max_bytes {
+            return Ok(0);
+        }
+
+        let mut freed = 0u64;
+        let mut current_size = info.total_size_bytes;
+
+        for (blob_path, thumb_path) in oldest_entries {
+            if current_size <= max_bytes {
+                break;
+            }
+            if let Some(bp) = blob_path {
+                let full = self.base_dir.join(bp);
+                if full.exists() {
+                    if let Ok(meta) = std::fs::metadata(&full) {
+                        freed += meta.len();
+                        current_size -= meta.len();
+                    }
+                    let _ = std::fs::remove_file(&full);
+                }
+            }
+            if let Some(tp) = thumb_path {
+                let full = self.base_dir.join(tp);
+                if full.exists() {
+                    if let Ok(meta) = std::fs::metadata(&full) {
+                        freed += meta.len();
+                        current_size -= meta.len();
+                    }
+                    let _ = std::fs::remove_file(&full);
                 }
             }
         }

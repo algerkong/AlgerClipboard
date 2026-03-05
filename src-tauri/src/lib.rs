@@ -42,7 +42,20 @@ pub fn run() {
             let db = Arc::new(Database::new(&db_path).expect("Failed to init database"));
             app.manage(AppDatabase(db.clone()));
 
-            let blob_store = Arc::new(BlobStore::new(&app_data_dir).expect("Failed to init blob store"));
+            // Initialize BlobStore: use custom cache_dir if set, otherwise default
+            let blob_base = match db.get_setting("cache_dir") {
+                Ok(Some(custom_dir)) => {
+                    let p = std::path::PathBuf::from(&custom_dir);
+                    if p.exists() || std::fs::create_dir_all(&p).is_ok() {
+                        p
+                    } else {
+                        log::warn!("Custom cache dir unavailable, falling back to default");
+                        app_data_dir.clone()
+                    }
+                }
+                _ => app_data_dir.clone(),
+            };
+            let blob_store = Arc::new(BlobStore::new(&blob_base).expect("Failed to init blob store"));
             app.manage(AppBlobStore(blob_store.clone()));
 
             let device_id = match db.get_setting("device_id") {
@@ -138,6 +151,11 @@ pub fn run() {
             commands::clipboard_cmd::extract_text_from_image,
             commands::clipboard_cmd::get_cache_info,
             commands::clipboard_cmd::cleanup_cache,
+            commands::clipboard_cmd::set_cache_dir,
+            commands::clipboard_cmd::migrate_cache,
+            commands::clipboard_cmd::set_cache_max_size,
+            commands::clipboard_cmd::get_cache_max_size,
+            commands::clipboard_cmd::cleanup_cache_by_size,
             commands::settings_cmd::get_settings,
             commands::settings_cmd::update_settings,
             commands::settings_cmd::set_auto_start,
@@ -160,6 +178,10 @@ pub fn run() {
             commands::sync_cmd::set_sync_passphrase,
             commands::sync_cmd::resolve_sync_conflict,
             commands::sync_cmd::start_oauth_flow,
+            commands::sync_cmd::set_settings_sync_enabled,
+            commands::sync_cmd::get_settings_sync_enabled,
+            commands::sync_cmd::set_sync_max_file_size,
+            commands::sync_cmd::get_sync_max_file_size,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

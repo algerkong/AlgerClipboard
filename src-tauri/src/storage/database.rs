@@ -918,6 +918,33 @@ impl Database {
         Ok((blob_paths, thumb_paths))
     }
 
+    /// Get blob/thumbnail paths of non-favorite entries ordered by created_at ASC (oldest first)
+    pub fn get_blobs_oldest_first(&self) -> Result<Vec<(Option<String>, Option<String>)>, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT blob_path, thumbnail_path FROM entries
+                 WHERE deleted = 0 AND is_favorite = 0 AND (blob_path IS NOT NULL OR thumbnail_path IS NOT NULL)
+                 ORDER BY created_at ASC"
+            )
+            .map_err(|e| format!("Prepare error: {}", e))?;
+
+        let rows = stmt
+            .query_map([], |row| {
+                let bp: Option<String> = row.get(0)?;
+                let tp: Option<String> = row.get(1)?;
+                Ok((bp, tp))
+            })
+            .map_err(|e| format!("Query error: {}", e))?;
+
+        let mut result = Vec::new();
+        for row in rows {
+            result.push(row.map_err(|e| format!("Row error: {}", e))?);
+        }
+        Ok(result)
+    }
+
     // --- Sync Account CRUD ---
 
     pub fn create_sync_account(&self, account: &SyncAccount) -> Result<(), String> {

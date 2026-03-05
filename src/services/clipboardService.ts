@@ -93,3 +93,23 @@ export async function getCacheInfo(): Promise<CacheInfo> {
 export async function cleanupCache(): Promise<number> {
   return invoke("cleanup_cache");
 }
+
+export async function setCacheDir(newPath: string): Promise<void> {
+  return invoke("set_cache_dir", { newPath });
+}
+
+export async function migrateCache(newPath: string): Promise<{ files_copied: number; bytes_copied: number }> {
+  return invoke("migrate_cache", { newPath });
+}
+
+export async function setCacheMaxSize(maxSizeMb: number): Promise<void> {
+  return invoke("set_cache_max_size", { maxSizeMb });
+}
+
+export async function getCacheMaxSize(): Promise<number> {
+  return invoke("get_cache_max_size");
+}
+
+export async function cleanupCacheBySize(): Promise<number> {
+  return invoke("cleanup_cache_by_size");
+}

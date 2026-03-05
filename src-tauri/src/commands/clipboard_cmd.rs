@@ -1,6 +1,6 @@
 use crate::clipboard::entry::ClipboardEntry;
 use crate::commands::paste_cmd::AppBlobStore;
-use crate::storage::blob::CacheInfo;
+use crate::storage::blob::{BlobStore, CacheInfo, MigrationResult};
 use crate::storage::database::{Database, ClipboardStats};
 use base64::Engine;
 use std::sync::Arc;
@@ -184,4 +184,71 @@ pub fn cleanup_cache(
     // Also clean up blobs/thumbnails of soft-deleted entries
     // (entries with deleted = 1 still have files on disk)
     Ok(freed)
+}
+
+#[tauri::command]
+pub fn set_cache_dir(
+    db: State<'_, AppDatabase>,
+    new_path: String,
+) -> Result<(), String> {
+    // Verify the path is writable
+    let path = std::path::Path::new(&new_path);
+    std::fs::create_dir_all(path)
+        .map_err(|e| format!("Cannot create directory: {}", e))?;
+    let test_file = path.join(".write_test");
+    std::fs::write(&test_file, b"test")
+        .map_err(|e| format!("Path is not writable: {}", e))?;
+    let _ = std::fs::remove_file(&test_file);
+
+    db.0.set_setting("cache_dir", &new_path)
+}
+
+#[tauri::command]
+pub fn migrate_cache(
+    db: State<'_, AppDatabase>,
+    blob_store: State<'_, AppBlobStore>,
+    new_path: String,
+) -> Result<MigrationResult, String> {
+    let old_base = blob_store.0.base_dir().to_path_buf();
+    let new_base = std::path::Path::new(&new_path);
+
+    std::fs::create_dir_all(new_base)
+        .map_err(|e| format!("Cannot create directory: {}", e))?;
+
+    let result = BlobStore::migrate(&old_base, new_base)?;
+    db.0.set_setting("cache_dir", &new_path)?;
+    Ok(result)
+}
+
+#[tauri::command]
+pub fn set_cache_max_size(
+    db: State<'_, AppDatabase>,
+    max_size_mb: i64,
+) -> Result<(), String> {
+    db.0.set_setting("cache_max_size_mb", &max_size_mb.to_string())
+}
+
+#[tauri::command]
+pub fn get_cache_max_size(
+    db: State<'_, AppDatabase>,
+) -> Result<i64, String> {
+    Ok(db.0.get_setting("cache_max_size_mb")?
+        .and_then(|v| v.parse::<i64>().ok())
+        .unwrap_or(0))
+}
+
+#[tauri::command]
+pub fn cleanup_cache_by_size(
+    db: State<'_, AppDatabase>,
+    blob_store: State<'_, AppBlobStore>,
+) -> Result<u64, String> {
+    let max_mb = db.0.get_setting("cache_max_size_mb")?
+        .and_then(|v| v.parse::<i64>().ok())
+        .unwrap_or(0);
+    if max_mb <= 0 {
+        return Ok(0);
+    }
+    let max_bytes = max_mb as u64 * 1024 * 1024;
+    let oldest = db.0.get_blobs_oldest_first()?;
+    blob_store.0.cleanup_by_size_limit(max_bytes, &oldest)
 }

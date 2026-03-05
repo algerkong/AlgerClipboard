@@ -78,7 +78,18 @@
     "expire7days": "7天",
     "expire30days": "30天",
     "expire90days": "90天",
-    "expireDaysDesc": "超时自动删除（收藏和置顶不受影响）"
+    "expireDaysDesc": "超时自动删除（收藏和置顶不受影响）",
+    "changeCacheDir": "更改",
+    "migrateCacheTitle": "迁移缓存文件",
+    "migrateCacheDesc": "是否将已有的缓存文件迁移到新目录？",
+    "migrateCacheYes": "迁移文件",
+    "migrateCacheNo": "仅更改路径",
+    "migrating": "正在迁移...",
+    "migrated": "迁移完成",
+    "restartRequired": "缓存目录已更改，需要重启应用生效",
+    "cacheMaxSize": "缓存大小上限",
+    "cacheUnlimited": "不限制",
+    "restartApp": "重启应用"
   },
   "sync": {
     "title": "同步",
@@ -124,7 +135,12 @@
     "conflictDesc": "此条目在多个设备上被修改",
     "keepLocal": "保留本地",
     "keepRemote": "保留远程",
-    "keepBoth": "保留两者"
+    "keepBoth": "保留两者",
+    "settingsSync": "同步设置",
+    "settingsSyncDesc": "同步主题、语言等用户偏好",
+    "syncMaxFileSize": "文件同步大小上限",
+    "syncMaxFileSizeDesc": "超过此大小的文件将跳过同步",
+    "syncMaxFileSizeUnlimited": "不限制"
   },
   "translate": {
     "title": "翻译",
@@ -137,6 +153,14 @@
     "auto": "自动检测",
     "engine": "引擎",
     "result": "翻译结果",
+    "sourceText": "原文",
+    "swap": "交换语言",
+    "copyResult": "复制译文",
+    "copied": "已复制",
+    "copyFailed": "复制失败",
+    "useTranslation": "复制并关闭",
+    "copiedToClipboard": "译文已复制到剪贴板",
+    "noResult": "点击翻译按钮开始",
     "engineConfig": "翻译引擎",
     "apiKey": "API Key",
     "apiSecret": "API Secret",

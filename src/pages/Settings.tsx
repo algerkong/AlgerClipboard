@@ -36,6 +36,11 @@ import {
   getCacheInfo,
   cleanupCache,
   getClipboardStats,
+  setCacheDir,
+  migrateCache,
+  setCacheMaxSize,
+  getCacheMaxSize,
+  cleanupCacheBySize,
   type CacheInfo,
 } from "@/services/clipboardService";
 import type { ClipboardStats } from "@/types";
@@ -366,6 +371,11 @@ function SyncTab() {
   const triggerSync = useSyncStore((s) => s.triggerSync);
   const startOAuth = useSyncStore((s) => s.startOAuth);
   const setPassphrase = useSyncStore((s) => s.setPassphrase);
+  const settingsSyncEnabled = useSyncStore((s) => s.settingsSyncEnabled);
+  const syncMaxFileSize = useSyncStore((s) => s.syncMaxFileSize);
+  const loadSyncSettings = useSyncStore((s) => s.loadSyncSettings);
+  const setSettingsSyncEnabled = useSyncStore((s) => s.setSettingsSyncEnabled);
+  const setSyncMaxFileSize = useSyncStore((s) => s.setSyncMaxFileSize);
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
@@ -393,7 +403,8 @@ function SyncTab() {
 
   useEffect(() => {
     loadAccounts();
-  }, [loadAccounts]);
+    loadSyncSettings();
+  }, [loadAccounts, loadSyncSettings]);
 
   const providers = [
     { key: "webdav" as const, label: t("sync.webdav") },
@@ -648,6 +659,43 @@ function SyncTab() {
             <Plus className="w-3 h-3" />
             {t("sync.addAccount")}
           </button>
+
+          {/* Settings sync toggle */}
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/30">
+            <div>
+              <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
+                {t("sync.settingsSync")}
+              </label>
+              <p className="text-xs2 text-muted-foreground/70">
+                {t("sync.settingsSyncDesc")}
+              </p>
+            </div>
+            <Toggle value={settingsSyncEnabled} onChange={setSettingsSyncEnabled} size="sm" />
+          </div>
+
+          {/* File sync size limit */}
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
+                {t("sync.syncMaxFileSize")}
+              </label>
+              <p className="text-xs2 text-muted-foreground/70">
+                {t("sync.syncMaxFileSizeDesc")}
+              </p>
+            </div>
+            <select
+              value={syncMaxFileSize}
+              onChange={(e) => setSyncMaxFileSize(Number(e.target.value))}
+              className="h-6 px-1.5 text-xs2 bg-muted/30 border border-border/50 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+            >
+              <option value={0}>{t("sync.syncMaxFileSizeUnlimited")}</option>
+              <option value={1}>1 MB</option>
+              <option value={5}>5 MB</option>
+              <option value={10}>10 MB</option>
+              <option value={50}>50 MB</option>
+              <option value={100}>100 MB</option>
+            </select>
+          </div>
         </div>
       )}
 
@@ -1044,11 +1092,67 @@ function DataTab() {
   const { t } = useTranslation();
   const [cacheInfo, setCacheInfo] = useState<CacheInfo | null>(null);
   const [stats, setStats] = useState<ClipboardStats | null>(null);
+  const [newCacheDir, setNewCacheDir] = useState("");
+  const [showCacheDirInput, setShowCacheDirInput] = useState(false);
+  const [showMigrateDialog, setShowMigrateDialog] = useState(false);
+  const [migrating, setMigrating] = useState(false);
+  const [cacheMaxSize, setCacheMaxSizeState] = useState(0);
+
+  const cacheSizeOptions = [
+    { value: 0, label: t("settings.cacheUnlimited") },
+    { value: 100, label: "100 MB" },
+    { value: 250, label: "250 MB" },
+    { value: 500, label: "500 MB" },
+    { value: 1024, label: "1 GB" },
+    { value: 2048, label: "2 GB" },
+  ];
 
   useEffect(() => {
     getCacheInfo().then(setCacheInfo).catch(() => {});
     getClipboardStats().then(setStats).catch(() => {});
+    getCacheMaxSize().then(setCacheMaxSizeState).catch(() => {});
   }, []);
+
+  const handleCacheDirChange = () => {
+    if (!newCacheDir.trim()) return;
+    setShowMigrateDialog(true);
+  };
+
+  const handleMigrate = async (doMigrate: boolean) => {
+    setShowMigrateDialog(false);
+    setMigrating(true);
+    try {
+      if (doMigrate) {
+        await migrateCache(newCacheDir.trim());
+        toast.success(t("settings.migrated"));
+      } else {
+        await setCacheDir(newCacheDir.trim());
+      }
+      toast.info(t("settings.restartRequired"));
+      setShowCacheDirInput(false);
+      setNewCacheDir("");
+      const info = await getCacheInfo();
+      setCacheInfo(info);
+    } catch (err) {
+      toast.error(String(err));
+    } finally {
+      setMigrating(false);
+    }
+  };
+
+  const handleCacheMaxSizeChange = async (mb: number) => {
+    setCacheMaxSizeState(mb);
+    try {
+      await setCacheMaxSize(mb);
+      if (mb > 0) {
+        await cleanupCacheBySize();
+        const info = await getCacheInfo();
+        setCacheInfo(info);
+      }
+    } catch (err) {
+      console.error("Failed to set cache max size:", err);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -1176,12 +1280,76 @@ function DataTab() {
             <div className="flex items-center gap-2 text-sm2">
               <FolderOpen className="w-3 h-3 text-muted-foreground shrink-0" />
               <span
-                className="text-muted-foreground truncate text-xs2"
+                className="text-muted-foreground truncate text-xs2 flex-1"
                 title={cacheInfo.cache_dir}
               >
                 {cacheInfo.cache_dir}
               </span>
+              <button
+                onClick={() => setShowCacheDirInput(!showCacheDirInput)}
+                className="text-xs2 text-primary hover:text-primary/80 shrink-0"
+              >
+                {t("settings.changeCacheDir")}
+              </button>
             </div>
+
+            {showCacheDirInput && (
+              <div className="space-y-1.5">
+                <input
+                  type="text"
+                  value={newCacheDir}
+                  onChange={(e) => setNewCacheDir(e.target.value)}
+                  placeholder={cacheInfo.cache_dir}
+                  className="w-full h-7 px-2 text-sm2 bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+                />
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={handleCacheDirChange}
+                    disabled={!newCacheDir.trim() || migrating}
+                    className="flex items-center gap-1 h-6 px-2 text-xs2 font-medium bg-primary/15 text-primary hover:bg-primary/25 rounded transition-colors disabled:opacity-50"
+                  >
+                    {migrating ? (
+                      <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                    ) : (
+                      <Check className="w-2.5 h-2.5" />
+                    )}
+                    {migrating ? t("settings.migrating") : t("sync.save")}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowCacheDirInput(false);
+                      setNewCacheDir("");
+                    }}
+                    className="flex items-center gap-1 h-6 px-2 text-xs2 font-medium bg-muted/30 hover:bg-muted/50 rounded transition-colors"
+                  >
+                    <X className="w-2.5 h-2.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Migrate dialog */}
+            {showMigrateDialog && (
+              <div className="bg-muted/30 rounded-md p-2.5 space-y-2">
+                <p className="text-sm2 font-medium">{t("settings.migrateCacheTitle")}</p>
+                <p className="text-xs2 text-muted-foreground">{t("settings.migrateCacheDesc")}</p>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => handleMigrate(true)}
+                    className="h-6 px-2 text-xs2 font-medium bg-primary/15 text-primary hover:bg-primary/25 rounded transition-colors"
+                  >
+                    {t("settings.migrateCacheYes")}
+                  </button>
+                  <button
+                    onClick={() => handleMigrate(false)}
+                    className="h-6 px-2 text-xs2 font-medium bg-muted/30 hover:bg-muted/50 rounded transition-colors"
+                  >
+                    {t("settings.migrateCacheNo")}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center gap-3 text-sm2">
               <span className="text-muted-foreground">
                 {t("settings.cacheSize")}:{" "}
@@ -1193,6 +1361,25 @@ function DataTab() {
                 {t("settings.cacheFiles", { count: cacheInfo.file_count })}
               </span>
             </div>
+
+            {/* Cache size limit */}
+            <div className="flex items-center justify-between">
+              <span className="text-sm2 text-muted-foreground">
+                {t("settings.cacheMaxSize")}
+              </span>
+              <select
+                value={cacheMaxSize}
+                onChange={(e) => handleCacheMaxSizeChange(Number(e.target.value))}
+                className="h-6 px-1.5 text-xs2 bg-muted/30 border border-border/50 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+              >
+                {cacheSizeOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <button
               onClick={async () => {
                 try {

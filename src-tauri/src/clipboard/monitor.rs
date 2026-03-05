@@ -159,7 +159,7 @@ fn get_clipboard_file_paths() -> Option<Vec<String>> {
 }
 
 /// Run auto-cleanup based on stored settings
-fn run_auto_cleanup(db: &Arc<Database>) {
+fn run_auto_cleanup(db: &Arc<Database>, blob_store: &Arc<BlobStore>) {
     let max_count = db.get_setting("max_history")
         .ok()
         .flatten()
@@ -173,6 +173,21 @@ fn run_auto_cleanup(db: &Arc<Database>) {
 
     if let Err(e) = db.auto_cleanup(max_count, expire_days) {
         log::error!("Auto-cleanup failed: {}", e);
+    }
+
+    // Cache size limit cleanup
+    let max_mb = db.get_setting("cache_max_size_mb")
+        .ok()
+        .flatten()
+        .and_then(|v| v.parse::<i64>().ok())
+        .unwrap_or(0);
+    if max_mb > 0 {
+        let max_bytes = max_mb as u64 * 1024 * 1024;
+        if let Ok(oldest) = db.get_blobs_oldest_first() {
+            if let Err(e) = blob_store.cleanup_by_size_limit(max_bytes, &oldest) {
+                log::error!("Cache size cleanup failed: {}", e);
+            }
+        }
     }
 }
 
@@ -264,7 +279,7 @@ impl ClipboardMonitor {
                                     log::error!("Failed to insert file paths entry: {}", e);
                                 } else {
                                     log::info!("Captured {} file path(s)", paths.len());
-                                    run_auto_cleanup(&db);
+                                    run_auto_cleanup(&db, &blob_store);
                                     callback(entry);
                                 }
                             }
@@ -364,7 +379,7 @@ impl ClipboardMonitor {
                                             log::error!("Failed to insert image entry: {}", e);
                                         } else {
                                             log::info!("Captured image ({}x{})", img_data.width, img_data.height);
-                                            run_auto_cleanup(&db);
+                                            run_auto_cleanup(&db, &blob_store);
                                             callback(entry);
                                         }
                                     }
@@ -425,7 +440,7 @@ impl ClipboardMonitor {
                                         if let Err(e) = db.insert_entry(&entry) {
                                             log::error!("Failed to insert text entry: {}", e);
                                         } else {
-                                            run_auto_cleanup(&db);
+                                            run_auto_cleanup(&db, &blob_store);
                                             callback(entry);
                                         }
                                     }
