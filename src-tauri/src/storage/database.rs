@@ -1088,6 +1088,31 @@ impl Database {
         ).map_err(|e| format!("Failed to read sync version: {}", e))?;
         Ok(version)
     }
+
+    /// Get IDs of soft-deleted entries that were previously synced (need deletion propagated)
+    pub fn get_deleted_synced_entry_ids(&self) -> Result<Vec<String>, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        let mut stmt = conn.prepare(
+            "SELECT id FROM entries WHERE deleted = 1 AND sync_version > 0"
+        ).map_err(|e| format!("Prepare error: {}", e))?;
+
+        let ids = stmt.query_map([], |row| row.get::<_, String>(0))
+            .map_err(|e| format!("Query error: {}", e))?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(ids)
+    }
+
+    /// Check if an entry exists in the database (including soft-deleted entries)
+    pub fn entry_exists(&self, id: &str) -> Result<bool, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM entries WHERE id = ?1",
+            params![id],
+            |row| row.get(0),
+        ).map_err(|e| format!("Query error: {}", e))?;
+        Ok(count > 0)
+    }
 }
 
 fn row_to_entry_inner(row: &rusqlite::Row) -> ClipboardEntry {

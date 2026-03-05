@@ -94,6 +94,8 @@ impl SyncEngine {
         // Pull remote changes
         for (entry_id, manifest_entry) in &remote_manifest.entries {
             if manifest_entry.deleted {
+                // Remote says this entry was deleted — ensure it's deleted locally too
+                let _ = self.db.delete_entries(&[entry_id.clone()]);
                 continue;
             }
             // Check if we have this entry locally
@@ -117,7 +119,12 @@ impl SyncEngine {
                     }
                 }
                 Ok(None) => {
-                    // New remote entry, pull it
+                    // Entry not found with deleted=0; check if it was soft-deleted locally
+                    if self.db.entry_exists(entry_id).unwrap_or(false) {
+                        // Entry exists but is deleted locally — don't pull it back
+                        continue;
+                    }
+                    // Genuinely new remote entry, pull it
                     match self.pull_entry(entry_id).await {
                         Ok(_) => result.pulled += 1,
                         Err(e) => result.errors.push(format!("Pull {}: {}", entry_id, e)),
@@ -138,6 +145,27 @@ impl SyncEngine {
                 has_blob: entry.blob_path.is_some(),
             });
         }
+
+        // Propagate local deletions to remote manifest
+        let deleted_ids = self.db.get_deleted_synced_entry_ids().unwrap_or_default();
+        for id in &deleted_ids {
+            if let Some(manifest_entry) = updated_manifest.entries.get_mut(id) {
+                manifest_entry.deleted = true;
+            } else {
+                // Entry was synced before but missing from manifest — add as deleted
+                updated_manifest.entries.insert(id.clone(), ManifestEntry {
+                    content_hash: String::new(),
+                    version: 0,
+                    updated_at: chrono::Utc::now().to_rfc3339(),
+                    deleted: true,
+                    has_blob: false,
+                });
+            }
+            // Clean up remote entry file
+            let remote_path = format!("AlgerClipboard/entries/{}.json", id);
+            let _ = self.adapter.delete(&remote_path).await;
+        }
+
         updated_manifest.version += 1;
         updated_manifest.device_id = self.device_id.clone();
         updated_manifest.updated_at = chrono::Utc::now().to_rfc3339();
