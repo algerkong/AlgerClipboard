@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.3.1] - 2026-03-05
+
+### Bug Fixes
+
+- **Single instance enforcement**: Prevent multiple app instances from launching. Double-clicking the shortcut while the app is running now focuses the existing window instead of opening a blank new one
+- **Installer icon**: Fixed NSIS installer not displaying the custom app icon
+- **Tray icon**: Fixed system tray showing default Tauri icon instead of app logo
+
+---
+
+## [1.3.1] - 2026-03-05 (中文)
+
+### Bug 修复
+
+- **单实例限制**: 防止应用启动多个实例。应用运行时双击快捷方式现在会聚焦已有窗口，而不是打开一个空白新窗口
+- **安装器图标**: 修复 NSIS 安装器未显示自定义应用图标的问题
+- **托盘图标**: 修复系统托盘显示 Tauri 默认图标而非应用 logo 的问题
+
+---
+
 ## [1.3.0] - 2026-03-05
 
 ### New Features
