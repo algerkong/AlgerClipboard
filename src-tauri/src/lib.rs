@@ -105,6 +105,7 @@ pub fn run() {
 
             let tray_window = app.get_webview_window("main").unwrap();
             TrayIconBuilder::new()
+                .icon(app.default_window_icon().cloned().unwrap())
                 .menu(&menu)
                 .on_menu_event(move |app: &tauri::AppHandle, event| {
                     match event.id.as_ref() {
