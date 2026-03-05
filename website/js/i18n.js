@@ -19,7 +19,10 @@ const translations = {
         'featTempDesc': 'Construct reusable snippet templates mapped to active variables. Boost your typing velocity dramatically.',
         'dlSectionTitle': 'Get AlgerClipboard',
         'dlSectionDesc': 'Available for all major desktop architectures. 100% free and open source.',
-        'footerText': 'AlgerClipboard is open source software licensed under MIT.'
+        'footerText': 'AlgerClipboard is open source software licensed under MIT.',
+        'seoTitle': 'AlgerClipboard - The Smartest Clipboard Manager & Sync Tool',
+        'seoDesc': 'An obsessively refined, open-source clipboard manager built with Tauri 2 and React. Features infinite memory, cross-device E2E encrypted sync, and inline translation.',
+        'seoKeywords': 'clipboard manager, clipboard history, open source clipboard, sync clipboard, encrypt clipboard, tauri clipboard, AlgerClipboard, productivity tool, translation tool'
     },
     'zh-CN': {
         'pageTitle': 'AlgerClipboard - 新一代剪贴板管理利器',
@@ -40,7 +43,10 @@ const translations = {
         'featTempDesc': '构建支持变量动态替换的复用片段，呈指数级提升您的输入效率。',
         'dlSectionTitle': '获取 AlgerClipboard',
         'dlSectionDesc': '支持跨平台三大桌面主流操作系统。全量开源并且完全免费。',
-        'footerText': 'AlgerClipboard 遵循 MIT 开源协议。'
+        'footerText': 'AlgerClipboard 遵循 MIT 开源协议。',
+        'seoTitle': 'AlgerClipboard - 新一代跨端同步智能剪贴板',
+        'seoDesc': '开源、极速、安全的新一代剪贴板管理效率工具，基于 Tauri 2 和 React 构建。核心特性包含无限数据历史、端到端云同步以及内置神经翻译引擎。',
+        'seoKeywords': '剪贴板管理器, 剪切板历史, 开源剪贴板, 跨多端同步, 剪贴板加密, Tauri 实用工具, 翻译效率, 文本模板'
     }
 };
 
@@ -85,8 +91,13 @@ class I18nManager {
 
         this.elements.forEach(el => {
             const key = el.getAttribute('data-i18n');
+            const targetAttr = el.getAttribute('data-i18n-target');
             if (dict[key]) {
-                el.innerHTML = dict[key];
+                if (targetAttr) {
+                    el.setAttribute(targetAttr, dict[key]);
+                } else {
+                    el.innerHTML = dict[key];
+                }
             }
         });
     }
