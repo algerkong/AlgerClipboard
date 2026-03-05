@@ -126,12 +126,12 @@ export function TemplateManager({ onBack }: Props) {
           <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground/70">
             <FileText className="w-8 h-8" />
             <p className="text-xs">{t("template.noTemplates")}</p>
-            <p className="text-[10px]">{t("template.createHint")}</p>
+            <p className="text-xs2">{t("template.createHint")}</p>
           </div>
         ) : (
           Object.entries(grouped).map(([group, items]) => (
             <div key={group} className="mb-3">
-              <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-1 mb-1">
+              <div className="text-xs2 font-medium text-muted-foreground uppercase tracking-wider px-1 mb-1">
                 {group}
               </div>
               <div className="space-y-1">
@@ -144,7 +144,7 @@ export function TemplateManager({ onBack }: Props) {
                       <div className="text-xs font-medium text-foreground truncate">
                         {tmpl.title}
                       </div>
-                      <div className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">
+                      <div className="text-xs2 text-muted-foreground line-clamp-2 mt-0.5">
                         {tmpl.content}
                       </div>
                     </div>
@@ -180,7 +180,7 @@ export function TemplateManager({ onBack }: Props) {
       </div>
 
       {/* Hint bar */}
-      <div className="px-3 py-1 text-[10px] text-muted-foreground/70 border-t border-border/20 shrink-0">
+      <div className="px-3 py-1 text-xs2 text-muted-foreground/70 border-t border-border/20 shrink-0">
         {t("template.variables")}: {"{date}"} {"{time}"} {"{datetime}"} {"{clipboard}"}
       </div>
 
@@ -194,7 +194,7 @@ export function TemplateManager({ onBack }: Props) {
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <label className="text-[11px] text-muted-foreground mb-1 block">
+              <label className="text-sm2 text-muted-foreground mb-1 block">
                 {t("template.titleField")}
               </label>
               <Input
@@ -205,7 +205,7 @@ export function TemplateManager({ onBack }: Props) {
               />
             </div>
             <div>
-              <label className="text-[11px] text-muted-foreground mb-1 block">
+              <label className="text-sm2 text-muted-foreground mb-1 block">
                 {t("template.content")}
               </label>
               <textarea
@@ -217,7 +217,7 @@ export function TemplateManager({ onBack }: Props) {
               />
             </div>
             <div>
-              <label className="text-[11px] text-muted-foreground mb-1 block">
+              <label className="text-sm2 text-muted-foreground mb-1 block">
                 {t("template.group")}
               </label>
               <Input

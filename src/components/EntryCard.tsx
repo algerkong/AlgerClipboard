@@ -227,11 +227,11 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
               onClick={(e) => { e.stopPropagation(); handleOpenImageViewer(); }}
             />
           ) : (
-            <p className="text-[12px] leading-relaxed text-foreground line-clamp-2 break-all">
+            <p className="text-base2 leading-relaxed text-foreground line-clamp-2 break-all">
               {getPreview(entry, t)}
             </p>
           )}
-          <div className="flex items-center gap-1.5 mt-1 text-[10px] text-muted-foreground">
+          <div className="flex items-center gap-1.5 mt-1 text-xs2 text-muted-foreground">
             {entry.is_pinned && (
               <Pin className="w-2.5 h-2.5 text-primary fill-primary/30" />
             )}
@@ -256,7 +256,7 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
                 className="flex items-center gap-0.5 text-blue-400/80 hover:text-blue-400 transition-colors ml-auto"
               >
                 <Languages className="w-2.5 h-2.5" />
-                <span className="text-[9px]">{t("viewer.translateHint")}</span>
+                <span className="text-2xs">{t("viewer.translateHint")}</span>
               </button>
             )}
             {!showTranslateHint && entry.is_favorite && (

@@ -208,7 +208,7 @@ function MainApp() {
           <ClipboardPanel onOpenSettings={handleOpenSettings} onOpenTemplates={handleOpenTemplates} />
         )}
       </div>
-      <Toaster position="bottom-center" richColors duration={2000} toastOptions={{ style: { fontSize: "12px", padding: "8px 12px" } }} />
+      <Toaster position="bottom-center" richColors duration={2000} toastOptions={{ style: { fontSize: "0.857rem", padding: "0.571rem 0.857rem" } }} />
     </div>
   );
 }

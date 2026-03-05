@@ -68,7 +68,7 @@ export function TypeFilter() {
           key={item.labelKey}
           onClick={() => handleClick(item)}
           className={cn(
-            "flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-colors",
+            "flex items-center gap-1 px-2 py-1 rounded-md text-sm2 font-medium transition-colors",
             isActive(item)
               ? "bg-primary/15 text-primary"
               : "text-muted-foreground hover:text-foreground hover:bg-accent/50"

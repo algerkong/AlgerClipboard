@@ -75,8 +75,8 @@ export function TranslateDialog({ text, onClose }: Props) {
         <div className="flex-1 overflow-y-auto p-3 space-y-3">
           {/* Source text */}
           <div>
-            <p className="text-[10px] text-muted-foreground mb-1">{t("translate.from")}</p>
-            <p className="text-[11px] text-foreground bg-muted/20 rounded p-2 max-h-[100px] overflow-y-auto break-all leading-relaxed">
+            <p className="text-xs2 text-muted-foreground mb-1">{t("translate.from")}</p>
+            <p className="text-sm2 text-foreground bg-muted/20 rounded p-2 max-h-[100px] overflow-y-auto break-all leading-relaxed">
               {text.length > 500 ? text.substring(0, 500) + "\u2026" : text}
             </p>
           </div>
@@ -85,25 +85,25 @@ export function TranslateDialog({ text, onClose }: Props) {
           {loading && (
             <div className="flex items-center justify-center gap-1.5 py-4 text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="text-[11px]">{t("translate.translating")}</span>
+              <span className="text-sm2">{t("translate.translating")}</span>
             </div>
           )}
 
           {error && (
-            <p className="text-[10px] text-red-400 bg-red-400/10 rounded p-2">
+            <p className="text-xs2 text-red-400 bg-red-400/10 rounded p-2">
               {t("translate.error")}: {error}
             </p>
           )}
 
           {result && (
             <div>
-              <p className="text-[10px] text-muted-foreground mb-1">
+              <p className="text-xs2 text-muted-foreground mb-1">
                 {t("translate.result")}
                 {result.engine && (
                   <span className="ml-1 text-primary/60">({result.engine})</span>
                 )}
               </p>
-              <p className="text-[11px] text-foreground bg-primary/5 rounded p-2 max-h-[140px] overflow-y-auto break-all leading-relaxed select-text">
+              <p className="text-sm2 text-foreground bg-primary/5 rounded p-2 max-h-[140px] overflow-y-auto break-all leading-relaxed select-text">
                 {result.translated}
               </p>
             </div>
@@ -112,11 +112,11 @@ export function TranslateDialog({ text, onClose }: Props) {
           {/* Language selectors + re-translate */}
           <div className="flex items-center gap-2">
             <div className="flex-1">
-              <label className="text-[10px] text-muted-foreground">{t("translate.from")}</label>
+              <label className="text-xs2 text-muted-foreground">{t("translate.from")}</label>
               <select
                 value={fromLang}
                 onChange={(e) => setFromLang(e.target.value)}
-                className="mt-0.5 w-full h-6 px-1 text-[11px] bg-muted/30 border border-border/50 rounded text-foreground focus:outline-none"
+                className="mt-0.5 w-full h-6 px-1 text-sm2 bg-muted/30 border border-border/50 rounded text-foreground focus:outline-none"
               >
                 {LANGUAGES.map((l) => (
                   <option key={l.value} value={l.value}>
@@ -127,11 +127,11 @@ export function TranslateDialog({ text, onClose }: Props) {
             </div>
             <span className="text-muted-foreground mt-3">&rarr;</span>
             <div className="flex-1">
-              <label className="text-[10px] text-muted-foreground">{t("translate.to")}</label>
+              <label className="text-xs2 text-muted-foreground">{t("translate.to")}</label>
               <select
                 value={toLang}
                 onChange={(e) => setToLang(e.target.value)}
-                className="mt-0.5 w-full h-6 px-1 text-[11px] bg-muted/30 border border-border/50 rounded text-foreground focus:outline-none"
+                className="mt-0.5 w-full h-6 px-1 text-sm2 bg-muted/30 border border-border/50 rounded text-foreground focus:outline-none"
               >
                 {LANGUAGES.filter((l) => l.value !== "auto").map((l) => (
                   <option key={l.value} value={l.value}>
@@ -144,7 +144,7 @@ export function TranslateDialog({ text, onClose }: Props) {
               onClick={handleTranslate}
               disabled={loading}
               className={cn(
-                "mt-4 shrink-0 flex items-center gap-1 h-6 px-2.5 rounded text-[11px] font-medium transition-colors",
+                "mt-4 shrink-0 flex items-center gap-1 h-6 px-2.5 rounded text-sm2 font-medium transition-colors",
                 loading
                   ? "bg-muted/50 text-muted-foreground cursor-not-allowed"
                   : "bg-primary/15 text-primary hover:bg-primary/25"

@@ -7,17 +7,45 @@ import {
 } from "@/services/settingsService";
 
 type Theme = "light" | "dark" | "system";
-export type FontSize = "small" | "medium" | "large";
+export type UIScale = "xs" | "sm" | "md" | "lg" | "xl";
+export type FontFamily = "system" | "microsoft-yahei" | "noto-sans" | "mono";
 
-const FONT_SIZE_MAP: Record<FontSize, string> = {
-  small: "12px",
-  medium: "13px",
-  large: "14px",
+const UI_SCALE_MAP: Record<UIScale, string> = {
+  xs: "12px",
+  sm: "13px",
+  md: "14px",
+  lg: "15px",
+  xl: "16px",
 };
 
-function applyFontSize(size: FontSize) {
-  document.documentElement.style.setProperty("--app-font-size", FONT_SIZE_MAP[size]);
+const FONT_FAMILY_MAP: Record<FontFamily, string> = {
+  system:
+    '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
+  "microsoft-yahei": '"Microsoft YaHei", "微软雅黑", sans-serif',
+  "noto-sans": '"Noto Sans SC", "Noto Sans", sans-serif',
+  mono: '"JetBrains Mono", "Fira Code", "Cascadia Code", Consolas, monospace',
+};
+
+function applyUIScale(scale: UIScale) {
+  document.documentElement.style.setProperty(
+    "--app-font-size",
+    UI_SCALE_MAP[scale],
+  );
 }
+
+function applyFontFamily(family: FontFamily) {
+  document.documentElement.style.setProperty(
+    "--app-font-family",
+    FONT_FAMILY_MAP[family],
+  );
+}
+
+// Migrate old font_size values to new ui_scale values
+const FONT_SIZE_MIGRATION: Record<string, UIScale> = {
+  small: "xs",
+  medium: "sm",
+  large: "md",
+};
 
 interface SettingsState {
   theme: Theme;
@@ -25,7 +53,8 @@ interface SettingsState {
   autoStart: boolean;
   pasteAndClose: boolean;
   locale: string;
-  fontSize: FontSize;
+  uiScale: UIScale;
+  fontFamily: FontFamily;
   isPinned: boolean; // non-persisted, controls auto-hide on blur
 
   loadSettings: () => Promise<void>;
@@ -34,7 +63,8 @@ interface SettingsState {
   setAutoStart: (enabled: boolean) => Promise<void>;
   setPasteAndClose: (enabled: boolean) => Promise<void>;
   setLocale: (locale: string) => Promise<void>;
-  setFontSize: (size: FontSize) => Promise<void>;
+  setUIScale: (scale: UIScale) => Promise<void>;
+  setFontFamily: (family: FontFamily) => Promise<void>;
   setIsPinned: (pinned: boolean) => void;
 }
 
@@ -44,22 +74,46 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   autoStart: false,
   pasteAndClose: true,
   locale: "zh-CN",
-  fontSize: "medium" as FontSize,
+  uiScale: "md",
+  fontFamily: "system",
   isPinned: true,
 
   loadSettings: async () => {
     try {
-      const [theme, maxHistory, pasteAndClose, locale, fontSize, autoStartEnabled] = await Promise.all([
+      const [
+        theme,
+        maxHistory,
+        pasteAndClose,
+        locale,
+        uiScale,
+        oldFontSize,
+        fontFamily,
+        autoStartEnabled,
+      ] = await Promise.all([
         getSetting("theme"),
         getSetting("max_history"),
         getSetting("paste_and_close"),
         getSetting("locale"),
+        getSetting("ui_scale"),
         getSetting("font_size"),
+        getSetting("font_family"),
         getAutoStart(),
       ]);
 
-      const fs = (fontSize as FontSize) || "medium";
-      applyFontSize(fs);
+      // Migrate old font_size to ui_scale
+      let scale: UIScale = "md";
+      if (uiScale && uiScale in UI_SCALE_MAP) {
+        scale = uiScale as UIScale;
+      } else if (oldFontSize && oldFontSize in FONT_SIZE_MIGRATION) {
+        scale = FONT_SIZE_MIGRATION[oldFontSize];
+        // Persist the migrated value
+        updateSetting("ui_scale", scale).catch(() => {});
+      }
+
+      const ff = (fontFamily as FontFamily) || "system";
+
+      applyUIScale(scale);
+      applyFontFamily(ff);
 
       set({
         theme: (theme as Theme) ?? "dark",
@@ -67,7 +121,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         autoStart: autoStartEnabled,
         pasteAndClose: pasteAndClose !== "false",
         locale: locale ?? "zh-CN",
-        fontSize: fs,
+        uiScale: scale,
+        fontFamily: ff,
       });
     } catch (err) {
       console.error("Failed to load settings:", err);
@@ -119,13 +174,23 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     }
   },
 
-  setFontSize: async (size: FontSize) => {
-    applyFontSize(size);
-    set({ fontSize: size });
+  setUIScale: async (scale: UIScale) => {
+    applyUIScale(scale);
+    set({ uiScale: scale });
     try {
-      await updateSetting("font_size", size);
+      await updateSetting("ui_scale", scale);
     } catch (err) {
-      console.error("Failed to save font_size:", err);
+      console.error("Failed to save ui_scale:", err);
+    }
+  },
+
+  setFontFamily: async (family: FontFamily) => {
+    applyFontFamily(family);
+    set({ fontFamily: family });
+    try {
+      await updateSetting("font_family", family);
+    } catch (err) {
+      console.error("Failed to save font_family:", err);
     }
   },
 

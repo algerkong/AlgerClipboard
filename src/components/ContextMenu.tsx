@@ -58,7 +58,7 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
               item.onClick();
               onClose();
             }}
-            className={`w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-left transition-colors ${
+            className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm2 text-left transition-colors ${
               item.danger
                 ? "text-red-400 hover:bg-red-500/10"
                 : "text-foreground hover:bg-accent/50"

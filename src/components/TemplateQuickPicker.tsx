@@ -53,7 +53,7 @@ export function TemplateQuickPicker({ onClose }: Props) {
       ) : templates.length === 0 ? (
         <div className="flex flex-col items-center gap-1 px-3 py-4 text-muted-foreground">
           <FileText className="w-5 h-5" />
-          <p className="text-[11px]">{t("template.noTemplates")}</p>
+          <p className="text-sm2">{t("template.noTemplates")}</p>
         </div>
       ) : (
         <div className="py-1">
@@ -65,10 +65,10 @@ export function TemplateQuickPicker({ onClose }: Props) {
             >
               <Copy className="w-3 h-3 text-muted-foreground shrink-0" />
               <div className="min-w-0 flex-1">
-                <div className="text-[11px] font-medium text-foreground truncate">
+                <div className="text-sm2 font-medium text-foreground truncate">
                   {tmpl.title}
                 </div>
-                <div className="text-[9px] text-muted-foreground truncate">
+                <div className="text-2xs text-muted-foreground truncate">
                   {tmpl.content.length > 40 ? tmpl.content.substring(0, 40) + "\u2026" : tmpl.content}
                 </div>
               </div>

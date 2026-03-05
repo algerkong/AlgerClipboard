@@ -78,7 +78,7 @@ export function TextViewer({ text, onClose }: Props) {
             {showTranslateHint && (
               <button
                 onClick={() => setShowTranslate(true)}
-                className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium text-blue-400 bg-blue-400/10 hover:bg-blue-400/20 transition-colors"
+                className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs2 font-medium text-blue-400 bg-blue-400/10 hover:bg-blue-400/20 transition-colors"
               >
                 <Languages className="w-3 h-3" />
                 {t("viewer.translateHint")}
@@ -104,7 +104,7 @@ export function TextViewer({ text, onClose }: Props) {
         <div className="flex-1 overflow-y-auto p-3">
           <pre
             className={cn(
-              "text-[11px] leading-relaxed whitespace-pre-wrap break-all",
+              "text-sm2 leading-relaxed whitespace-pre-wrap break-all",
               isCode
                 ? "font-mono bg-muted/30 rounded-md p-3 text-foreground border border-border/20"
                 : "text-foreground"

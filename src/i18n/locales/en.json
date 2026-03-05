@@ -53,10 +53,18 @@
     "cacheFiles": "{{count}} files",
     "cleanupCache": "Clean Up Cache",
     "cacheCleanedUp": "Cache cleaned up",
-    "fontSize": "Font Size",
-    "fontSize_small": "Small",
-    "fontSize_medium": "Medium",
-    "fontSize_large": "Large"
+    "uiScale": "UI Scale",
+    "uiScale_xs": "XS",
+    "uiScale_sm": "S",
+    "uiScale_md": "M",
+    "uiScale_lg": "L",
+    "uiScale_xl": "XL",
+    "fontFamily": "Font",
+    "fontFamily_system": "System Default",
+    "fontFamily_microsoft-yahei": "Microsoft YaHei",
+    "fontFamily_noto-sans": "Noto Sans",
+    "fontFamily_mono": "Monospace",
+    "fontFamilyDesc": "Change the interface font"
   },
   "sync": {
     "title": "Sync",

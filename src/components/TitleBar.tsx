@@ -45,7 +45,7 @@ function SyncIndicator() {
             {icon}
           </div>
         </TooltipTrigger>
-        <TooltipContent side="bottom" className="text-[10px]">
+        <TooltipContent side="bottom" className="text-xs2">
           {tooltip}
         </TooltipContent>
       </Tooltip>
@@ -70,7 +70,7 @@ export function TitleBar() {
   return (
     <div data-tauri-drag-region className="flex items-center justify-between h-8 px-3 bg-card/80 backdrop-blur-sm border-b border-border/50 select-none shrink-0">
       <div data-tauri-drag-region className="flex items-center gap-1.5">
-        <span data-tauri-drag-region className="text-[11px] font-medium text-muted-foreground tracking-wide uppercase">
+        <span data-tauri-drag-region className="text-sm2 font-medium text-muted-foreground tracking-wide uppercase">
           {t("titleBar.clipboard")}
         </span>
         <SyncIndicator />

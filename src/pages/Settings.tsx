@@ -1,13 +1,42 @@
 import { useEffect, useState } from "react";
 import {
-  ArrowLeft, Sun, Moon, Monitor, Download, Upload, Trash2, FolderOpen,
-  Settings2, Cloud, Languages, Database, Plus, RefreshCw, Check, X, Lock, Loader2, CloudOff, Pencil
+  ArrowLeft,
+  Sun,
+  Moon,
+  Monitor,
+  Download,
+  Upload,
+  Trash2,
+  FolderOpen,
+  Settings2,
+  Cloud,
+  Languages,
+  Database,
+  Plus,
+  RefreshCw,
+  Check,
+  X,
+  Lock,
+  Loader2,
+  CloudOff,
+  Pencil,
 } from "lucide-react";
-import { useSettingsStore, type FontSize } from "@/stores/settingsStore";
+import {
+  useSettingsStore,
+  type UIScale,
+  type FontFamily,
+} from "@/stores/settingsStore";
 import { useTranslateStore } from "@/stores/translateStore";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { useSyncStore } from "@/stores/syncStore";
-import { exportData, importData, clearHistory, getCacheInfo, cleanupCache, type CacheInfo } from "@/services/clipboardService";
+import {
+  exportData,
+  importData,
+  clearHistory,
+  getCacheInfo,
+  cleanupCache,
+  type CacheInfo,
+} from "@/services/clipboardService";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -27,7 +56,8 @@ const languages = [
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
@@ -38,23 +68,57 @@ const ENGINE_LIST = [
 ] as const;
 
 const TABS: { key: SettingsTab; labelKey: string; icon: React.ReactNode }[] = [
-  { key: "general", labelKey: "settings.tabGeneral", icon: <Settings2 className="w-3 h-3" /> },
-  { key: "sync", labelKey: "settings.tabSync", icon: <Cloud className="w-3 h-3" /> },
-  { key: "translate", labelKey: "settings.tabTranslate", icon: <Languages className="w-3 h-3" /> },
-  { key: "data", labelKey: "settings.tabData", icon: <Database className="w-3 h-3" /> },
+  {
+    key: "general",
+    labelKey: "settings.tabGeneral",
+    icon: <Settings2 className="w-3 h-3" />,
+  },
+  {
+    key: "sync",
+    labelKey: "settings.tabSync",
+    icon: <Cloud className="w-3 h-3" />,
+  },
+  {
+    key: "translate",
+    labelKey: "settings.tabTranslate",
+    icon: <Languages className="w-3 h-3" />,
+  },
+  {
+    key: "data",
+    labelKey: "settings.tabData",
+    icon: <Database className="w-3 h-3" />,
+  },
 ];
 
 /* ─── Toggle switch helper ─── */
-function Toggle({ value, onChange, size = "md" }: { value: boolean; onChange: (v: boolean) => void; size?: "sm" | "md" }) {
+function Toggle({
+  value,
+  onChange,
+  size = "md",
+}: {
+  value: boolean;
+  onChange: (v: boolean) => void;
+  size?: "sm" | "md";
+}) {
   const w = size === "sm" ? "w-7 h-[16px]" : "w-8 h-[18px]";
   const dot = size === "sm" ? "w-[12px] h-[12px]" : "w-[14px] h-[14px]";
   const shift = size === "sm" ? "translate-x-[11px]" : "translate-x-[14px]";
   return (
     <button
       onClick={() => onChange(!value)}
-      className={cn("relative rounded-full transition-colors", w, value ? "bg-primary/80" : "bg-muted")}
+      className={cn(
+        "relative rounded-full transition-colors",
+        w,
+        value ? "bg-primary/80" : "bg-muted",
+      )}
     >
-      <span className={cn("absolute top-[2px] left-[2px] rounded-full bg-white shadow transition-transform", dot, value && shift)} />
+      <span
+        className={cn(
+          "absolute top-[2px] left-[2px] rounded-full bg-white shadow transition-transform",
+          dot,
+          value && shift,
+        )}
+      />
     </button>
   );
 }
@@ -67,18 +131,32 @@ function GeneralTab() {
   const pasteAndClose = useSettingsStore((s) => s.pasteAndClose);
   const autoStart = useSettingsStore((s) => s.autoStart);
   const locale = useSettingsStore((s) => s.locale);
-  const fontSize = useSettingsStore((s) => s.fontSize);
+  const uiScale = useSettingsStore((s) => s.uiScale);
+  const fontFamily = useSettingsStore((s) => s.fontFamily);
   const setTheme = useSettingsStore((s) => s.setTheme);
   const setMaxHistory = useSettingsStore((s) => s.setMaxHistory);
   const setPasteAndClose = useSettingsStore((s) => s.setPasteAndClose);
   const setAutoStart = useSettingsStore((s) => s.setAutoStart);
   const setLocale = useSettingsStore((s) => s.setLocale);
-  const setFontSize = useSettingsStore((s) => s.setFontSize);
+  const setUIScale = useSettingsStore((s) => s.setUIScale);
+  const setFontFamily = useSettingsStore((s) => s.setFontFamily);
 
   const themes: { value: Theme; labelKey: string; icon: React.ReactNode }[] = [
-    { value: "light", labelKey: "settings.light", icon: <Sun className="w-3.5 h-3.5" /> },
-    { value: "dark", labelKey: "settings.dark", icon: <Moon className="w-3.5 h-3.5" /> },
-    { value: "system", labelKey: "settings.auto", icon: <Monitor className="w-3.5 h-3.5" /> },
+    {
+      value: "light",
+      labelKey: "settings.light",
+      icon: <Sun className="w-3.5 h-3.5" />,
+    },
+    {
+      value: "dark",
+      labelKey: "settings.dark",
+      icon: <Moon className="w-3.5 h-3.5" />,
+    },
+    {
+      value: "system",
+      labelKey: "settings.auto",
+      icon: <Monitor className="w-3.5 h-3.5" />,
+    },
   ];
 
   const handleLocaleChange = (newLocale: string) => {
@@ -90,7 +168,7 @@ function GeneralTab() {
     <div className="space-y-5">
       {/* Language */}
       <section>
-        <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+        <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
           {t("settings.language")}
         </label>
         <div className="flex gap-1.5 mt-2">
@@ -102,19 +180,21 @@ function GeneralTab() {
                 "flex-1 flex items-center justify-center py-1.5 rounded-md text-xs font-medium transition-colors",
                 locale === lang.value
                   ? "bg-primary/15 text-primary ring-1 ring-primary/30"
-                  : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                  : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground",
               )}
             >
               {lang.label}
             </button>
           ))}
         </div>
-        <p className="mt-1 text-[10px] text-muted-foreground/70">{t("settings.languageDesc")}</p>
+        <p className="mt-1 text-xs2 text-muted-foreground/70">
+          {t("settings.languageDesc")}
+        </p>
       </section>
 
       {/* Theme */}
       <section>
-        <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+        <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
           {t("settings.theme")}
         </label>
         <div className="flex gap-1.5 mt-2">
@@ -126,7 +206,7 @@ function GeneralTab() {
                 "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-colors",
                 theme === themeItem.value
                   ? "bg-primary/15 text-primary ring-1 ring-primary/30"
-                  : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                  : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground",
               )}
             >
               {themeItem.icon}
@@ -136,32 +216,55 @@ function GeneralTab() {
         </div>
       </section>
 
-      {/* Font size */}
+      {/* UI Scale */}
       <section>
-        <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-          {t("settings.fontSize")}
+        <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
+          {t("settings.uiScale")}
         </label>
-        <div className="flex gap-1.5 mt-2">
-          {(["small", "medium", "large"] as FontSize[]).map((size) => (
+        <div className="flex gap-1 mt-2">
+          {(["xs", "sm", "md", "lg", "xl"] as UIScale[]).map((scale) => (
             <button
-              key={size}
-              onClick={() => setFontSize(size)}
+              key={scale}
+              onClick={() => setUIScale(scale)}
               className={cn(
                 "flex-1 flex items-center justify-center py-1.5 rounded-md text-xs font-medium transition-colors",
-                fontSize === size
+                uiScale === scale
                   ? "bg-primary/15 text-primary ring-1 ring-primary/30"
-                  : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                  : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground",
               )}
             >
-              {t(`settings.fontSize_${size}`)}
+              {t(`settings.uiScale_${scale}`)}
             </button>
           ))}
         </div>
       </section>
 
+      {/* Font Family */}
+      <section>
+        <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
+          {t("settings.fontFamily")}
+        </label>
+        <select
+          value={fontFamily}
+          onChange={(e) => setFontFamily(e.target.value as FontFamily)}
+          className="mt-2 w-full h-7 px-2 text-xs bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+        >
+          {(
+            ["system", "microsoft-yahei", "noto-sans", "mono"] as FontFamily[]
+          ).map((f) => (
+            <option key={f} value={f}>
+              {t(`settings.fontFamily_${f}`)}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-xs2 text-muted-foreground/70">
+          {t("settings.fontFamilyDesc")}
+        </p>
+      </section>
+
       {/* Max history */}
       <section>
-        <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+        <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
           {t("settings.historyLimit")}
         </label>
         <input
@@ -175,17 +278,21 @@ function GeneralTab() {
           }}
           className="mt-2 w-24 h-7 px-2 text-xs bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
         />
-        <p className="mt-1 text-[10px] text-muted-foreground/70">{t("settings.maxEntries")}</p>
+        <p className="mt-1 text-xs2 text-muted-foreground/70">
+          {t("settings.maxEntries")}
+        </p>
       </section>
 
       {/* Paste and close */}
       <section>
         <div className="flex items-center justify-between">
           <div>
-            <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+            <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
               {t("settings.autoClose")}
             </label>
-            <p className="mt-0.5 text-[10px] text-muted-foreground/70">{t("settings.hidePanel")}</p>
+            <p className="mt-0.5 text-xs2 text-muted-foreground/70">
+              {t("settings.hidePanel")}
+            </p>
           </div>
           <Toggle value={pasteAndClose} onChange={setPasteAndClose} />
         </div>
@@ -195,10 +302,12 @@ function GeneralTab() {
       <section>
         <div className="flex items-center justify-between">
           <div>
-            <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+            <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
               {t("settings.autoStart")}
             </label>
-            <p className="mt-0.5 text-[10px] text-muted-foreground/70">{t("settings.autoStartDesc")}</p>
+            <p className="mt-0.5 text-xs2 text-muted-foreground/70">
+              {t("settings.autoStartDesc")}
+            </p>
           </div>
           <Toggle value={autoStart} onChange={setAutoStart} />
         </div>
@@ -224,14 +333,21 @@ function SyncTab() {
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
-  const [provider, setProvider] = useState<"webdav" | "google_drive" | "onedrive">("webdav");
+  const [provider, setProvider] = useState<
+    "webdav" | "google_drive" | "onedrive"
+  >("webdav");
   const [webdavUrl, setWebdavUrl] = useState("");
   const [webdavUser, setWebdavUser] = useState("");
   const [webdavPass, setWebdavPass] = useState("");
   const [oauthClientId, setOauthClientId] = useState("");
   const [oauthClientSecret, setOauthClientSecret] = useState("");
-  const [oauthTokens, setOauthTokens] = useState<Record<string, unknown> | null>(null);
-  const [syncFreq, setSyncFreq] = useState<"realtime" | "interval" | "manual">("manual");
+  const [oauthTokens, setOauthTokens] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
+  const [syncFreq, setSyncFreq] = useState<"realtime" | "interval" | "manual">(
+    "manual",
+  );
   const [intervalMin, setIntervalMin] = useState(15);
   const [encEnabled, setEncEnabled] = useState(false);
   const [passphraseVal, setPassphraseVal] = useState("");
@@ -239,7 +355,9 @@ function SyncTab() {
   const [authorizing, setAuthorizing] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { loadAccounts(); }, [loadAccounts]);
+  useEffect(() => {
+    loadAccounts();
+  }, [loadAccounts]);
 
   const providers = [
     { key: "webdav" as const, label: t("sync.webdav") },
@@ -255,9 +373,17 @@ function SyncTab() {
 
   const buildConfig = (): string => {
     if (provider === "webdav") {
-      return JSON.stringify({ url: webdavUrl, username: webdavUser, password: webdavPass });
+      return JSON.stringify({
+        url: webdavUrl,
+        username: webdavUser,
+        password: webdavPass,
+      });
     }
-    return JSON.stringify({ client_id: oauthClientId, client_secret: oauthClientSecret, tokens: oauthTokens });
+    return JSON.stringify({
+      client_id: oauthClientId,
+      client_secret: oauthClientSecret,
+      tokens: oauthTokens,
+    });
   };
 
   const handleSave = async () => {
@@ -273,10 +399,15 @@ function SyncTab() {
           syncFreq,
           syncFreq === "interval" ? intervalMin : null,
           encEnabled,
-          true
+          true,
         );
       } else {
-        await addAccount(provider, buildConfig(), syncFreq, syncFreq === "interval" ? intervalMin : undefined);
+        await addAccount(
+          provider,
+          buildConfig(),
+          syncFreq,
+          syncFreq === "interval" ? intervalMin : undefined,
+        );
       }
       toast.success(t("sync.saved"));
       setShowAddForm(false);
@@ -305,7 +436,11 @@ function SyncTab() {
   const handleOAuth = async () => {
     setAuthorizing(true);
     try {
-      const tokens = await startOAuth(provider, oauthClientId, oauthClientSecret || undefined);
+      const tokens = await startOAuth(
+        provider,
+        oauthClientId,
+        oauthClientSecret || undefined,
+      );
       setOauthTokens(tokens);
       toast.success(t("sync.authorized"));
     } catch {
@@ -315,7 +450,7 @@ function SyncTab() {
     }
   };
 
-  const handleEdit = (acc: typeof accounts[0]) => {
+  const handleEdit = (acc: (typeof accounts)[0]) => {
     setEditingAccountId(acc.id);
     setProvider(acc.provider);
     setSyncFreq(acc.sync_frequency);
@@ -343,10 +478,16 @@ function SyncTab() {
 
   const resetForm = () => {
     setProvider("webdav");
-    setWebdavUrl(""); setWebdavUser(""); setWebdavPass("");
-    setOauthClientId(""); setOauthClientSecret(""); setOauthTokens(null);
-    setSyncFreq("manual"); setIntervalMin(15);
-    setEncEnabled(false); setPassphraseVal("");
+    setWebdavUrl("");
+    setWebdavUser("");
+    setWebdavPass("");
+    setOauthClientId("");
+    setOauthClientSecret("");
+    setOauthTokens(null);
+    setSyncFreq("manual");
+    setIntervalMin(15);
+    setEncEnabled(false);
+    setPassphraseVal("");
     setEditingAccountId(null);
   };
 
@@ -356,29 +497,43 @@ function SyncTab() {
       {accounts.length > 0 && !showAddForm && (
         <div className="space-y-2">
           {accounts.map((acc) => (
-            <div key={acc.id} className="bg-muted/20 rounded-md p-2.5 space-y-1.5">
+            <div
+              key={acc.id}
+              className="bg-muted/20 rounded-md p-2.5 space-y-1.5"
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <Cloud className="w-3 h-3 text-muted-foreground" />
-                  <span className="text-[11px] font-medium text-foreground capitalize">
-                    {acc.provider === "google_drive" ? "Google Drive" : acc.provider === "onedrive" ? "OneDrive" : "WebDAV"}
+                  <span className="text-sm2 font-medium text-foreground capitalize">
+                    {acc.provider === "google_drive"
+                      ? "Google Drive"
+                      : acc.provider === "onedrive"
+                        ? "OneDrive"
+                        : "WebDAV"}
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <span className={cn(
-                    "text-[9px] px-1.5 py-0.5 rounded-full",
-                    acc.enabled ? "bg-green-500/15 text-green-400" : "bg-muted/30 text-muted-foreground"
-                  )}>
+                  <span
+                    className={cn(
+                      "text-2xs px-1.5 py-0.5 rounded-full",
+                      acc.enabled
+                        ? "bg-green-500/15 text-green-400"
+                        : "bg-muted/30 text-muted-foreground",
+                    )}
+                  >
                     {acc.enabled ? t("sync.enabled") : "Off"}
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+              <div className="flex items-center gap-2 text-xs2 text-muted-foreground">
                 <span>{acc.sync_frequency}</span>
                 {acc.last_sync_at && (
                   <>
                     <span>·</span>
-                    <span>{t("sync.lastSync")}: {new Date(acc.last_sync_at).toLocaleTimeString()}</span>
+                    <span>
+                      {t("sync.lastSync")}:{" "}
+                      {new Date(acc.last_sync_at).toLocaleTimeString()}
+                    </span>
                   </>
                 )}
                 {acc.encryption_enabled && (
@@ -392,14 +547,18 @@ function SyncTab() {
                 <button
                   onClick={() => triggerSync(acc.id)}
                   disabled={syncStatus === "syncing"}
-                  className="flex items-center gap-1 h-6 px-2 text-[10px] font-medium bg-primary/15 text-primary hover:bg-primary/25 rounded transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1 h-6 px-2 text-xs2 font-medium bg-primary/15 text-primary hover:bg-primary/25 rounded transition-colors disabled:opacity-50"
                 >
-                  {syncStatus === "syncing" ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <RefreshCw className="w-2.5 h-2.5" />}
+                  {syncStatus === "syncing" ? (
+                    <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-2.5 h-2.5" />
+                  )}
                   {t("sync.syncNow")}
                 </button>
                 <button
                   onClick={() => handleEdit(acc)}
-                  className="flex items-center gap-1 h-6 px-2 text-[10px] font-medium bg-muted/30 hover:bg-muted/50 rounded transition-colors"
+                  className="flex items-center gap-1 h-6 px-2 text-xs2 font-medium bg-muted/30 hover:bg-muted/50 rounded transition-colors"
                 >
                   <Pencil className="w-2.5 h-2.5" />
                   {t("sync.edit")}
@@ -409,7 +568,7 @@ function SyncTab() {
                     await removeAccount(acc.id);
                     toast.success(t("sync.delete"));
                   }}
-                  className="flex items-center gap-1 h-6 px-2 text-[10px] font-medium text-destructive bg-destructive/10 hover:bg-destructive/20 rounded transition-colors"
+                  className="flex items-center gap-1 h-6 px-2 text-xs2 font-medium text-destructive bg-destructive/10 hover:bg-destructive/20 rounded transition-colors"
                 >
                   <Trash2 className="w-2.5 h-2.5" />
                   {t("sync.delete")}
@@ -419,22 +578,36 @@ function SyncTab() {
           ))}
 
           {/* Sync status bar */}
-          <div className="flex items-center justify-between text-[10px] text-muted-foreground px-1">
+          <div className="flex items-center justify-between text-xs2 text-muted-foreground px-1">
             <div className="flex items-center gap-1">
-              {syncStatus === "syncing" && <Loader2 className="w-2.5 h-2.5 animate-spin text-blue-400" />}
-              {syncStatus === "synced" && <Cloud className="w-2.5 h-2.5 text-green-400" />}
-              {syncStatus === "error" && <CloudOff className="w-2.5 h-2.5 text-red-400" />}
+              {syncStatus === "syncing" && (
+                <Loader2 className="w-2.5 h-2.5 animate-spin text-blue-400" />
+              )}
+              {syncStatus === "synced" && (
+                <Cloud className="w-2.5 h-2.5 text-green-400" />
+              )}
+              {syncStatus === "error" && (
+                <CloudOff className="w-2.5 h-2.5 text-red-400" />
+              )}
               <span>
-                {syncStatus === "syncing" ? t("sync.syncing") : syncStatus === "synced" ? t("sync.synced") : syncStatus === "error" ? t("sync.syncFailed") : ""}
+                {syncStatus === "syncing"
+                  ? t("sync.syncing")
+                  : syncStatus === "synced"
+                    ? t("sync.synced")
+                    : syncStatus === "error"
+                      ? t("sync.syncFailed")
+                      : ""}
               </span>
             </div>
-            {lastSyncTime && <span>{new Date(lastSyncTime).toLocaleTimeString()}</span>}
+            {lastSyncTime && (
+              <span>{new Date(lastSyncTime).toLocaleTimeString()}</span>
+            )}
           </div>
 
           {/* Add more button */}
           <button
             onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-1.5 h-7 px-3 text-[11px] font-medium bg-muted/30 hover:bg-muted/50 rounded-md transition-colors"
+            className="flex items-center gap-1.5 h-7 px-3 text-sm2 font-medium bg-muted/30 hover:bg-muted/50 rounded-md transition-colors"
           >
             <Plus className="w-3 h-3" />
             {t("sync.addAccount")}
@@ -447,10 +620,10 @@ function SyncTab() {
         <div className="flex flex-col items-center justify-center py-6 gap-3 text-muted-foreground/70">
           <Cloud className="w-8 h-8 text-muted-foreground/40" />
           <p className="text-xs">{t("sync.noAccounts")}</p>
-          <p className="text-[10px]">{t("sync.noAccountsDesc")}</p>
+          <p className="text-xs2">{t("sync.noAccountsDesc")}</p>
           <button
             onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-1.5 h-7 px-3 text-[11px] font-medium bg-primary/15 text-primary hover:bg-primary/25 rounded-md transition-colors mt-1"
+            className="flex items-center gap-1.5 h-7 px-3 text-sm2 font-medium bg-primary/15 text-primary hover:bg-primary/25 rounded-md transition-colors mt-1"
           >
             <Plus className="w-3 h-3" />
             {t("sync.addAccount")}
@@ -462,21 +635,26 @@ function SyncTab() {
         <div className="space-y-4">
           {/* Provider selector */}
           <section>
-            <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+            <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
               {t("sync.provider")}
             </label>
             <div className="flex gap-1.5 mt-2">
               {providers.map((p) => (
                 <button
                   key={p.key}
-                  onClick={() => { if (!editingAccountId) { setProvider(p.key); setOauthTokens(null); } }}
+                  onClick={() => {
+                    if (!editingAccountId) {
+                      setProvider(p.key);
+                      setOauthTokens(null);
+                    }
+                  }}
                   disabled={!!editingAccountId}
                   className={cn(
                     "flex-1 flex items-center justify-center py-1.5 rounded-md text-xs font-medium transition-colors",
                     provider === p.key
                       ? "bg-primary/15 text-primary ring-1 ring-primary/30"
                       : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-                    editingAccountId && "opacity-60 cursor-not-allowed"
+                    editingAccountId && "opacity-60 cursor-not-allowed",
                   )}
                 >
                   {p.label}
@@ -493,21 +671,21 @@ function SyncTab() {
                 placeholder={t("sync.url")}
                 value={webdavUrl}
                 onChange={(e) => setWebdavUrl(e.target.value)}
-                className="w-full h-7 px-2 text-[11px] bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+                className="w-full h-7 px-2 text-sm2 bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
               />
               <input
                 type="text"
                 placeholder={t("sync.username")}
                 value={webdavUser}
                 onChange={(e) => setWebdavUser(e.target.value)}
-                className="w-full h-7 px-2 text-[11px] bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+                className="w-full h-7 px-2 text-sm2 bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
               />
               <input
                 type="password"
                 placeholder={t("sync.password")}
                 value={webdavPass}
                 onChange={(e) => setWebdavPass(e.target.value)}
-                className="w-full h-7 px-2 text-[11px] bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+                className="w-full h-7 px-2 text-sm2 bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
               />
             </section>
           )}
@@ -519,7 +697,7 @@ function SyncTab() {
                 placeholder={t("sync.clientId")}
                 value={oauthClientId}
                 onChange={(e) => setOauthClientId(e.target.value)}
-                className="w-full h-7 px-2 text-[11px] bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+                className="w-full h-7 px-2 text-sm2 bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
               />
               {provider === "google_drive" && (
                 <input
@@ -527,13 +705,13 @@ function SyncTab() {
                   placeholder={t("sync.clientSecret")}
                   value={oauthClientSecret}
                   onChange={(e) => setOauthClientSecret(e.target.value)}
-                  className="w-full h-7 px-2 text-[11px] bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+                  className="w-full h-7 px-2 text-sm2 bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
                 />
               )}
               <button
                 onClick={handleOAuth}
                 disabled={authorizing || !oauthClientId}
-                className="flex items-center gap-1.5 h-7 px-3 text-[11px] font-medium bg-primary/15 text-primary hover:bg-primary/25 rounded-md transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 h-7 px-3 text-sm2 font-medium bg-primary/15 text-primary hover:bg-primary/25 rounded-md transition-colors disabled:opacity-50"
               >
                 {authorizing && <Loader2 className="w-3 h-3 animate-spin" />}
                 {oauthTokens ? t("sync.authorized") : t("sync.authorize")}
@@ -543,7 +721,7 @@ function SyncTab() {
 
           {/* Sync frequency */}
           <section>
-            <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+            <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
               {t("sync.syncFrequency")}
             </label>
             <div className="flex gap-1.5 mt-2">
@@ -555,7 +733,7 @@ function SyncTab() {
                     "flex-1 flex items-center justify-center py-1.5 rounded-md text-xs font-medium transition-colors",
                     syncFreq === f.key
                       ? "bg-primary/15 text-primary ring-1 ring-primary/30"
-                      : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                      : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                   )}
                 >
                   {f.label}
@@ -569,10 +747,14 @@ function SyncTab() {
                   min={1}
                   max={1440}
                   value={intervalMin}
-                  onChange={(e) => setIntervalMin(parseInt(e.target.value, 10) || 15)}
+                  onChange={(e) =>
+                    setIntervalMin(parseInt(e.target.value, 10) || 15)
+                  }
                   className="w-20 h-7 px-2 text-xs bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
                 />
-                <span className="text-[10px] text-muted-foreground">{t("sync.intervalMinutes")}</span>
+                <span className="text-xs2 text-muted-foreground">
+                  {t("sync.intervalMinutes")}
+                </span>
               </div>
             )}
           </section>
@@ -583,10 +765,12 @@ function SyncTab() {
               <div className="flex items-center gap-1.5">
                 <Lock className="w-3 h-3 text-muted-foreground" />
                 <div>
-                  <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                  <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
                     {t("sync.encryption")}
                   </label>
-                  <p className="text-[10px] text-muted-foreground/70">{t("sync.encryptionDesc")}</p>
+                  <p className="text-xs2 text-muted-foreground/70">
+                    {t("sync.encryptionDesc")}
+                  </p>
                 </div>
               </div>
               <Toggle value={encEnabled} onChange={setEncEnabled} size="sm" />
@@ -597,7 +781,7 @@ function SyncTab() {
                 placeholder={t("sync.passphrase")}
                 value={passphraseVal}
                 onChange={(e) => setPassphraseVal(e.target.value)}
-                className="mt-2 w-full h-7 px-2 text-[11px] bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+                className="mt-2 w-full h-7 px-2 text-sm2 bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
               />
             )}
           </section>
@@ -605,8 +789,12 @@ function SyncTab() {
           {/* Action buttons */}
           <div className="flex gap-2">
             <button
-              onClick={() => { setShowAddForm(false); setEditingAccountId(null); resetForm(); }}
-              className="flex items-center gap-1.5 h-7 px-3 text-[11px] font-medium bg-muted/30 hover:bg-muted/50 rounded-md transition-colors"
+              onClick={() => {
+                setShowAddForm(false);
+                setEditingAccountId(null);
+                resetForm();
+              }}
+              className="flex items-center gap-1.5 h-7 px-3 text-sm2 font-medium bg-muted/30 hover:bg-muted/50 rounded-md transition-colors"
             >
               <X className="w-3 h-3" />
               {t("template.cancel")}
@@ -614,18 +802,26 @@ function SyncTab() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center gap-1.5 h-7 px-3 text-[11px] font-medium bg-primary/15 text-primary hover:bg-primary/25 rounded-md transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 h-7 px-3 text-sm2 font-medium bg-primary/15 text-primary hover:bg-primary/25 rounded-md transition-colors disabled:opacity-50"
             >
-              {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+              {saving ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Check className="w-3 h-3" />
+              )}
               {t("sync.save")}
             </button>
             {provider === "webdav" && (
               <button
                 onClick={handleTest}
                 disabled={testing}
-                className="flex items-center gap-1.5 h-7 px-3 text-[11px] font-medium bg-muted/30 hover:bg-muted/50 rounded-md transition-colors ml-auto disabled:opacity-50"
+                className="flex items-center gap-1.5 h-7 px-3 text-sm2 font-medium bg-muted/30 hover:bg-muted/50 rounded-md transition-colors ml-auto disabled:opacity-50"
               >
-                {testing ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                {testing ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-3 h-3" />
+                )}
                 {t("sync.testConnection")}
               </button>
             )}
@@ -643,7 +839,9 @@ function TranslateTab() {
   const loadEngines = useTranslateStore((s) => s.loadEngines);
   const saveEngine = useTranslateStore((s) => s.saveEngine);
 
-  const [engineForms, setEngineForms] = useState<Record<string, { apiKey: string; apiSecret: string; enabled: boolean }>>({});
+  const [engineForms, setEngineForms] = useState<
+    Record<string, { apiKey: string; apiSecret: string; enabled: boolean }>
+  >({});
   const [savedEngine, setSavedEngine] = useState<string | null>(null);
 
   useEffect(() => {
@@ -651,7 +849,10 @@ function TranslateTab() {
   }, [loadEngines]);
 
   useEffect(() => {
-    const forms: Record<string, { apiKey: string; apiSecret: string; enabled: boolean }> = {};
+    const forms: Record<
+      string,
+      { apiKey: string; apiSecret: string; enabled: boolean }
+    > = {};
     for (const eng of ENGINE_LIST) {
       const existing = engines.find((e) => e.engine === eng.id);
       forms[eng.id] = {
@@ -673,7 +874,7 @@ function TranslateTab() {
 
   return (
     <div className="space-y-3">
-      <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+      <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
         {t("translate.engineConfig")}
       </label>
       {ENGINE_LIST.map((eng) => {
@@ -682,8 +883,19 @@ function TranslateTab() {
         return (
           <div key={eng.id} className="bg-muted/20 rounded-md p-2.5 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium text-foreground">{eng.label}</span>
-              <Toggle value={form.enabled} onChange={(v) => setEngineForms((prev) => ({ ...prev, [eng.id]: { ...prev[eng.id], enabled: v } }))} size="sm" />
+              <span className="text-sm2 font-medium text-foreground">
+                {eng.label}
+              </span>
+              <Toggle
+                value={form.enabled}
+                onChange={(v) =>
+                  setEngineForms((prev) => ({
+                    ...prev,
+                    [eng.id]: { ...prev[eng.id], enabled: v },
+                  }))
+                }
+                size="sm"
+              />
             </div>
             <input
               type="text"
@@ -695,7 +907,7 @@ function TranslateTab() {
                   [eng.id]: { ...prev[eng.id], apiKey: e.target.value },
                 }))
               }
-              className="w-full h-6 px-2 text-[11px] bg-background border border-border/50 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+              className="w-full h-6 px-2 text-sm2 bg-background border border-border/50 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
             />
             {eng.hasSecret && (
               <input
@@ -708,14 +920,16 @@ function TranslateTab() {
                     [eng.id]: { ...prev[eng.id], apiSecret: e.target.value },
                   }))
                 }
-                className="w-full h-6 px-2 text-[11px] bg-background border border-border/50 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+                className="w-full h-6 px-2 text-sm2 bg-background border border-border/50 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
               />
             )}
             <button
               onClick={() => handleSaveEngine(eng.id)}
-              className="h-6 px-3 text-[10px] font-medium bg-primary/15 text-primary hover:bg-primary/25 rounded transition-colors"
+              className="h-6 px-3 text-xs2 font-medium bg-primary/15 text-primary hover:bg-primary/25 rounded transition-colors"
             >
-              {savedEngine === eng.id ? t("translate.saved") : t("translate.save")}
+              {savedEngine === eng.id
+                ? t("translate.saved")
+                : t("translate.save")}
             </button>
           </div>
         );
@@ -730,14 +944,16 @@ function DataTab() {
   const [cacheInfo, setCacheInfo] = useState<CacheInfo | null>(null);
 
   useEffect(() => {
-    getCacheInfo().then(setCacheInfo).catch(() => {});
+    getCacheInfo()
+      .then(setCacheInfo)
+      .catch(() => {});
   }, []);
 
   return (
     <div className="space-y-5">
       {/* Data management */}
       <section>
-        <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+        <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
           {t("settings.dataManagement")}
         </label>
         <div className="flex flex-col gap-2 mt-2">
@@ -758,7 +974,7 @@ function DataTab() {
                   toast.error(t("toast.exportFailed"));
                 }
               }}
-              className="flex items-center gap-1.5 h-7 px-3 text-[11px] font-medium bg-muted/30 hover:bg-muted/50 rounded-md transition-colors"
+              className="flex items-center gap-1.5 h-7 px-3 text-sm2 font-medium bg-muted/30 hover:bg-muted/50 rounded-md transition-colors"
             >
               <Download className="w-3 h-3" />
               {t("settings.export")}
@@ -782,7 +998,7 @@ function DataTab() {
                 };
                 input.click();
               }}
-              className="flex items-center gap-1.5 h-7 px-3 text-[11px] font-medium bg-muted/30 hover:bg-muted/50 rounded-md transition-colors"
+              className="flex items-center gap-1.5 h-7 px-3 text-sm2 font-medium bg-muted/30 hover:bg-muted/50 rounded-md transition-colors"
             >
               <Upload className="w-3 h-3" />
               {t("settings.import")}
@@ -798,31 +1014,39 @@ function DataTab() {
                 toast.error(t("toast.clearFailed"));
               }
             }}
-            className="flex items-center gap-1.5 h-7 px-3 text-[11px] font-medium text-destructive bg-destructive/10 hover:bg-destructive/20 rounded-md transition-colors w-fit"
+            className="flex items-center gap-1.5 h-7 px-3 text-sm2 font-medium text-destructive bg-destructive/10 hover:bg-destructive/20 rounded-md transition-colors w-fit"
           >
             <Trash2 className="w-3 h-3" />
             {t("settings.clearHistory")}
           </button>
-          <p className="text-[10px] text-muted-foreground/70">{t("settings.clearHistoryDesc")}</p>
+          <p className="text-xs2 text-muted-foreground/70">
+            {t("settings.clearHistoryDesc")}
+          </p>
         </div>
       </section>
 
       {/* Cache management */}
       <section>
-        <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+        <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
           {t("settings.cache")}
         </label>
         {cacheInfo && (
           <div className="mt-2 space-y-2">
-            <div className="flex items-center gap-2 text-[11px]">
+            <div className="flex items-center gap-2 text-sm2">
               <FolderOpen className="w-3 h-3 text-muted-foreground shrink-0" />
-              <span className="text-muted-foreground truncate text-[10px]" title={cacheInfo.cache_dir}>
+              <span
+                className="text-muted-foreground truncate text-xs2"
+                title={cacheInfo.cache_dir}
+              >
                 {cacheInfo.cache_dir}
               </span>
             </div>
-            <div className="flex items-center gap-3 text-[11px]">
+            <div className="flex items-center gap-3 text-sm2">
               <span className="text-muted-foreground">
-                {t("settings.cacheSize")}: <span className="text-foreground font-medium">{formatBytes(cacheInfo.total_size_bytes)}</span>
+                {t("settings.cacheSize")}:{" "}
+                <span className="text-foreground font-medium">
+                  {formatBytes(cacheInfo.total_size_bytes)}
+                </span>
               </span>
               <span className="text-muted-foreground">
                 {t("settings.cacheFiles", { count: cacheInfo.file_count })}
@@ -839,7 +1063,7 @@ function DataTab() {
                   toast.error("Cleanup failed");
                 }
               }}
-              className="flex items-center gap-1.5 h-7 px-3 text-[11px] font-medium bg-muted/30 hover:bg-muted/50 rounded-md transition-colors"
+              className="flex items-center gap-1.5 h-7 px-3 text-sm2 font-medium bg-muted/30 hover:bg-muted/50 rounded-md transition-colors"
             >
               <Trash2 className="w-3 h-3" />
               {t("settings.cleanupCache")}
@@ -876,10 +1100,10 @@ export function SettingsPage({ onBack }: Props) {
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={cn(
-              "flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-colors",
+              "flex items-center gap-1 px-2 py-1 rounded-md text-sm2 font-medium transition-colors",
               activeTab === tab.key
                 ? "bg-primary/15 text-primary"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
             )}
           >
             {tab.icon}

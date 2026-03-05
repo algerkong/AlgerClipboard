@@ -53,10 +53,18 @@
     "cacheFiles": "{{count}} 个文件",
     "cleanupCache": "清理缓存",
     "cacheCleanedUp": "已清理缓存",
-    "fontSize": "字体大小",
-    "fontSize_small": "小",
-    "fontSize_medium": "中",
-    "fontSize_large": "大"
+    "uiScale": "界面缩放",
+    "uiScale_xs": "较小",
+    "uiScale_sm": "小",
+    "uiScale_md": "中",
+    "uiScale_lg": "大",
+    "uiScale_xl": "较大",
+    "fontFamily": "字体",
+    "fontFamily_system": "系统默认",
+    "fontFamily_microsoft-yahei": "微软雅黑",
+    "fontFamily_noto-sans": "Noto Sans",
+    "fontFamily_mono": "等宽字体",
+    "fontFamilyDesc": "更改界面显示字体"
   },
   "sync": {
     "title": "同步",

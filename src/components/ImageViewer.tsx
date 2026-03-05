@@ -95,7 +95,7 @@ export function ImageViewerPage() {
         className="flex items-center justify-between h-8 px-3 bg-card/80 backdrop-blur-sm border-b border-border/50 select-none shrink-0"
       >
         <div data-tauri-drag-region className="flex items-center gap-2">
-          <span data-tauri-drag-region className="text-[11px] font-medium text-muted-foreground">
+          <span data-tauri-drag-region className="text-sm2 font-medium text-muted-foreground">
             {t("imageViewer.title")}
           </span>
           {/* Zoom controls */}
@@ -107,7 +107,7 @@ export function ImageViewerPage() {
             >
               <ZoomOut className="w-3 h-3" />
             </button>
-            <span className="text-[10px] text-muted-foreground min-w-[32px] text-center">
+            <span className="text-xs2 text-muted-foreground min-w-[32px] text-center">
               {Math.round(zoom * 100)}%
             </span>
             <button
@@ -133,7 +133,7 @@ export function ImageViewerPage() {
             onClick={handleExtractText}
             disabled={ocrLoading}
             className={cn(
-              "flex items-center gap-1 px-1.5 h-5 rounded text-[10px] font-medium transition-colors",
+              "flex items-center gap-1 px-1.5 h-5 rounded text-xs2 font-medium transition-colors",
               ocrLoading
                 ? "text-muted-foreground cursor-not-allowed"
                 : "text-blue-400 hover:bg-blue-400/10"
@@ -180,14 +180,14 @@ export function ImageViewerPage() {
       {(ocrText !== null || ocrError) && (
         <div className="border-t border-border/30 px-3 py-2 shrink-0 max-h-[40%] flex flex-col">
           <div className="flex items-center justify-between mb-1 shrink-0">
-            <span className="text-[10px] text-muted-foreground font-medium">
+            <span className="text-xs2 text-muted-foreground font-medium">
               {t("imageViewer.ocrResult")}
             </span>
             {ocrText && (
               <div className="flex items-center gap-1">
                 <button
                   onClick={handleCopyText}
-                  className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                  className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs2 text-muted-foreground hover:text-foreground transition-colors"
                   title={t("imageViewer.copyText")}
                 >
                   <Copy className="w-2.5 h-2.5" />
@@ -195,7 +195,7 @@ export function ImageViewerPage() {
                 </button>
                 <button
                   onClick={() => setShowTranslate(true)}
-                  className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] text-blue-400 hover:bg-blue-400/10 transition-colors"
+                  className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs2 text-blue-400 hover:bg-blue-400/10 transition-colors"
                   title={t("imageViewer.translateText")}
                 >
                   <Languages className="w-2.5 h-2.5" />
@@ -205,10 +205,10 @@ export function ImageViewerPage() {
             )}
           </div>
           {ocrError && !ocrText && (
-            <p className="text-[10px] text-red-400 bg-red-400/10 rounded p-2">{ocrError}</p>
+            <p className="text-xs2 text-red-400 bg-red-400/10 rounded p-2">{ocrError}</p>
           )}
           {ocrText && (
-            <p className="text-[11px] text-foreground bg-muted/20 rounded p-2 overflow-y-auto break-all leading-relaxed select-text">
+            <p className="text-sm2 text-foreground bg-muted/20 rounded p-2 overflow-y-auto break-all leading-relaxed select-text">
               {ocrText}
             </p>
           )}
@@ -223,7 +223,7 @@ export function ImageViewerPage() {
         />
       )}
 
-      <Toaster position="bottom-center" richColors duration={2000} toastOptions={{ style: { fontSize: "12px", padding: "8px 12px" } }} />
+      <Toaster position="bottom-center" richColors duration={2000} toastOptions={{ style: { fontSize: "0.857rem", padding: "0.571rem 0.857rem" } }} />
     </div>
   );
 }

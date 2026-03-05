@@ -100,7 +100,7 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
             <ClipboardList className="w-10 h-10 text-muted-foreground/50" />
             <div className="text-center">
               <p className="text-xs">{t("clipboardPanel.noEntries")}</p>
-              <p className="text-[10px] mt-1">{t("clipboardPanel.copyToStart")}</p>
+              <p className="text-xs2 mt-1">{t("clipboardPanel.copyToStart")}</p>
             </div>
           </div>
         ) : (
@@ -115,7 +115,7 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
       </div>
 
       {/* Status bar */}
-      <div className="flex items-center justify-between px-3 py-1 text-[10px] text-muted-foreground/70 border-t border-border/20 shrink-0">
+      <div className="flex items-center justify-between px-3 py-1 text-xs2 text-muted-foreground/70 border-t border-border/20 shrink-0">
         <span>{t("clipboardPanel.items", { count: displayEntries.length })}</span>
         <span>{t("clipboardPanel.pasteHint")}</span>
       </div>
