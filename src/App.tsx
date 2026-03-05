@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useCallback, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useTranslation } from "react-i18next";
@@ -13,9 +13,10 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { useSyncStore } from "@/stores/syncStore";
 import type { ClipboardEntry } from "@/types";
 
-// Detect if this window is an image viewer
+// Detect window type from URL params
 const searchParams = new URLSearchParams(window.location.search);
 const isImageViewer = searchParams.get("window") === "image-viewer";
+const isTemplateManager = searchParams.get("window") === "template-manager";
 
 function applyTheme(theme: "light" | "dark" | "system") {
   const root = document.documentElement;
@@ -42,13 +43,57 @@ function App() {
     return <ImageViewerPage />;
   }
 
+  // If this is a template manager window, render standalone template manager
+  if (isTemplateManager) {
+    return <TemplateManagerWindow />;
+  }
+
   return <MainApp />;
+}
+
+function TemplateManagerWindow() {
+  const { i18n } = useTranslation();
+  const theme = useSettingsStore((s) => s.theme);
+  const locale = useSettingsStore((s) => s.locale);
+  const loadSettings = useSettingsStore((s) => s.loadSettings);
+
+  useEffect(() => {
+    document.documentElement.classList.add("dark");
+  }, []);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  useEffect(() => {
+    if (locale && i18n.language !== locale) {
+      i18n.changeLanguage(locale);
+    }
+  }, [locale, i18n]);
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+
+  const handleClose = useCallback(async () => {
+    const { getCurrentWebviewWindow } = await import("@tauri-apps/api/webviewWindow");
+    getCurrentWebviewWindow().close();
+  }, []);
+
+  return (
+    <div className="flex flex-col h-screen overflow-hidden">
+      <TitleBar />
+      <div className="flex-1 min-h-0">
+        <TemplateManager onBack={handleClose} />
+      </div>
+      <Toaster position="bottom-center" richColors duration={2000} toastOptions={{ style: { fontSize: "0.857rem", padding: "0.571rem 0.857rem" } }} />
+    </div>
+  );
 }
 
 function MainApp() {
   const { i18n } = useTranslation();
-  const [showSettings, setShowSettings] = useState(false);
-  const [showTemplates, setShowTemplates] = useState(false);
+  const [showSettings, setShowSettings] = React.useState(false);
   const fetchHistory = useClipboardStore((s) => s.fetchHistory);
   const addEntry = useClipboardStore((s) => s.addEntry);
   const theme = useSettingsStore((s) => s.theme);
@@ -176,8 +221,6 @@ function MainApp() {
         e.preventDefault();
         if (showSettings) {
           setShowSettings(false);
-        } else if (showTemplates) {
-          setShowTemplates(false);
         } else {
           getCurrentWebviewWindow().hide();
         }
@@ -185,12 +228,10 @@ function MainApp() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showSettings, showTemplates]);
+  }, [showSettings]);
 
   const handleOpenSettings = useCallback(() => setShowSettings(true), []);
   const handleCloseSettings = useCallback(() => setShowSettings(false), []);
-  const handleOpenTemplates = useCallback(() => setShowTemplates(true), []);
-  const handleCloseTemplates = useCallback(() => setShowTemplates(false), []);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -200,12 +241,8 @@ function MainApp() {
           <div className="h-full animate-slide-in">
             <SettingsPage onBack={handleCloseSettings} />
           </div>
-        ) : showTemplates ? (
-          <div className="h-full animate-slide-in">
-            <TemplateManager onBack={handleCloseTemplates} />
-          </div>
         ) : (
-          <ClipboardPanel onOpenSettings={handleOpenSettings} onOpenTemplates={handleOpenTemplates} />
+          <ClipboardPanel onOpenSettings={handleOpenSettings} />
         )}
       </div>
       <Toaster position="bottom-center" richColors duration={2000} toastOptions={{ style: { fontSize: "0.857rem", padding: "0.571rem 0.857rem" } }} />

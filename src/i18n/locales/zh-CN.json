@@ -156,7 +156,8 @@
     "deleteConfirm": "确定要删除此模板吗？此操作无法撤销。",
     "applied": "模板已应用到剪贴板",
     "applyFailed": "应用模板失败",
-    "variables": "变量"
+    "variables": "变量",
+    "manage": "管理模板"
   },
   "viewer": {
     "fullText": "查看全文",

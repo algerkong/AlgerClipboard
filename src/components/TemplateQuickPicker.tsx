@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { FileText, Copy } from "lucide-react";
+import { FileText, Copy, Settings2 } from "lucide-react";
 import { useTemplateStore } from "@/stores/templateStore";
+import { openTemplateManager } from "@/services/templateWindowService";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -76,6 +77,16 @@ export function TemplateQuickPicker({ onClose }: Props) {
           ))}
         </div>
       )}
+      {/* Manage templates button */}
+      <div className="border-t border-border/30 px-1 py-1">
+        <button
+          onClick={() => { openTemplateManager(); onClose(); }}
+          className="w-full flex items-center gap-2 px-2 py-1.5 text-left text-sm2 text-muted-foreground hover:text-foreground hover:bg-accent/50 rounded transition-colors"
+        >
+          <Settings2 className="w-3 h-3 shrink-0" />
+          {t("template.manage")}
+        </button>
+      </div>
     </div>
   );
 }

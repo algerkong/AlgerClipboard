@@ -156,7 +156,8 @@
     "deleteConfirm": "Are you sure you want to delete this template? This action cannot be undone.",
     "applied": "Template applied to clipboard",
     "applyFailed": "Failed to apply template",
-    "variables": "Variables"
+    "variables": "Variables",
+    "manage": "Manage Templates"
   },
   "viewer": {
     "fullText": "Full Text",

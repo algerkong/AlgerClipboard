@@ -12,7 +12,6 @@ import { toast } from "sonner";
 
 interface Props {
   onOpenSettings: () => void;
-  onOpenTemplates?: () => void;
 }
 
 export function ClipboardPanel({ onOpenSettings }: Props) {
