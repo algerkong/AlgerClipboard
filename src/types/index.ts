@@ -87,6 +87,20 @@ export interface ClipboardStats {
   daily_trend: DailyCount[];
 }
 
+export interface OcrTextLine {
+  text: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface OcrResult {
+  lines: OcrTextLine[];
+  image_width: number;
+  image_height: number;
+}
+
 export interface Template {
   id: string;
   title: string;

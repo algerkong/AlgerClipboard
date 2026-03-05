@@ -89,8 +89,54 @@ fn get_clipboard_html() -> Option<String> {
     }
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "macos")]
 fn get_clipboard_html() -> Option<String> {
+    let output = std::process::Command::new("osascript")
+        .arg("-e")
+        .arg(r#"
+use framework "AppKit"
+set pb to current application's NSPasteboard's generalPasteboard()
+set htmlData to pb's dataForType:"public.html"
+if htmlData is not missing value then
+    set htmlStr to (current application's NSString's alloc()'s initWithData:htmlData encoding:4)
+    return htmlStr as text
+end if
+"#)
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let html = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if html.is_empty() { None } else { Some(html) }
+}
+
+#[cfg(target_os = "linux")]
+fn get_clipboard_html() -> Option<String> {
+    // Try X11 first (xclip)
+    if let Ok(output) = std::process::Command::new("xclip")
+        .args(["-selection", "clipboard", "-t", "text/html", "-o"])
+        .output()
+    {
+        if output.status.success() {
+            let html = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !html.is_empty() {
+                return Some(html);
+            }
+        }
+    }
+    // Wayland fallback (wl-paste)
+    if let Ok(output) = std::process::Command::new("wl-paste")
+        .args(["-t", "text/html"])
+        .output()
+    {
+        if output.status.success() {
+            let html = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !html.is_empty() {
+                return Some(html);
+            }
+        }
+    }
     None
 }
 
@@ -153,9 +199,107 @@ fn get_clipboard_file_paths() -> Option<Vec<String>> {
     }
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "macos")]
 fn get_clipboard_file_paths() -> Option<Vec<String>> {
+    let output = std::process::Command::new("osascript")
+        .arg("-e")
+        .arg(r#"
+use framework "AppKit"
+set pb to current application's NSPasteboard's generalPasteboard()
+set types to pb's types() as list
+if types contains "NSFilenamesPboardType" or types contains "public.file-url" then
+    set urls to (pb's propertyListForType:"NSFilenamesPboardType") as list
+    set out to ""
+    repeat with f in urls
+        set out to out & (POSIX path of f) & linefeed
+    end repeat
+    return out
+end if
+"#)
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let text = String::from_utf8_lossy(&output.stdout).to_string();
+    let paths: Vec<String> = text
+        .lines()
+        .map(|l| l.trim().to_string())
+        .filter(|l| !l.is_empty())
+        .collect();
+    if paths.is_empty() { None } else { Some(paths) }
+}
+
+#[cfg(target_os = "linux")]
+fn get_clipboard_file_paths() -> Option<Vec<String>> {
+    // Try X11 first (xclip with gnome-copied-files MIME)
+    if let Ok(output) = std::process::Command::new("xclip")
+        .args(["-selection", "clipboard", "-t", "x-special/gnome-copied-files", "-o"])
+        .output()
+    {
+        if output.status.success() {
+            let text = String::from_utf8_lossy(&output.stdout).to_string();
+            let paths = parse_linux_file_uris(&text);
+            if !paths.is_empty() {
+                return Some(paths);
+            }
+        }
+    }
+    // Wayland fallback (wl-paste with uri-list)
+    if let Ok(output) = std::process::Command::new("wl-paste")
+        .args(["-t", "text/uri-list"])
+        .output()
+    {
+        if output.status.success() {
+            let text = String::from_utf8_lossy(&output.stdout).to_string();
+            let paths = parse_linux_file_uris(&text);
+            if !paths.is_empty() {
+                return Some(paths);
+            }
+        }
+    }
     None
+}
+
+/// Parse file URIs from Linux clipboard content.
+/// Skips action lines like "copy"/"cut" and converts file:// URIs to local paths.
+#[cfg(target_os = "linux")]
+fn parse_linux_file_uris(text: &str) -> Vec<String> {
+    text.lines()
+        .map(|l| l.trim())
+        .filter(|l| !l.is_empty())
+        .filter_map(|line| {
+            if let Some(path) = line.strip_prefix("file://") {
+                // URL-decode the path
+                Some(url_decode(path))
+            } else {
+                None // Skip action lines like "copy"/"cut"
+            }
+        })
+        .collect()
+}
+
+/// Simple percent-decoding for file paths (e.g. %20 -> space)
+#[cfg(target_os = "linux")]
+fn url_decode(s: &str) -> String {
+    let mut result = Vec::new();
+    let bytes = s.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' && i + 2 < bytes.len() {
+            if let Ok(val) = u8::from_str_radix(
+                &String::from_utf8_lossy(&bytes[i + 1..i + 3]),
+                16,
+            ) {
+                result.push(val);
+                i += 3;
+                continue;
+            }
+        }
+        result.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&result).to_string()
 }
 
 /// Run auto-cleanup based on stored settings

@@ -1,17 +1,26 @@
-import { useState, useCallback, useEffect } from "react";
-import { X, ZoomIn, ZoomOut, RotateCcw, ScanText, Copy, Languages, Loader2 } from "lucide-react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import {
+  X,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  Languages,
+  Loader2,
+} from "lucide-react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
-import { getThumbnailBase64, extractTextFromImage } from "@/services/clipboardService";
-import { TranslateDialog } from "@/components/TranslateDialog";
+import {
+  getThumbnailBase64,
+  extractTextFromImage,
+} from "@/services/clipboardService";
+import { translateText } from "@/services/translateService";
 import { toast } from "sonner";
 import { Toaster } from "sonner";
+import type { OcrResult, OcrTextLine } from "@/types";
 
-/**
- * Standalone image viewer page — rendered in its own Tauri window.
- * Receives `blobPath` from URL search params.
- */
+const VIEWER_SIZE_KEY = "image-viewer-size";
+
 export function ImageViewerPage() {
   const { t } = useTranslation();
   const params = new URLSearchParams(window.location.search);
@@ -19,49 +28,78 @@ export function ImageViewerPage() {
 
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
-  const [ocrText, setOcrText] = useState<string | null>(null);
+
+  const [ocrResult, setOcrResult] = useState<OcrResult | null>(null);
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrError, setOcrError] = useState<string | null>(null);
-  const [showTranslate, setShowTranslate] = useState(false);
 
-  // Load image on mount
+  const [translatedLines, setTranslatedLines] = useState<string[] | null>(null);
+  const [translateLoading, setTranslateLoading] = useState(false);
+  const [showTranslated, setShowTranslated] = useState(false);
+
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [imgSize, setImgSize] = useState({ width: 0, height: 0 });
+
+  // Save window size on resize (debounced), restored by imageViewerService on next open
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const handleResize = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        localStorage.setItem(VIEWER_SIZE_KEY, JSON.stringify({
+          width: window.outerWidth,
+          height: window.outerHeight,
+        }));
+      }, 500);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
   useEffect(() => {
     if (!blobPath) return;
-    getThumbnailBase64(blobPath)
-      .then(setImageSrc)
-      .catch(() => {});
+    getThumbnailBase64(blobPath).then(setImageSrc).catch(() => {});
   }, [blobPath]);
 
-  // Apply dark theme
   useEffect(() => {
     document.documentElement.classList.add("dark");
   }, []);
 
-  const handleClose = useCallback(() => {
-    getCurrentWebviewWindow().close();
-  }, []);
-
-  const handleZoomIn = useCallback(() => setZoom((z) => Math.min(z + 0.25, 5)), []);
-  const handleZoomOut = useCallback(() => setZoom((z) => Math.max(z - 0.25, 0.25)), []);
-  const handleResetZoom = useCallback(() => setZoom(1), []);
-
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    if (e.deltaY < 0) {
-      setZoom((z) => Math.min(z + 0.1, 5));
-    } else {
-      setZoom((z) => Math.max(z - 0.1, 0.25));
+  // Auto-OCR
+  const ocrTriggered = useRef(false);
+  const handleImageLoad = useCallback(() => {
+    if (imgRef.current) {
+      setImgSize({ width: imgRef.current.clientWidth, height: imgRef.current.clientHeight });
     }
-  }, []);
+    if (!ocrTriggered.current && blobPath) {
+      ocrTriggered.current = true;
+      runOcr();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blobPath]);
 
-  const handleExtractText = useCallback(async () => {
+  useEffect(() => {
+    const update = () => {
+      if (imgRef.current) {
+        setImgSize({ width: imgRef.current.clientWidth, height: imgRef.current.clientHeight });
+      }
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [zoom, imageSrc]);
+
+  const runOcr = useCallback(async () => {
+    if (!blobPath) return;
     setOcrLoading(true);
     setOcrError(null);
     try {
-      const text = await extractTextFromImage(blobPath);
-      if (text.trim()) {
-        setOcrText(text.trim());
-      } else {
-        setOcrText("");
+      const result = await extractTextFromImage(blobPath);
+      setOcrResult(result);
+      if (result.lines.length === 0) {
         setOcrError(t("imageViewer.noText"));
       }
     } catch (err) {
@@ -71,25 +109,59 @@ export function ImageViewerPage() {
     }
   }, [blobPath, t]);
 
-  const handleCopyText = useCallback(async () => {
-    if (ocrText) {
-      await navigator.clipboard.writeText(ocrText);
-      toast.success(t("toast.copied"));
-    }
-  }, [ocrText, t]);
+  const handleClose = useCallback(() => { getCurrentWebviewWindow().close(); }, []);
+  const handleZoomIn = useCallback(() => setZoom((z) => Math.min(z + 0.25, 5)), []);
+  const handleZoomOut = useCallback(() => setZoom((z) => Math.max(z - 0.25, 0.25)), []);
+  const handleResetZoom = useCallback(() => setZoom(1), []);
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    setZoom((z) => Math.max(0.25, Math.min(5, z + (e.deltaY < 0 ? 0.1 : -0.1))));
+  }, []);
 
-  // Escape key to close
+  const handleTranslate = useCallback(async () => {
+    if (!ocrResult || ocrResult.lines.length === 0) return;
+    if (translatedLines && showTranslated) { setShowTranslated(false); return; }
+    if (translatedLines) { setShowTranslated(true); return; }
+
+    setTranslateLoading(true);
+    try {
+      const allText = ocrResult.lines.map((l) => l.text).join("\n");
+      const result = await translateText(allText, "auto", "zh");
+      const translated = result.translated.split("\n");
+      setTranslatedLines(ocrResult.lines.map((_, i) => translated[i] ?? ""));
+      setShowTranslated(true);
+    } catch (err) {
+      toast.error(t("translate.error") + ": " + String(err));
+    } finally {
+      setTranslateLoading(false);
+    }
+  }, [ocrResult, translatedLines, showTranslated, t]);
+
+  // Intercept copy to force plain text (prevent HTML/rich text clipboard pollution)
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") handleClose();
+    const handleCopy = (e: ClipboardEvent) => {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed) return;
+      const text = sel.toString();
+      if (text) {
+        e.preventDefault();
+        e.clipboardData?.setData("text/plain", text);
+      }
     };
+    document.addEventListener("copy", handleCopy);
+    return () => document.removeEventListener("copy", handleCopy);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") handleClose(); };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [handleClose]);
 
+  const hasOcrText = ocrResult && ocrResult.lines.length > 0;
+
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background">
-      {/* Title bar (draggable) */}
+      {/* Title bar */}
       <div
         data-tauri-drag-region
         className="flex items-center justify-between h-8 px-3 bg-card/80 backdrop-blur-sm border-b border-border/50 select-none shrink-0"
@@ -98,132 +170,198 @@ export function ImageViewerPage() {
           <span data-tauri-drag-region className="text-sm2 font-medium text-muted-foreground">
             {t("imageViewer.title")}
           </span>
-          {/* Zoom controls */}
           <div className="flex items-center gap-0.5">
-            <button
-              onClick={handleZoomOut}
-              className="p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
-              title={t("imageViewer.zoomOut")}
-            >
+            <button onClick={handleZoomOut} className="p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors" title={t("imageViewer.zoomOut")}>
               <ZoomOut className="w-3 h-3" />
             </button>
-            <span className="text-xs2 text-muted-foreground min-w-[32px] text-center">
-              {Math.round(zoom * 100)}%
-            </span>
-            <button
-              onClick={handleZoomIn}
-              className="p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
-              title={t("imageViewer.zoomIn")}
-            >
+            <span className="text-xs2 text-muted-foreground min-w-[32px] text-center">{Math.round(zoom * 100)}%</span>
+            <button onClick={handleZoomIn} className="p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors" title={t("imageViewer.zoomIn")}>
               <ZoomIn className="w-3 h-3" />
             </button>
-            <button
-              onClick={handleResetZoom}
-              className="p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
-              title={t("imageViewer.resetZoom")}
-            >
+            <button onClick={handleResetZoom} className="p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors" title={t("imageViewer.resetZoom")}>
               <RotateCcw className="w-2.5 h-2.5" />
             </button>
           </div>
         </div>
 
         <div className="flex items-center gap-0.5 -mr-1">
-          {/* OCR button */}
-          <button
-            onClick={handleExtractText}
-            disabled={ocrLoading}
-            className={cn(
-              "flex items-center gap-1 px-1.5 h-5 rounded text-xs2 font-medium transition-colors",
-              ocrLoading
-                ? "text-muted-foreground cursor-not-allowed"
-                : "text-blue-400 hover:bg-blue-400/10"
-            )}
-            title={t("imageViewer.extractText")}
-          >
-            {ocrLoading ? (
+          {ocrLoading && (
+            <span className="flex items-center gap-1 px-1.5 h-5 text-xs2 text-muted-foreground">
               <Loader2 className="w-3 h-3 animate-spin" />
-            ) : (
-              <ScanText className="w-3 h-3" />
-            )}
-            {t("imageViewer.extractText")}
-          </button>
-
-          {/* Close */}
-          <button
-            onClick={handleClose}
-            className="flex items-center justify-center w-6 h-6 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
-          >
+              {t("imageViewer.extracting")}
+            </span>
+          )}
+          {hasOcrText && (
+            <button
+              onClick={handleTranslate}
+              disabled={translateLoading}
+              className={cn(
+                "flex items-center gap-1 px-1.5 h-5 rounded text-xs2 font-medium transition-colors",
+                translateLoading ? "text-muted-foreground cursor-not-allowed"
+                  : showTranslated ? "text-green-400 hover:bg-green-400/10"
+                    : "text-blue-400 hover:bg-blue-400/10"
+              )}
+              title={t("imageViewer.translateText")}
+            >
+              {translateLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Languages className="w-3 h-3" />}
+              {t("imageViewer.translateText")}
+            </button>
+          )}
+          <button onClick={handleClose} className="flex items-center justify-center w-6 h-6 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors">
             <X className="w-3 h-3" />
           </button>
         </div>
       </div>
 
-      {/* Image area */}
-      <div
-        className="flex-1 overflow-auto flex items-center justify-center min-h-0"
-        onWheel={handleWheel}
-      >
+      {/* Image + text layer */}
+      <div className="flex-1 overflow-auto flex items-center justify-center min-h-0" onWheel={handleWheel}>
         {imageSrc ? (
-          <img
-            src={imageSrc}
-            alt=""
-            className="max-w-full max-h-full object-contain transition-transform"
+          <div
+            className="relative inline-block"
             style={{ transform: `scale(${zoom})`, transformOrigin: "center center" }}
-            draggable={false}
-          />
+          >
+            <img
+              ref={imgRef}
+              src={imageSrc}
+              alt=""
+              className="block max-w-full max-h-full object-contain"
+              draggable={false}
+              onLoad={handleImageLoad}
+            />
+
+            {/* Transparent selectable text layer (PDF.js style) */}
+            {hasOcrText && !showTranslated && (
+              <div
+                className="ocr-text-layer absolute top-0 left-0"
+                style={{ width: imgSize.width || "100%", height: imgSize.height || "100%" }}
+              >
+                {ocrResult.lines.map((line, i) => (
+                  <OcrSelectableText
+                    key={i}
+                    line={line}
+                    containerWidth={imgSize.width}
+                    containerHeight={imgSize.height}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Translation overlay */}
+            {showTranslated && translatedLines && ocrResult && (
+              <div
+                className="ocr-text-layer absolute top-0 left-0"
+                style={{ width: imgSize.width || "100%", height: imgSize.height || "100%" }}
+              >
+                {ocrResult.lines.map((line, i) => {
+                  const text = translatedLines[i];
+                  if (!text) return null;
+                  return (
+                    <TranslatedText
+                      key={i}
+                      line={line}
+                      text={text}
+                      containerWidth={imgSize.width}
+                      containerHeight={imgSize.height}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </div>
         ) : (
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         )}
       </div>
 
-      {/* OCR result panel */}
-      {(ocrText !== null || ocrError) && (
-        <div className="border-t border-border/30 px-3 py-2 shrink-0 max-h-[40%] flex flex-col">
-          <div className="flex items-center justify-between mb-1 shrink-0">
-            <span className="text-xs2 text-muted-foreground font-medium">
-              {t("imageViewer.ocrResult")}
-            </span>
-            {ocrText && (
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={handleCopyText}
-                  className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs2 text-muted-foreground hover:text-foreground transition-colors"
-                  title={t("imageViewer.copyText")}
-                >
-                  <Copy className="w-2.5 h-2.5" />
-                  {t("imageViewer.copyText")}
-                </button>
-                <button
-                  onClick={() => setShowTranslate(true)}
-                  className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs2 text-blue-400 hover:bg-blue-400/10 transition-colors"
-                  title={t("imageViewer.translateText")}
-                >
-                  <Languages className="w-2.5 h-2.5" />
-                  {t("imageViewer.translateText")}
-                </button>
-              </div>
-            )}
-          </div>
-          {ocrError && !ocrText && (
-            <p className="text-xs2 text-red-400 bg-red-400/10 rounded p-2">{ocrError}</p>
-          )}
-          {ocrText && (
-            <p className="text-sm2 text-foreground bg-muted/20 rounded p-2 overflow-y-auto break-all leading-relaxed select-text">
-              {ocrText}
-            </p>
-          )}
+      {ocrError && !hasOcrText && !ocrLoading && (
+        <div className="border-t border-border/30 px-3 py-1.5 shrink-0">
+          <p className="text-xs2 text-red-400">{ocrError}</p>
         </div>
-      )}
-
-      {/* Translate dialog (modal within this window) */}
-      {showTranslate && ocrText && (
-        <TranslateDialog
-          text={ocrText}
-          onClose={() => setShowTranslate(false)}
-        />
       )}
 
       <Toaster position="bottom-center" richColors duration={2000} toastOptions={{ style: { fontSize: "0.857rem", padding: "0.571rem 0.857rem" } }} />
     </div>
+  );
+}
+
+/**
+ * Invisible but selectable text positioned over the image.
+ * Bounding box expanded by padding to fully cover the text in the image.
+ * color: transparent, ::selection shows blue highlight.
+ */
+function OcrSelectableText({
+  line,
+  containerWidth,
+  containerHeight,
+}: {
+  line: OcrTextLine;
+  containerWidth: number;
+  containerHeight: number;
+}) {
+  // Expand bounding box by ~20% padding to fully cover text
+  const padX = line.width * 0.1;
+  const padY = line.height * 0.15;
+  const left = Math.max(0, line.x - padX) * containerWidth;
+  const top = Math.max(0, line.y - padY) * containerHeight;
+  const width = Math.min(1 - Math.max(0, line.x - padX), line.width + padX * 2) * containerWidth;
+  const height = (line.height + padY * 2) * containerHeight;
+  const fontSize = Math.max(8, line.height * containerHeight * 0.85);
+
+  return (
+    <span
+      className="ocr-selectable-text absolute select-text cursor-text whitespace-pre"
+      style={{
+        left: `${left}px`,
+        top: `${top}px`,
+        width: `${width}px`,
+        height: `${height}px`,
+        fontSize: `${fontSize}px`,
+        lineHeight: `${height}px`,
+        color: "transparent",
+      }}
+    >
+      {line.text}
+    </span>
+  );
+}
+
+/**
+ * Translated text overlay: visible, selectable, with opaque background
+ * covering the original text area on the image.
+ */
+function TranslatedText({
+  line,
+  text,
+  containerWidth,
+  containerHeight,
+}: {
+  line: OcrTextLine;
+  text: string;
+  containerWidth: number;
+  containerHeight: number;
+}) {
+  // Same padding expansion as OCR selection
+  const padX = line.width * 0.1;
+  const padY = line.height * 0.15;
+  const left = Math.max(0, line.x - padX) * containerWidth;
+  const top = Math.max(0, line.y - padY) * containerHeight;
+  const width = Math.min(1 - Math.max(0, line.x - padX), line.width + padX * 2) * containerWidth;
+  const height = (line.height + padY * 2) * containerHeight;
+  const fontSize = Math.max(8, line.height * containerHeight * 0.7);
+
+  return (
+    <span
+      className="absolute select-text cursor-text whitespace-pre-wrap break-words flex items-center px-[3px] rounded-[2px] bg-white/90 dark:bg-neutral-800/95 text-green-700 dark:text-green-400 font-medium"
+      style={{
+        left: `${left}px`,
+        top: `${top}px`,
+        width: `${width}px`,
+        minHeight: `${height}px`,
+        fontSize: `${fontSize}px`,
+        lineHeight: 1.3,
+      }}
+    >
+      {text}
+    </span>
   );
 }

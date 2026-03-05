@@ -270,3 +270,13 @@ body {
   border: 1px solid var(--border);
   padding: 0.2em 0.4em;
 }
+
+/* OCR text layer — transparent text with visible selection highlight */
+.ocr-selectable-text::selection {
+  background: oklch(0.6 0.18 250 / 0.4);
+  color: transparent;
+}
+.ocr-selectable-text::-moz-selection {
+  background: oklch(0.6 0.18 250 / 0.4);
+  color: transparent;
+}

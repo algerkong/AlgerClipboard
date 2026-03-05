@@ -108,10 +108,92 @@ pub fn paste_files(paths: &[&str]) -> Result<(), String> {
     Ok(())
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "macos")]
 pub fn paste_files(paths: &[&str]) -> Result<(), String> {
-    // Fallback: paste as text on non-Windows platforms
-    paste_text(&paths.join("\n"))
+    let paths_str = paths
+        .iter()
+        .map(|p| format!("\"{}\"", p.trim()))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let script = format!(
+        r#"
+use framework "AppKit"
+set pb to current application's NSPasteboard's generalPasteboard()
+pb's clearContents()
+set fileURLs to current application's NSMutableArray's new()
+repeat with f in {{{}}}
+    set fileURL to current application's NSURL's fileURLWithPath:f
+    (fileURLs's addObject:fileURL)
+end repeat
+pb's writeObjects:fileURLs
+"#,
+        paths_str
+    );
+    let output = std::process::Command::new("osascript")
+        .arg("-e")
+        .arg(&script)
+        .output()
+        .map_err(|e| format!("Failed to run osascript: {}", e))?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Failed to set file clipboard: {}", stderr));
+    }
+    thread::sleep(Duration::from_millis(50));
+    simulate_paste()
+}
+
+#[cfg(target_os = "linux")]
+pub fn paste_files(paths: &[&str]) -> Result<(), String> {
+    let content = format!(
+        "copy\n{}",
+        paths
+            .iter()
+            .map(|p| format!("file://{}", p.trim()))
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+
+    // Try X11 first (xclip)
+    let xclip_result = std::process::Command::new("xclip")
+        .args(["-selection", "clipboard", "-t", "x-special/gnome-copied-files", "-i"])
+        .stdin(std::process::Stdio::piped())
+        .spawn()
+        .and_then(|mut child| {
+            use std::io::Write;
+            if let Some(ref mut stdin) = child.stdin {
+                stdin.write_all(content.as_bytes())?;
+            }
+            child.wait()
+        });
+
+    match xclip_result {
+        Ok(status) if status.success() => {}
+        _ => {
+            // Wayland fallback (wl-copy)
+            let mut child = std::process::Command::new("wl-copy")
+                .args(["-t", "x-special/gnome-copied-files"])
+                .stdin(std::process::Stdio::piped())
+                .spawn()
+                .map_err(|e| format!("Failed to run wl-copy (tried xclip first): {}", e))?;
+            {
+                use std::io::Write;
+                if let Some(ref mut stdin) = child.stdin {
+                    stdin
+                        .write_all(content.as_bytes())
+                        .map_err(|e| format!("Failed to write to wl-copy stdin: {}", e))?;
+                }
+            }
+            let status = child
+                .wait()
+                .map_err(|e| format!("Failed to wait for wl-copy: {}", e))?;
+            if !status.success() {
+                return Err("wl-copy failed to set file clipboard".to_string());
+            }
+        }
+    }
+
+    thread::sleep(Duration::from_millis(50));
+    simulate_paste()
 }
 
 /// Load image from path, set on clipboard, and simulate Ctrl+V paste
