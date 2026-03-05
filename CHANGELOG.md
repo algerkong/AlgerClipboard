@@ -1,5 +1,47 @@
 # Changelog
 
+## [1.3.0] - 2026-03-05
+
+### New Features
+
+- **Native folder picker for cache path**: Cache directory configuration now opens a system folder selection dialog instead of requiring manual path input
+- **Open cache directory button**: Added "Open" button next to cache path to quickly open it in the system file explorer
+
+### Bug Fixes
+
+- **Deleted entries reappearing after sync**: Fixed a critical bug where deleted clipboard entries would reappear after cloud sync. Deletions are now properly propagated to the remote manifest and applied across devices
+- **Template manager window issues**: Fixed template manager window unable to close. Added proper window permissions, replaced shared TitleBar with a dedicated window header, and added Escape key support
+- **Arrow keys blocked by search bar**: Left/Right arrow keys now correctly switch type filter tabs and Up/Down arrow keys navigate entries even when the search input is focused
+
+### Improvements
+
+- **Auto-select first entry on open**: Clipboard panel now automatically selects the first entry and scrolls to top when opened via hotkey
+- **Reset to home on reopen**: Each time the clipboard is reopened, it resets to the main view (closes settings, clears search and filters)
+- **Copy time display**: Each entry card now shows the actual copy time (HH:mm) in the bottom-right corner of the metadata line
+
+---
+
+## [1.3.0] - 2026-03-05 (中文)
+
+### 新功能
+
+- **缓存路径原生文件夹选择**: 缓存目录配置现在直接打开系统文件夹选择对话框，无需手动输入路径
+- **打开缓存目录按钮**: 缓存路径旁新增"打开"按钮，可快速在系统文件管理器中打开缓存目录
+
+### Bug 修复
+
+- **删除的条目同步后重新出现**: 修复了剪贴板条目删除后经过云同步又重新出现的严重 bug。删除操作现在会正确同步到远端清单并在所有设备上生效
+- **模板管理窗口问题**: 修复模板管理窗口无法关闭的问题。添加了正确的窗口权限，使用专用窗口标题栏替代共享 TitleBar，支持 Escape 键关闭
+- **方向键被搜索框拦截**: 左右方向键现在可以在搜索框聚焦时正常切换类型筛选标签，上下方向键可正常切换条目
+
+### 改进
+
+- **打开后自动选中第一条**: 通过快捷键呼出剪贴板时自动选中第一条并滚动到顶部
+- **重新打开时回到首页**: 每次重新打开剪贴板时自动回到主视图（关闭设置、清空搜索和筛选）
+- **显示复制时间**: 每条记录的右下角现在显示实际复制时间（HH:mm 格式）
+
+---
+
 ## [1.2.0] - 2026-03-05
 
 ### New Features
