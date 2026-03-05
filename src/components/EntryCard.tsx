@@ -49,6 +49,19 @@ function formatTimeAgo(dateStr: string): string {
   return `${d}d`;
 }
 
+function formatCopyTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const now = new Date();
+  if (date.toDateString() === now.toDateString()) {
+    return `${hours}:${minutes}`;
+  }
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  return `${month}/${day} ${hours}:${minutes}`;
+}
+
 function getPreview(entry: ClipboardEntry, t: (key: string) => string): string {
   if (entry.content_type === "PlainText" || entry.content_type === "RichText") {
     const text = entry.text_content ?? "";
@@ -282,21 +295,21 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
                 {entry.sync_status === "Conflict" && <CloudAlert className="w-2.5 h-2.5 text-amber-400/70" />}
               </span>
             )}
-            {showTranslateHint && (
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowTranslate(true); }}
-                className="flex items-center gap-0.5 text-blue-400/80 hover:text-blue-400 transition-colors ml-auto"
-              >
-                <Languages className="w-2.5 h-2.5" />
-                <span className="text-2xs">{t("viewer.translateHint")}</span>
-              </button>
-            )}
-            {!showTranslateHint && entry.is_favorite && (
-              <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400 ml-auto" />
-            )}
-            {showTranslateHint && entry.is_favorite && (
-              <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
-            )}
+            <span className="ml-auto flex items-center gap-1.5 shrink-0">
+              {showTranslateHint && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowTranslate(true); }}
+                  className="flex items-center gap-0.5 text-blue-400/80 hover:text-blue-400 transition-colors"
+                >
+                  <Languages className="w-2.5 h-2.5" />
+                  <span className="text-2xs">{t("viewer.translateHint")}</span>
+                </button>
+              )}
+              {entry.is_favorite && (
+                <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
+              )}
+              <span className="text-muted-foreground/50">{formatCopyTime(entry.created_at)}</span>
+            </span>
           </div>
           {/* Tags */}
           {entry.tags.length > 0 && (

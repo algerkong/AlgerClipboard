@@ -203,6 +203,15 @@ function MainApp() {
     return () => { unlisten.then((fn) => fn()); };
   }, [setSyncStatus, fetchHistory]);
 
+  // Reset to home view when window regains focus
+  useEffect(() => {
+    const unlisten = listen("tauri://focus", () => {
+      setShowSettings(false);
+      useClipboardStore.getState().resetView();
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, []);
+
   // Auto-hide when window loses focus (unless pinned)
   const isPinned = useSettingsStore((s) => s.isPinned);
   useEffect(() => {

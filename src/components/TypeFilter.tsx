@@ -66,7 +66,7 @@ export function TypeFilter() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
       const target = e.target as HTMLElement;
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
+      if ((target.tagName === "INPUT" || target.tagName === "TEXTAREA") && !e.defaultPrevented) return;
 
       e.preventDefault();
       const idx = getActiveIndex();

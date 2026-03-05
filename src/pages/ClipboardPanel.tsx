@@ -57,10 +57,11 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [displayEntries, selectedId, selectEntry]);
 
-  // Auto-select first entry
+  // Auto-select first entry and scroll to top
   useEffect(() => {
     if (!selectedId && displayEntries.length > 0) {
       selectEntry(displayEntries[0].id);
+      virtuosoRef.current?.scrollToIndex({ index: 0, behavior: "auto" });
     }
   }, [displayEntries, selectedId, selectEntry]);
 
