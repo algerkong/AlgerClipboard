@@ -205,6 +205,7 @@ impl Database {
         offset: i64,
         type_filter: Option<String>,
         keyword: Option<String>,
+        tag_filter: Option<String>,
     ) -> Result<Vec<ClipboardEntry>, String> {
         let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
@@ -222,6 +223,11 @@ impl Database {
         if let Some(ref kw) = keyword {
             sql.push_str(" AND text_content LIKE ?");
             param_values.push(Box::new(format!("%{}%", kw)));
+        }
+
+        if let Some(ref tag) = tag_filter {
+            sql.push_str(" AND id IN (SELECT entry_id FROM tags WHERE tag = ?)");
+            param_values.push(Box::new(tag.clone()));
         }
 
         sql.push_str(" ORDER BY is_pinned DESC, created_at DESC LIMIT ? OFFSET ?");
@@ -434,6 +440,64 @@ impl Database {
         let mut result = Vec::new();
         for tag_result in tags {
             result.push(tag_result.map_err(|e| format!("Row error: {}", e))?);
+        }
+
+        Ok(result)
+    }
+
+    // --- Tag Operations ---
+
+    pub fn add_tag(&self, entry_id: &str, tag: &str) -> Result<(), String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+        // Check if tag already exists for this entry
+        let exists: bool = conn
+            .query_row(
+                "SELECT COUNT(*) > 0 FROM tags WHERE entry_id = ?1 AND tag = ?2",
+                params![entry_id, tag],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+
+        if exists {
+            return Ok(());
+        }
+
+        conn.execute(
+            "INSERT INTO tags (entry_id, tag) VALUES (?1, ?2)",
+            params![entry_id, tag],
+        )
+        .map_err(|e| format!("Failed to add tag: {}", e))?;
+
+        Ok(())
+    }
+
+    pub fn remove_tag(&self, entry_id: &str, tag: &str) -> Result<(), String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+        conn.execute(
+            "DELETE FROM tags WHERE entry_id = ?1 AND tag = ?2",
+            params![entry_id, tag],
+        )
+        .map_err(|e| format!("Failed to remove tag: {}", e))?;
+
+        Ok(())
+    }
+
+    pub fn get_all_tags(&self) -> Result<Vec<String>, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+        let mut stmt = conn
+            .prepare("SELECT DISTINCT tag FROM tags ORDER BY tag")
+            .map_err(|e| format!("Prepare error: {}", e))?;
+
+        let tags = stmt
+            .query_map([], |row| row.get(0))
+            .map_err(|e| format!("Query error: {}", e))?;
+
+        let mut result = Vec::new();
+        for tag in tags {
+            result.push(tag.map_err(|e| format!("Row error: {}", e))?);
         }
 
         Ok(result)

@@ -15,10 +15,11 @@ pub fn get_clipboard_history(
     offset: Option<i64>,
     type_filter: Option<String>,
     keyword: Option<String>,
+    tag_filter: Option<String>,
 ) -> Result<Vec<ClipboardEntry>, String> {
     let limit = limit.unwrap_or(50);
     let offset = offset.unwrap_or(0);
-    db.0.get_history(limit, offset, type_filter, keyword)
+    db.0.get_history(limit, offset, type_filter, keyword, tag_filter)
 }
 
 #[tauri::command]
@@ -106,6 +107,31 @@ pub fn get_entry_count(
     db: State<'_, AppDatabase>,
 ) -> Result<i64, String> {
     db.0.get_entry_count()
+}
+
+#[tauri::command]
+pub fn add_tag(
+    db: State<'_, AppDatabase>,
+    entry_id: String,
+    tag: String,
+) -> Result<(), String> {
+    db.0.add_tag(&entry_id, &tag)
+}
+
+#[tauri::command]
+pub fn remove_tag(
+    db: State<'_, AppDatabase>,
+    entry_id: String,
+    tag: String,
+) -> Result<(), String> {
+    db.0.remove_tag(&entry_id, &tag)
+}
+
+#[tauri::command]
+pub fn get_all_tags(
+    db: State<'_, AppDatabase>,
+) -> Result<Vec<String>, String> {
+    db.0.get_all_tags()
 }
 
 #[tauri::command]

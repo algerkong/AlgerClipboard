@@ -5,6 +5,9 @@ import {
   deleteEntries as deleteEntriesApi,
   toggleFavorite as toggleFavoriteApi,
   togglePin as togglePinApi,
+  addTag as addTagApi,
+  removeTag as removeTagApi,
+  getAllTags as getAllTagsApi,
 } from "@/services/clipboardService";
 
 interface ClipboardState {
@@ -14,16 +17,22 @@ interface ClipboardState {
   typeFilter: ContentType | null;
   keyword: string;
   showFavoritesOnly: boolean;
+  tagFilter: string | null;
+  allTags: string[];
 
   fetchHistory: () => Promise<void>;
   setTypeFilter: (filter: ContentType | null) => void;
   setKeyword: (keyword: string) => void;
   setShowFavoritesOnly: (show: boolean) => void;
+  setTagFilter: (tag: string | null) => void;
   selectEntry: (id: string | null) => void;
   toggleFavorite: (id: string) => Promise<void>;
   togglePin: (id: string) => Promise<void>;
   deleteEntries: (ids: string[]) => Promise<void>;
   addEntry: (entry: ClipboardEntry) => void;
+  addTag: (entryId: string, tag: string) => Promise<void>;
+  removeTag: (entryId: string, tag: string) => Promise<void>;
+  fetchAllTags: () => Promise<void>;
 }
 
 export const useClipboardStore = create<ClipboardState>((set, get) => ({
@@ -33,6 +42,8 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
   typeFilter: null,
   keyword: "",
   showFavoritesOnly: false,
+  tagFilter: null,
+  allTags: [],
 
   fetchHistory: async () => {
     set({ loading: true });
@@ -43,6 +54,7 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
         offset: 0,
         type_filter: state.typeFilter ?? undefined,
         keyword: state.keyword || undefined,
+        tag_filter: state.tagFilter ?? undefined,
       });
       set({ entries, loading: false });
     } catch (err) {
@@ -52,7 +64,7 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
   },
 
   setTypeFilter: (filter: ContentType | null) => {
-    set({ typeFilter: filter, showFavoritesOnly: false });
+    set({ typeFilter: filter, showFavoritesOnly: false, tagFilter: null });
     get().fetchHistory();
   },
 
@@ -121,5 +133,47 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
       );
       return { entries: [entry, ...filtered] };
     });
+  },
+
+  setTagFilter: (tag: string | null) => {
+    set({ tagFilter: tag, showFavoritesOnly: false });
+    get().fetchHistory();
+  },
+
+  addTag: async (entryId: string, tag: string) => {
+    try {
+      await addTagApi(entryId, tag);
+      set((state) => ({
+        entries: state.entries.map((e) =>
+          e.id === entryId ? { ...e, tags: [...e.tags.filter((t) => t !== tag), tag] } : e
+        ),
+      }));
+      get().fetchAllTags();
+    } catch (err) {
+      console.error("Failed to add tag:", err);
+    }
+  },
+
+  removeTag: async (entryId: string, tag: string) => {
+    try {
+      await removeTagApi(entryId, tag);
+      set((state) => ({
+        entries: state.entries.map((e) =>
+          e.id === entryId ? { ...e, tags: e.tags.filter((t) => t !== tag) } : e
+        ),
+      }));
+      get().fetchAllTags();
+    } catch (err) {
+      console.error("Failed to remove tag:", err);
+    }
+  },
+
+  fetchAllTags: async () => {
+    try {
+      const allTags = await getAllTagsApi();
+      set({ allTags });
+    } catch (err) {
+      console.error("Failed to fetch tags:", err);
+    }
   },
 }));

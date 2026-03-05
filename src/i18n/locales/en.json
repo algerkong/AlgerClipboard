@@ -10,7 +10,8 @@
     "text": "Text",
     "image": "Image",
     "file": "File",
-    "starred": "Starred"
+    "starred": "Starred",
+    "tag": "Tag"
   },
   "entryCard": {
     "image": "Image",
@@ -189,6 +190,8 @@
     "favorite": "Favorite",
     "unfavorite": "Unfavorite",
     "translate": "Translate",
+    "addTag": "Add Tag",
+    "tagPlaceholder": "Enter tag name...",
     "delete": "Delete"
   },
   "toast": {

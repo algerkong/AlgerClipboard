@@ -10,7 +10,8 @@
     "text": "文本",
     "image": "图片",
     "file": "文件",
-    "starred": "收藏"
+    "starred": "收藏",
+    "tag": "标签"
   },
   "entryCard": {
     "image": "图片",
@@ -189,6 +190,8 @@
     "favorite": "收藏",
     "unfavorite": "取消收藏",
     "translate": "翻译",
+    "addTag": "添加标签",
+    "tagPlaceholder": "输入标签名...",
     "delete": "删除"
   },
   "toast": {

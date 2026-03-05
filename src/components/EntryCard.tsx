@@ -1,5 +1,5 @@
-import { memo, useCallback, useState, useEffect, useMemo } from "react";
-import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages, Pin, Eye, Copy, ClipboardPaste, Maximize2, Cloud, Upload, CloudAlert, ScanText, Code } from "lucide-react";
+import { memo, useCallback, useState, useEffect, useMemo, useRef } from "react";
+import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages, Pin, Eye, Copy, ClipboardPaste, Maximize2, Cloud, Upload, CloudAlert, ScanText, Code, Tag, X } from "lucide-react";
 import DOMPurify from "dompurify";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { pasteEntry, getThumbnailBase64 } from "@/services/clipboardService";
@@ -103,10 +103,16 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
   const toggleFavorite = useClipboardStore((s) => s.toggleFavorite);
   const togglePin = useClipboardStore((s) => s.togglePin);
   const deleteEntries = useClipboardStore((s) => s.deleteEntries);
+  const addTag = useClipboardStore((s) => s.addTag);
+  const removeTag = useClipboardStore((s) => s.removeTag);
+  const allTags = useClipboardStore((s) => s.allTags);
   const isSelected = selectedId === entry.id;
   const [showTranslate, setShowTranslate] = useState(false);
   const [showViewer, setShowViewer] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [showTagInput, setShowTagInput] = useState(false);
+  const [tagInputValue, setTagInputValue] = useState("");
+  const tagInputRef = useRef<HTMLInputElement>(null);
   const hasText = entry.content_type === "PlainText" || entry.content_type === "RichText";
   const isRichText = entry.content_type === "RichText" && !!entry.html_content;
   const isImage = entry.content_type === "Image";
@@ -203,6 +209,16 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
     }
 
     items.push({
+      label: t("contextMenu.addTag"),
+      icon: <Tag className="w-3.5 h-3.5" />,
+      onClick: () => {
+        setShowTagInput(true);
+        setTimeout(() => tagInputRef.current?.focus(), 50);
+      },
+      divider: true,
+    });
+
+    items.push({
       label: t("contextMenu.delete"),
       icon: <Trash2 className="w-3.5 h-3.5" />,
       onClick: () => deleteEntries([entry.id]),
@@ -282,6 +298,55 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
               <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
             )}
           </div>
+          {/* Tags */}
+          {entry.tags.length > 0 && (
+            <div className="flex items-center gap-1 mt-1 flex-wrap">
+              {entry.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-0.5 px-1.5 py-0 rounded-full text-2xs font-medium bg-primary/10 text-primary border border-primary/20"
+                >
+                  {tag}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); removeTag(entry.id, tag); }}
+                    className="hover:text-red-400 transition-colors"
+                  >
+                    <X className="w-2 h-2" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          {/* Tag input */}
+          {showTagInput && (
+            <div className="flex items-center gap-1 mt-1" onClick={(e) => e.stopPropagation()}>
+              <input
+                ref={tagInputRef}
+                type="text"
+                value={tagInputValue}
+                onChange={(e) => setTagInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && tagInputValue.trim()) {
+                    addTag(entry.id, tagInputValue.trim());
+                    setTagInputValue("");
+                    setShowTagInput(false);
+                  } else if (e.key === "Escape") {
+                    setShowTagInput(false);
+                    setTagInputValue("");
+                  }
+                }}
+                onBlur={() => { setShowTagInput(false); setTagInputValue(""); }}
+                placeholder={t("contextMenu.tagPlaceholder")}
+                className="h-5 w-24 px-1.5 text-2xs bg-muted/30 border border-border/50 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+                list="tag-suggestions"
+              />
+              <datalist id="tag-suggestions">
+                {allTags.filter((t) => !entry.tags.includes(t)).map((t) => (
+                  <option key={t} value={t} />
+                ))}
+              </datalist>
+            </div>
+          )}
         </div>
       </div>
 

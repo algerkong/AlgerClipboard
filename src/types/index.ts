@@ -26,6 +26,7 @@ export interface HistoryQuery {
   offset?: number;
   type_filter?: ContentType;
   keyword?: string;
+  tag_filter?: string;
 }
 
 export interface TranslateResult {

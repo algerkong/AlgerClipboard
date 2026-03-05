@@ -9,6 +9,7 @@ export async function getClipboardHistory(
     offset: query.offset ?? 0,
     typeFilter: query.type_filter ?? null,
     keyword: query.keyword ?? null,
+    tagFilter: query.tag_filter ?? null,
   });
 }
 
@@ -51,6 +52,18 @@ export async function importData(jsonData: string): Promise<number> {
 
 export async function getEntryCount(): Promise<number> {
   return invoke("get_entry_count");
+}
+
+export async function addTag(entryId: string, tag: string): Promise<void> {
+  return invoke("add_tag", { entryId, tag });
+}
+
+export async function removeTag(entryId: string, tag: string): Promise<void> {
+  return invoke("remove_tag", { entryId, tag });
+}
+
+export async function getAllTags(): Promise<string[]> {
+  return invoke("get_all_tags");
 }
 
 export interface CacheInfo {
