@@ -130,6 +130,7 @@ pub fn run() {
             commands::clipboard_cmd::export_data,
             commands::clipboard_cmd::import_data,
             commands::clipboard_cmd::get_entry_count,
+            commands::clipboard_cmd::get_clipboard_stats,
             commands::clipboard_cmd::add_tag,
             commands::clipboard_cmd::remove_tag,
             commands::clipboard_cmd::get_all_tags,

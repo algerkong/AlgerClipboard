@@ -35,8 +35,10 @@ import {
   clearHistory,
   getCacheInfo,
   cleanupCache,
+  getClipboardStats,
   type CacheInfo,
 } from "@/services/clipboardService";
+import type { ClipboardStats } from "@/types";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -972,19 +974,124 @@ function TranslateTab() {
   );
 }
 
+/* ─── Stats Mini Chart Components ─── */
+
+const TYPE_COLORS: Record<string, string> = {
+  PlainText: "bg-blue-400",
+  RichText: "bg-purple-400",
+  Image: "bg-green-400",
+  FilePaths: "bg-amber-400",
+};
+
+const TYPE_LABELS: Record<string, string> = {
+  PlainText: "Text",
+  RichText: "Rich",
+  Image: "Image",
+  FilePaths: "File",
+};
+
+function TypePieChart({ typeCounts, total }: { typeCounts: ClipboardStats["type_counts"]; total: number }) {
+  if (total === 0) return null;
+  return (
+    <div className="space-y-1.5">
+      {/* Stacked bar */}
+      <div className="flex h-2 rounded-full overflow-hidden bg-muted/30">
+        {typeCounts.map((tc) => (
+          <div
+            key={tc.content_type}
+            className={cn("transition-all", TYPE_COLORS[tc.content_type] ?? "bg-gray-400")}
+            style={{ width: `${(tc.count / total) * 100}%` }}
+          />
+        ))}
+      </div>
+      {/* Legend */}
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+        {typeCounts.map((tc) => (
+          <div key={tc.content_type} className="flex items-center gap-1 text-xs2 text-muted-foreground">
+            <span className={cn("w-2 h-2 rounded-full", TYPE_COLORS[tc.content_type] ?? "bg-gray-400")} />
+            <span>{TYPE_LABELS[tc.content_type] ?? tc.content_type}</span>
+            <span className="text-foreground font-medium">{tc.count}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DailyTrendChart({ dailyTrend }: { dailyTrend: ClipboardStats["daily_trend"] }) {
+  if (dailyTrend.length === 0) return null;
+  const maxCount = Math.max(...dailyTrend.map((d) => d.count), 1);
+  return (
+    <div className="flex items-end gap-1 h-12">
+      {dailyTrend.map((d) => (
+        <div key={d.date} className="flex-1 flex flex-col items-center gap-0.5">
+          <div
+            className="w-full bg-primary/40 rounded-t transition-all min-h-[2px]"
+            style={{ height: `${(d.count / maxCount) * 100}%` }}
+            title={`${d.date}: ${d.count}`}
+          />
+          <span className="text-2xs text-muted-foreground/70">
+            {d.date.slice(5)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* ─── Data Tab ─── */
 function DataTab() {
   const { t } = useTranslation();
   const [cacheInfo, setCacheInfo] = useState<CacheInfo | null>(null);
+  const [stats, setStats] = useState<ClipboardStats | null>(null);
 
   useEffect(() => {
-    getCacheInfo()
-      .then(setCacheInfo)
-      .catch(() => {});
+    getCacheInfo().then(setCacheInfo).catch(() => {});
+    getClipboardStats().then(setStats).catch(() => {});
   }, []);
 
   return (
     <div className="space-y-5">
+      {/* Statistics */}
+      {stats && (
+        <section>
+          <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
+            {t("settings.statistics")}
+          </label>
+          <div className="mt-2 space-y-3">
+            {/* Summary row */}
+            <div className="flex gap-2">
+              <div className="flex-1 bg-muted/20 rounded-md px-2.5 py-2 text-center">
+                <div className="text-lg font-semibold text-foreground">{stats.total}</div>
+                <div className="text-2xs text-muted-foreground">{t("settings.statsTotal")}</div>
+              </div>
+              <div className="flex-1 bg-muted/20 rounded-md px-2.5 py-2 text-center">
+                <div className="text-lg font-semibold text-yellow-400">{stats.favorites}</div>
+                <div className="text-2xs text-muted-foreground">{t("settings.statsFavorites")}</div>
+              </div>
+              <div className="flex-1 bg-muted/20 rounded-md px-2.5 py-2 text-center">
+                <div className="text-lg font-semibold text-primary">{stats.pinned}</div>
+                <div className="text-2xs text-muted-foreground">{t("settings.statsPinned")}</div>
+              </div>
+            </div>
+
+            {/* Type distribution */}
+            <div>
+              <div className="text-xs2 text-muted-foreground mb-1">{t("settings.statsTypeDistribution")}</div>
+              <TypePieChart typeCounts={stats.type_counts} total={stats.total} />
+            </div>
+
+            {/* Daily trend */}
+            {stats.daily_trend.length > 0 && (
+              <div>
+                <div className="text-xs2 text-muted-foreground mb-1">{t("settings.statsDailyTrend")}</div>
+                <DailyTrendChart dailyTrend={stats.daily_trend} />
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* Data management */}
       <section>
         <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">

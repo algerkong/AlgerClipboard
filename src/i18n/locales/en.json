@@ -72,7 +72,13 @@
     "expire7days": "7 Days",
     "expire30days": "30 Days",
     "expire90days": "90 Days",
-    "expireDaysDesc": "Auto-delete after expiry (favorites and pinned are exempt)"
+    "expireDaysDesc": "Auto-delete after expiry (favorites and pinned are exempt)",
+    "statistics": "Statistics",
+    "statsTotal": "Total",
+    "statsFavorites": "Favorites",
+    "statsPinned": "Pinned",
+    "statsTypeDistribution": "Type Distribution",
+    "statsDailyTrend": "7-Day Trend"
   },
   "sync": {
     "title": "Sync",

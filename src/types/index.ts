@@ -67,6 +67,24 @@ export interface SyncResult {
   errors: string[];
 }
 
+export interface TypeCount {
+  content_type: string;
+  count: number;
+}
+
+export interface DailyCount {
+  date: string;
+  count: number;
+}
+
+export interface ClipboardStats {
+  total: number;
+  favorites: number;
+  pinned: number;
+  type_counts: TypeCount[];
+  daily_trend: DailyCount[];
+}
+
 export interface Template {
   id: string;
   title: string;

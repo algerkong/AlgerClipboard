@@ -1,7 +1,7 @@
 use crate::clipboard::entry::ClipboardEntry;
 use crate::commands::paste_cmd::AppBlobStore;
 use crate::storage::blob::CacheInfo;
-use crate::storage::database::Database;
+use crate::storage::database::{Database, ClipboardStats};
 use base64::Engine;
 use std::sync::Arc;
 use tauri::State;
@@ -107,6 +107,13 @@ pub fn get_entry_count(
     db: State<'_, AppDatabase>,
 ) -> Result<i64, String> {
     db.0.get_entry_count()
+}
+
+#[tauri::command]
+pub fn get_clipboard_stats(
+    db: State<'_, AppDatabase>,
+) -> Result<ClipboardStats, String> {
+    db.0.get_clipboard_stats()
 }
 
 #[tauri::command]

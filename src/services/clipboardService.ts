@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { ClipboardEntry, HistoryQuery } from "@/types";
+import type { ClipboardEntry, HistoryQuery, ClipboardStats } from "@/types";
 
 export async function getClipboardHistory(
   query: HistoryQuery = {}
@@ -64,6 +64,10 @@ export async function removeTag(entryId: string, tag: string): Promise<void> {
 
 export async function getAllTags(): Promise<string[]> {
   return invoke("get_all_tags");
+}
+
+export async function getClipboardStats(): Promise<ClipboardStats> {
+  return invoke("get_clipboard_stats");
 }
 
 export interface CacheInfo {

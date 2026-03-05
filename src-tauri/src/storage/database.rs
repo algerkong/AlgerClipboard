@@ -16,6 +16,27 @@ pub struct Template {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TypeCount {
+    pub content_type: String,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DailyCount {
+    pub date: String,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClipboardStats {
+    pub total: i64,
+    pub favorites: i64,
+    pub pinned: i64,
+    pub type_counts: Vec<TypeCount>,
+    pub daily_trend: Vec<DailyCount>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SyncAccount {
     pub id: String,
     pub provider: String,
@@ -470,6 +491,72 @@ impl Database {
         }
 
         Ok(result)
+    }
+
+    // --- Statistics ---
+
+    pub fn get_clipboard_stats(&self) -> Result<ClipboardStats, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+        let total: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM entries WHERE deleted = 0",
+            [],
+            |row| row.get(0),
+        ).map_err(|e| format!("Stats error: {}", e))?;
+
+        let favorites: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM entries WHERE deleted = 0 AND is_favorite = 1",
+            [],
+            |row| row.get(0),
+        ).map_err(|e| format!("Stats error: {}", e))?;
+
+        let pinned: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM entries WHERE deleted = 0 AND is_pinned = 1",
+            [],
+            |row| row.get(0),
+        ).map_err(|e| format!("Stats error: {}", e))?;
+
+        // Type distribution
+        let mut stmt = conn.prepare(
+            "SELECT content_type, COUNT(*) FROM entries WHERE deleted = 0 GROUP BY content_type"
+        ).map_err(|e| format!("Prepare error: {}", e))?;
+
+        let type_counts: Vec<TypeCount> = stmt
+            .query_map([], |row| {
+                Ok(TypeCount {
+                    content_type: row.get(0)?,
+                    count: row.get(1)?,
+                })
+            })
+            .map_err(|e| format!("Query error: {}", e))?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        // Daily trend (last 7 days)
+        let mut stmt = conn.prepare(
+            "SELECT DATE(created_at) as day, COUNT(*) as cnt
+             FROM entries WHERE deleted = 0 AND created_at >= DATE('now', '-7 days')
+             GROUP BY day ORDER BY day"
+        ).map_err(|e| format!("Prepare error: {}", e))?;
+
+        let daily_trend: Vec<DailyCount> = stmt
+            .query_map([], |row| {
+                Ok(DailyCount {
+                    date: row.get(0)?,
+                    count: row.get(1)?,
+                })
+            })
+            .map_err(|e| format!("Query error: {}", e))?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        Ok(ClipboardStats {
+            total,
+            favorites,
+            pinned,
+            type_counts,
+            daily_trend,
+        })
     }
 
     // --- Tag Operations ---
