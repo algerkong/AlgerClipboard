@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="pageTitle">AlgerClipboard - The Smartest Clipboard Manager</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Outfit for modern clean headers, Manrope for high-legibility body, JetBrains Mono for tech data -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Manrope:wght@400;500;600&family=Outfit:wght@700;800&display=swap"
+    rel="stylesheet">
+
+  <!-- Three.js Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+
+  <link rel="icon" type="image/png" href="./assets/logo.png">
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+
+<body>
+  <!-- WebGL Background Canvas Container -->
+  <div id="webgl-canvas-container"></div>
+
+  <!-- Subtle noise texture overlay -->
+  <div class="noise"></div>
+  <!-- Grid overlay behind everything -->
+  <div class="grid-bg"></div>
+
+  <nav class="navbar">
+    <div class="container nav-content">
+      <div class="logo">
+        <img src="./assets/logo.png" alt="AlgerClipboard Logo" width="32" height="32" class="logo-img">
+        <span>AlgerClipboard</span>
+      </div>
+      <div class="nav-links">
+        <a href="https://github.com/algerkong/AlgerClipboard" target="_blank" class="nav-link">GitHub</a>
+        <button id="lang-toggle" class="lang-btn" aria-label="Toggle language">EN</button>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <header class="hero container">
+      <div class="hero-badge reveal" data-i18n="heroBadge">Open Source · Tauri 2 + React</div>
+
+      <h1 class="hero-title reveal delay-1">
+        <span data-i18n="heroTitleStart">Total Recall for Your</span><br>
+        <span class="accent-text" data-i18n="heroTitleHighlight">Digital Life.</span>
+      </h1>
+
+      <p class="hero-subtitle reveal delay-2" data-i18n="heroSubtitle">
+        An obsessively refined clipboard manager. Auto-capture text, images, and files with blazing fast search and E2E
+        encrypted sync.
+      </p>
+
+      <div class="hero-actions reveal delay-3">
+        <a href="#downloads" class="btn btn-primary">
+          <span data-i18n="downloadBtn">Download Release</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="btn-icon" stroke="currentColor"
+            stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <polyline points="19 12 12 19 5 12"></polyline>
+          </svg>
+        </a>
+        <a href="https://github.com/algerkong/AlgerClipboard" target="_blank" class="btn btn-secondary">
+          <span data-i18n="viewGithubBtn">View on GitHub</span>
+        </a>
+      </div>
+
+      <div class="app-showcase reveal delay-4">
+        <div class="app-glow"></div>
+        <!-- Generated mockup image -->
+        <img src="./assets/app.png" alt="AlgerClipboard Application Interface" class="app-mockup">
+      </div>
+    </header>
+
+    <section class="features container">
+      <h2 class="section-title reveal" data-i18n="featuresSectionTitle">Built for Power Users</h2>
+
+      <div class="features-grid">
+        <div class="feature-card reveal delay-1">
+          <div class="feature-icon sys-icon">∞</div>
+          <div class="feature-content">
+            <h3 data-i18n="featHistoryTitle">Infinite Memory</h3>
+            <p data-i18n="featHistoryDesc">Seamlessly logs text, file paths, and image data. Retrieve anything from
+              weeks ago instantly via global hotkeys.</p>
+          </div>
+        </div>
+
+        <div class="feature-card reveal delay-2">
+          <div class="feature-icon sys-icon">🛡️</div>
+          <div class="feature-content">
+            <h3 data-i18n="featSyncTitle">Zero-Knowledge Sync</h3>
+            <p data-i18n="featSyncDesc">AES-256-GCM encrypted persistence. Sync flawlessly across devices leveraging
+              WebDAV, Google Drive, or OneDrive.</p>
+          </div>
+        </div>
+
+        <div class="feature-card reveal delay-3">
+          <div class="feature-icon sys-icon">🌐</div>
+          <div class="feature-content">
+            <h3 data-i18n="featTransTitle">Inline Translation</h3>
+            <p data-i18n="featTransDesc">Bridge language barriers on-the-fly. Built-in neural translation engines
+              including Baidu, Youdao, and Google.</p>
+          </div>
+        </div>
+
+        <div class="feature-card reveal delay-4">
+          <div class="feature-icon sys-icon">⚡</div>
+          <div class="feature-content">
+            <h3 data-i18n="featTempTitle">Dynamic Templates</h3>
+            <p data-i18n="featTempDesc">Construct reusable snippet templates mapped to active variables. Boost your
+              typing velocity dramatically.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="downloads" class="downloads-section container">
+      <div class="downloads-box reveal">
+        <h2 data-i18n="dlSectionTitle">Get AlgerClipboard</h2>
+        <p data-i18n="dlSectionDesc">Available for all major desktop architectures. 100% free and open source.</p>
+
+        <div class="dl-platforms">
+          <a href="https://github.com/algerkong/AlgerClipboard/releases" target="_blank" class="dl-card">
+            <div class="dl-icon">
+              <!-- Windows simple logo -->
+              <svg viewBox="0 0 88 88" width="32" height="32" fill="currentColor">
+                <path
+                  d="M0 12.402l35.687-4.86.016 34.423-35.67.203zm35.67 33.529l.028 34.453L0 75.43V46.131zm4.326-39.02l48.004-6.91v40.352l-48.004.267zm48.004 43.461l-.008 40.54-47.996-6.81v-34.02z" />
+              </svg>
+            </div>
+            <h3>Windows</h3>
+            <span class="dl-format">.msi / .exe</span>
+          </a>
+
+          <a href="https://github.com/algerkong/AlgerClipboard/releases" target="_blank" class="dl-card">
+            <div class="dl-icon">
+              <!-- macOS pure icon -->
+              <svg viewBox="0 0 384 512" width="32" height="32" fill="currentColor">
+                <path
+                  d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
+              </svg>
+            </div>
+            <h3>macOS</h3>
+            <span class="dl-format">.dmg</span>
+          </a>
+
+          <a href="https://github.com/algerkong/AlgerClipboard/releases" target="_blank" class="dl-card">
+            <div class="dl-icon">
+              <!-- Linux simple icon -->
+              <svg viewBox="0 0 448 512" width="32" height="32" fill="currentColor">
+                <path
+                  d="M220.8 123.3c1 .5 1.8 1.7 3 1.7 1.1 0 2.8-.4 2.9-1.5.2-1.4-1.9-2.3-3.2-2.9-1.7-.7-3.9-1-5.5-.1-.4.2-.8.7-.6 1.1.3 1.3 2.3 1.1 3.4 1.7zm-8.4-1.3c1.3.6 3.1.7 4.5.2-.4-.8-1.7-1.4-2.8-1.9-1.3-.6-3-.9-4-1.8-1 .6-1.5 2.1-2.1 3.2.7.4 1.9.4 3 1.1.4.3.9.7 1.4.2zm-28.5-4c0-.9 1.1-1.3 1.8-1.5-1.5-2.2-3.8-1.2-5.4-2.7-1.1-.9-1.7-2.3-3-3.1-1.2-.8-3-1.4-4-2.4-1.1-1-1.4-2.8-2.5-3.8-1.1-1.1-3.1-1.8-4.3-2.9-1-1-1.5-2.6-2.5-3.6-1-.9-3-.9-4-1.7-1-.6-1.5-2-2.3-2.6-.9-.8-2.6-1.1-3.6-1.9-1.9-1.4-2.9-3.9-5-5.2-1-.6-2.4-.6-3.4-.9-1.1-.3-2.4-.4-3.5-.7-1-.3-2.4-.5-3.4-.7-1.1-.2-2.3-.6-3.4-.8-3-.5-5.9-.6-8.9-.7-1.1 0-2.3.2-3.4.4-1.1.2-2.3.4-3.4.7-1.1.3-2.3.5-3.4.9-1.1.4-2.3.9-3.4 1.4-1.1.5-2.2 1.2-3.2 1.8-1 .6-2 1.3-2.9 2.1-.9.8-1.8 1.7-2.5 2.6-.7.9-1.4 1.8-2 2.8-.6 1-1.1 2.1-1.5 3.1-.4 1-.7 2-1 3.1-.2 1-.4 2-.5 3-.1 1-.1 2-.1 3 0 1 .1 1.9.2 2.9.1 1 .3 1.9.5 2.8.2.9.5 1.8.8 2.6.3.8.7 1.6 1.1 2.4.4.7.9 1.4 1.4 2 .8 1.1 1.8 2 2.9 2.7 1.1.7 2.4 1.2 3.8 1.5 1.4.3 2.9.3 4.4.1 1.5-.2 2.9-.7 4.2-1.4 1.2-.6 2.3-1.4 3.1-2.4.8-1 1.4-2.1 1.7-3.4.3-1.2.3-2.5 0-3.8-.3-1.2-.9-2.4-1.7-3.4-.8-1-1.9-1.8-3.1-2.4-1.2-.6-2.6-1-4-1.1-1.4-.1-2.8.1-4.2.5-1.3.4-2.6 1.1-3.6 1.9-.9.8-1.7 1.8-2.2 3-.5 1.1-.8 2.4-.9 3.6-.1 1.2.1 2.5.5 3.7.4 1.1 1 2.2 1.8 3.1.8.9 1.8 1.6 3 2.1 1.1.5 2.4.8 3.6.9 1.2.1 2.4-.1 3.6-.4 1.1-.3 2.2-.9 3.1-1.6.9-.7 1.6-1.6 2.1-2.7.5-1 .8-2.2.9-3.4.1-1.1-.1-2.3-.5-3.4-.4-1.1-1-2.1-1.8-2.9-.8-.8-1.8-1.5-2.9-1.9-1.1-.4-2.3-.6-3.5-.6-1.1 0-2.3.2-3.4.5-1.1.3-2.1.8-3 1.4-.9.6-1.6 1.4-2.2 2.3-.5.9-.8 2-.9 3.1-.1 1.1.1 2.2.4 3.2.3 1 .8 1.9 1.5 2.7.7.8 1.6 1.4 2.6 1.8 1 .4 2.1.6 3.2.7 1.1.1 2.2-.1 3.3-.4 1-.3 2-.8 2.9-1.4.8-.6 1.5-1.4 2-2.3.5-.9.8-1.9.9-2.9.1-1-.1-2.1-.4-3.1-.3-.9-.8-1.8-1.4-2.5-.7-.7-1.5-1.3-2.4-1.7zm18.8 8.4l-.5 4.3c3.7-.6 7-.5 10.3-1 .2-2 .8-3.5 2.4-4.8l-1.6-4.9c-2.4-2-4.5-3.9-7-5.7-1.2 1.6-2.4 3.4-3.6 12.1z..." />
+              </svg>
+            </div>
+            <h3>Linux</h3>
+            <span class="dl-format">.deb / .AppImage</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer container">
+    <div class="footer-content">
+      <p data-i18n="footerText">AlgerClipboard is open source software licensed under MIT.</p>
+      <div class="footer-links">
+        <a href="https://github.com/algerkong/AlgerClipboard" target="_blank">Source Code</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="./js/i18n.js"></script>
+  <script src="./js/main.js"></script>
+</body>
+
+</html>
