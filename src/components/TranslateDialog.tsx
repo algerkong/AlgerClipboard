@@ -1,19 +1,28 @@
-import { useEffect, useRef } from "react";
-import { X, Loader2, RefreshCw } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  X,
+  Loader2,
+  ArrowRightLeft,
+  Copy,
+  Check,
+  ClipboardPaste,
+  RotateCcw,
+} from "lucide-react";
 import { useTranslateStore } from "@/stores/translateStore";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 const LANGUAGES = [
   { value: "auto", labelKey: "translate.auto" },
-  { value: "zh", label: "Chinese" },
+  { value: "zh", label: "中文" },
   { value: "en", label: "English" },
-  { value: "ja", label: "Japanese" },
-  { value: "ko", label: "Korean" },
-  { value: "fr", label: "French" },
-  { value: "de", label: "German" },
-  { value: "es", label: "Spanish" },
-  { value: "ru", label: "Russian" },
+  { value: "ja", label: "日本語" },
+  { value: "ko", label: "한국어" },
+  { value: "fr", label: "Français" },
+  { value: "de", label: "Deutsch" },
+  { value: "es", label: "Español" },
+  { value: "ru", label: "Русский" },
 ];
 
 interface Props {
@@ -34,6 +43,7 @@ export function TranslateDialog({ text, onClose }: Props) {
   const clearResult = useTranslateStore((s) => s.clearResult);
 
   const autoTranslated = useRef(false);
+  const [copied, setCopied] = useState(false);
 
   // Auto-translate on open
   useEffect(() => {
@@ -51,109 +61,203 @@ export function TranslateDialog({ text, onClose }: Props) {
     translate(text);
   };
 
+  const handleSwapLangs = () => {
+    if (fromLang === "auto") return;
+    const oldFrom = fromLang;
+    const oldTo = toLang;
+    setFromLang(oldTo);
+    setToLang(oldFrom);
+  };
+
+  const handleCopyResult = async () => {
+    if (!result?.translated) return;
+    try {
+      await navigator.clipboard.writeText(result.translated);
+      setCopied(true);
+      toast.success(t("toast.copied"));
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.error(t("translate.copyFailed"));
+    }
+  };
+
+  const handleUseTranslation = async () => {
+    if (!result?.translated) return;
+    try {
+      await navigator.clipboard.writeText(result.translated);
+      toast.success(t("translate.copiedToClipboard"));
+      onClose();
+    } catch {
+      toast.error(t("translate.copyFailed"));
+    }
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-      onClick={(e) => { e.stopPropagation(); onClose(); }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
     >
       <div
-        className="bg-background border border-border/50 rounded-lg shadow-xl w-[400px] max-h-[520px] flex flex-col"
+        className="bg-background border border-border/50 rounded-lg shadow-xl w-[400px] max-h-[560px] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-border/30">
-          <span className="text-xs font-medium">{t("translate.title")}</span>
-          <button
-            onClick={onClose}
-            className="p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-3">
-          {/* Source text */}
-          <div>
-            <p className="text-xs2 text-muted-foreground mb-1">{t("translate.from")}</p>
-            <p className="text-sm2 text-foreground bg-muted/20 rounded p-2 max-h-[100px] overflow-y-auto break-all leading-relaxed">
-              {text.length > 500 ? text.substring(0, 500) + "\u2026" : text}
-            </p>
+        {/* Header with language controls */}
+        <div className="px-3 py-2 border-b border-border/30 shrink-0 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium">{t("translate.title")}</span>
+            <button
+              onClick={onClose}
+              className="p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
 
-          {/* Result — shown directly when available */}
-          {loading && (
-            <div className="flex items-center justify-center gap-1.5 py-4 text-muted-foreground">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="text-sm2">{t("translate.translating")}</span>
-            </div>
-          )}
+          {/* Language bar */}
+          <div className="flex items-center gap-1.5">
+            <select
+              value={fromLang}
+              onChange={(e) => setFromLang(e.target.value)}
+              className="flex-1 h-6 px-1.5 text-xs2 bg-muted/30 border border-border/50 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+            >
+              {LANGUAGES.map((l) => (
+                <option key={l.value} value={l.value}>
+                  {l.labelKey ? t(l.labelKey) : l.label}
+                </option>
+              ))}
+            </select>
 
-          {error && (
-            <p className="text-xs2 text-red-400 bg-red-400/10 rounded p-2">
-              {t("translate.error")}: {error}
-            </p>
-          )}
+            <button
+              onClick={handleSwapLangs}
+              disabled={fromLang === "auto"}
+              className={cn(
+                "shrink-0 p-1 rounded transition-colors",
+                fromLang === "auto"
+                  ? "text-muted-foreground/30 cursor-not-allowed"
+                  : "text-muted-foreground hover:text-primary hover:bg-primary/10"
+              )}
+              title={t("translate.swap")}
+            >
+              <ArrowRightLeft className="w-3 h-3" />
+            </button>
 
-          {result && (
-            <div>
-              <p className="text-xs2 text-muted-foreground mb-1">
-                {t("translate.result")}
-                {result.engine && (
-                  <span className="ml-1 text-primary/60">({result.engine})</span>
-                )}
-              </p>
-              <p className="text-sm2 text-foreground bg-primary/5 rounded p-2 max-h-[140px] overflow-y-auto break-all leading-relaxed select-text">
-                {result.translated}
-              </p>
-            </div>
-          )}
+            <select
+              value={toLang}
+              onChange={(e) => setToLang(e.target.value)}
+              className="flex-1 h-6 px-1.5 text-xs2 bg-muted/30 border border-border/50 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+            >
+              {LANGUAGES.filter((l) => l.value !== "auto").map((l) => (
+                <option key={l.value} value={l.value}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
 
-          {/* Language selectors + re-translate */}
-          <div className="flex items-center gap-2">
-            <div className="flex-1">
-              <label className="text-xs2 text-muted-foreground">{t("translate.from")}</label>
-              <select
-                value={fromLang}
-                onChange={(e) => setFromLang(e.target.value)}
-                className="mt-0.5 w-full h-6 px-1 text-sm2 bg-muted/30 border border-border/50 rounded text-foreground focus:outline-none"
-              >
-                {LANGUAGES.map((l) => (
-                  <option key={l.value} value={l.value}>
-                    {l.labelKey ? t(l.labelKey) : l.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <span className="text-muted-foreground mt-3">&rarr;</span>
-            <div className="flex-1">
-              <label className="text-xs2 text-muted-foreground">{t("translate.to")}</label>
-              <select
-                value={toLang}
-                onChange={(e) => setToLang(e.target.value)}
-                className="mt-0.5 w-full h-6 px-1 text-sm2 bg-muted/30 border border-border/50 rounded text-foreground focus:outline-none"
-              >
-                {LANGUAGES.filter((l) => l.value !== "auto").map((l) => (
-                  <option key={l.value} value={l.value}>
-                    {l.label}
-                  </option>
-                ))}
-              </select>
-            </div>
             <button
               onClick={handleTranslate}
               disabled={loading}
               className={cn(
-                "mt-4 shrink-0 flex items-center gap-1 h-6 px-2.5 rounded text-sm2 font-medium transition-colors",
+                "shrink-0 flex items-center gap-1 h-6 px-2 rounded text-xs2 font-medium transition-colors",
                 loading
                   ? "bg-muted/50 text-muted-foreground cursor-not-allowed"
                   : "bg-primary/15 text-primary hover:bg-primary/25"
               )}
-              title={t("translate.translate")}
             >
-              <RefreshCw className={cn("w-3 h-3", loading && "animate-spin")} />
-              {t("translate.translate")}
+              <RotateCcw
+                className={cn("w-2.5 h-2.5", loading && "animate-spin")}
+              />
             </button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto flex flex-col min-h-0">
+          {/* Source text — compact, collapsible feel */}
+          <div className="px-3 pt-2.5 pb-2">
+            <p className="text-2xs text-muted-foreground/60 uppercase tracking-wider mb-1">
+              {t("translate.sourceText")}
+            </p>
+            <p className="text-sm2 text-muted-foreground bg-muted/10 rounded-md px-2.5 py-2 max-h-[100px] overflow-y-auto break-words leading-relaxed select-text">
+              {text.length > 500 ? text.substring(0, 500) + "\u2026" : text}
+            </p>
+          </div>
+
+          {/* Divider */}
+          <div className="mx-3 border-t border-border/20" />
+
+          {/* Result area */}
+          <div className="px-3 pt-2 pb-3 flex-1 min-h-0 flex flex-col">
+            {loading && (
+              <div className="flex items-center justify-center gap-1.5 py-8 text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm2">{t("translate.translating")}</span>
+              </div>
+            )}
+
+            {error && (
+              <div className="py-2">
+                <p className="text-xs2 text-red-400 bg-red-400/10 rounded-md px-2.5 py-2">
+                  {t("translate.error")}: {error}
+                </p>
+              </div>
+            )}
+
+            {result && (
+              <div className="flex flex-col flex-1 min-h-0">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-2xs text-muted-foreground/60 uppercase tracking-wider">
+                    {t("translate.result")}
+                    {result.engine && (
+                      <span className="ml-1 normal-case tracking-normal text-primary/50">
+                        ({result.engine})
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <div className="relative group/result flex-1 min-h-0">
+                  <p className="text-sm2 text-foreground bg-primary/5 border border-primary/10 rounded-md px-2.5 py-2 max-h-[180px] overflow-y-auto break-words leading-relaxed select-text">
+                    {result.translated}
+                  </p>
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex items-center gap-1.5 mt-2">
+                  <button
+                    onClick={handleCopyResult}
+                    className={cn(
+                      "flex items-center gap-1 h-6 px-2.5 rounded text-xs2 font-medium transition-all",
+                      copied
+                        ? "bg-green-500/15 text-green-400"
+                        : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                    )}
+                  >
+                    {copied ? (
+                      <Check className="w-2.5 h-2.5" />
+                    ) : (
+                      <Copy className="w-2.5 h-2.5" />
+                    )}
+                    {copied ? t("translate.copied") : t("translate.copyResult")}
+                  </button>
+                  <button
+                    onClick={handleUseTranslation}
+                    className="flex items-center gap-1 h-6 px-2.5 rounded text-xs2 font-medium bg-primary/15 text-primary hover:bg-primary/25 transition-colors"
+                  >
+                    <ClipboardPaste className="w-2.5 h-2.5" />
+                    {t("translate.useTranslation")}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Empty state — no result yet, not loading, no error */}
+            {!loading && !error && !result && (
+              <div className="flex items-center justify-center py-8 text-muted-foreground/40">
+                <span className="text-xs2">{t("translate.noResult")}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
