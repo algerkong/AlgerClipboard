@@ -38,6 +38,7 @@
     "global-shortcut:allow-unregister",
     "global-shortcut:allow-is-registered",
     "shell:default",
+    "dialog:default",
     "notification:default",
     "autostart:default"
   ]

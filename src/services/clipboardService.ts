@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { ClipboardEntry, HistoryQuery, ClipboardStats } from "@/types";
+import type { ClipboardEntry, HistoryQuery, ClipboardStats, OcrResult } from "@/types";
 
 export async function getClipboardHistory(
   query: HistoryQuery = {}
@@ -82,7 +82,7 @@ export async function getThumbnailBase64(relativePath: string): Promise<string> 
   return invoke("get_thumbnail_base64", { relativePath });
 }
 
-export async function extractTextFromImage(relativePath: string): Promise<string> {
+export async function extractTextFromImage(relativePath: string): Promise<OcrResult> {
   return invoke("extract_text_from_image", { relativePath });
 }
 
@@ -112,4 +112,8 @@ export async function getCacheMaxSize(): Promise<number> {
 
 export async function cleanupCacheBySize(): Promise<number> {
   return invoke("cleanup_cache_by_size");
+}
+
+export async function openInExplorer(path: string): Promise<void> {
+  return invoke("open_in_explorer", { path });
 }

@@ -80,6 +80,8 @@
     "expire90days": "90天",
     "expireDaysDesc": "超时自动删除（收藏和置顶不受影响）",
     "changeCacheDir": "更改",
+    "openCacheDir": "打开",
+    "selectCacheDir": "选择缓存目录",
     "migrateCacheTitle": "迁移缓存文件",
     "migrateCacheDesc": "是否将已有的缓存文件迁移到新目录？",
     "migrateCacheYes": "迁移文件",
@@ -210,12 +212,13 @@
     "extractText": "提取文字",
     "extracting": "正在识别文字...",
     "noText": "未识别到文字",
-    "translateText": "翻译文字",
+    "translateText": "翻译",
     "copyText": "复制文字",
     "zoomIn": "放大",
     "zoomOut": "缩小",
     "resetZoom": "重置",
-    "ocrResult": "识别结果"
+    "ocrResult": "识别结果",
+    "toggleOverlay": "显示/隐藏文字覆盖"
   },
   "contextMenu": {
     "viewFull": "查看全文",

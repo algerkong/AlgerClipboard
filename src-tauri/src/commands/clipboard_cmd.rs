@@ -157,7 +157,7 @@ pub fn get_thumbnail_base64(
 pub async fn extract_text_from_image(
     blob_store: State<'_, AppBlobStore>,
     relative_path: String,
-) -> Result<String, String> {
+) -> Result<crate::ocr::OcrResult, String> {
     let full_path = blob_store.0.get_blob_path(&relative_path);
     let path_str = full_path.to_string_lossy().to_string();
     tokio::task::spawn_blocking(move || crate::ocr::extract_text(&path_str))
@@ -251,4 +251,30 @@ pub fn cleanup_cache_by_size(
     let max_bytes = max_mb as u64 * 1024 * 1024;
     let oldest = db.0.get_blobs_oldest_first()?;
     blob_store.0.cleanup_by_size_limit(max_bytes, &oldest)
+}
+
+#[tauri::command]
+pub fn open_in_explorer(path: String) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to open directory: {}", e))?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to open directory: {}", e))?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to open directory: {}", e))?;
+    }
+    Ok(())
 }

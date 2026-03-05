@@ -41,8 +41,10 @@ import {
   setCacheMaxSize,
   getCacheMaxSize,
   cleanupCacheBySize,
+  openInExplorer,
   type CacheInfo,
 } from "@/services/clipboardService";
+import { open as openFolderDialog } from "@tauri-apps/plugin-dialog";
 import type { ClipboardStats } from "@/types";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -1092,8 +1094,7 @@ function DataTab() {
   const { t } = useTranslation();
   const [cacheInfo, setCacheInfo] = useState<CacheInfo | null>(null);
   const [stats, setStats] = useState<ClipboardStats | null>(null);
-  const [newCacheDir, setNewCacheDir] = useState("");
-  const [showCacheDirInput, setShowCacheDirInput] = useState(false);
+  const [pendingCacheDir, setPendingCacheDir] = useState<string | null>(null);
   const [showMigrateDialog, setShowMigrateDialog] = useState(false);
   const [migrating, setMigrating] = useState(false);
   const [cacheMaxSize, setCacheMaxSizeState] = useState(0);
@@ -1113,24 +1114,29 @@ function DataTab() {
     getCacheMaxSize().then(setCacheMaxSizeState).catch(() => {});
   }, []);
 
-  const handleCacheDirChange = () => {
-    if (!newCacheDir.trim()) return;
+  const handleCacheDirChange = async () => {
+    const selected = await openFolderDialog({
+      directory: true,
+      title: t("settings.selectCacheDir"),
+    });
+    if (!selected) return;
+    setPendingCacheDir(selected);
     setShowMigrateDialog(true);
   };
 
   const handleMigrate = async (doMigrate: boolean) => {
     setShowMigrateDialog(false);
+    if (!pendingCacheDir) return;
     setMigrating(true);
     try {
       if (doMigrate) {
-        await migrateCache(newCacheDir.trim());
+        await migrateCache(pendingCacheDir);
         toast.success(t("settings.migrated"));
       } else {
-        await setCacheDir(newCacheDir.trim());
+        await setCacheDir(pendingCacheDir);
       }
       toast.info(t("settings.restartRequired"));
-      setShowCacheDirInput(false);
-      setNewCacheDir("");
+      setPendingCacheDir(null);
       const info = await getCacheInfo();
       setCacheInfo(info);
     } catch (err) {
@@ -1286,47 +1292,24 @@ function DataTab() {
                 {cacheInfo.cache_dir}
               </span>
               <button
-                onClick={() => setShowCacheDirInput(!showCacheDirInput)}
-                className="text-xs2 text-primary hover:text-primary/80 shrink-0"
+                onClick={() => openInExplorer(cacheInfo.cache_dir).catch(() => {})}
+                className="text-xs2 text-muted-foreground hover:text-foreground shrink-0"
+                title={t("settings.openCacheDir")}
               >
-                {t("settings.changeCacheDir")}
+                {t("settings.openCacheDir")}
+              </button>
+              <button
+                onClick={handleCacheDirChange}
+                disabled={migrating}
+                className="text-xs2 text-primary hover:text-primary/80 shrink-0 disabled:opacity-50"
+              >
+                {migrating ? (
+                  <Loader2 className="w-2.5 h-2.5 animate-spin inline" />
+                ) : (
+                  t("settings.changeCacheDir")
+                )}
               </button>
             </div>
-
-            {showCacheDirInput && (
-              <div className="space-y-1.5">
-                <input
-                  type="text"
-                  value={newCacheDir}
-                  onChange={(e) => setNewCacheDir(e.target.value)}
-                  placeholder={cacheInfo.cache_dir}
-                  className="w-full h-7 px-2 text-sm2 bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
-                />
-                <div className="flex gap-1.5">
-                  <button
-                    onClick={handleCacheDirChange}
-                    disabled={!newCacheDir.trim() || migrating}
-                    className="flex items-center gap-1 h-6 px-2 text-xs2 font-medium bg-primary/15 text-primary hover:bg-primary/25 rounded transition-colors disabled:opacity-50"
-                  >
-                    {migrating ? (
-                      <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                    ) : (
-                      <Check className="w-2.5 h-2.5" />
-                    )}
-                    {migrating ? t("settings.migrating") : t("sync.save")}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowCacheDirInput(false);
-                      setNewCacheDir("");
-                    }}
-                    className="flex items-center gap-1 h-6 px-2 text-xs2 font-medium bg-muted/30 hover:bg-muted/50 rounded transition-colors"
-                  >
-                    <X className="w-2.5 h-2.5" />
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* Migrate dialog */}
             {showMigrateDialog && (

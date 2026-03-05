@@ -80,6 +80,8 @@
     "statsTypeDistribution": "Type Distribution",
     "statsDailyTrend": "7-Day Trend",
     "changeCacheDir": "Change",
+    "openCacheDir": "Open",
+    "selectCacheDir": "Select Cache Directory",
     "migrateCacheTitle": "Migrate Cache Files",
     "migrateCacheDesc": "Move existing cache files to the new directory?",
     "migrateCacheYes": "Migrate Files",
@@ -210,12 +212,13 @@
     "extractText": "Extract Text",
     "extracting": "Extracting text...",
     "noText": "No text detected",
-    "translateText": "Translate Text",
+    "translateText": "Translate",
     "copyText": "Copy Text",
     "zoomIn": "Zoom In",
     "zoomOut": "Zoom Out",
     "resetZoom": "Reset",
-    "ocrResult": "OCR Result"
+    "ocrResult": "OCR Result",
+    "toggleOverlay": "Toggle text overlay"
   },
   "contextMenu": {
     "viewFull": "View Full Text",

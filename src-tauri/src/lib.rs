@@ -34,6 +34,7 @@ pub fn run() {
         .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec!["--minimized"])))
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir().expect("Failed to get app data dir");
             std::fs::create_dir_all(&app_data_dir).expect("Failed to create app data dir");
@@ -156,6 +157,7 @@ pub fn run() {
             commands::clipboard_cmd::set_cache_max_size,
             commands::clipboard_cmd::get_cache_max_size,
             commands::clipboard_cmd::cleanup_cache_by_size,
+            commands::clipboard_cmd::open_in_explorer,
             commands::settings_cmd::get_settings,
             commands::settings_cmd::update_settings,
             commands::settings_cmd::set_auto_start,
