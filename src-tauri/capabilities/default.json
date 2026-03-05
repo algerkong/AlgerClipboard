@@ -4,7 +4,8 @@
   "description": "enables the default permissions",
   "windows": [
     "main",
-    "image-viewer-*"
+    "image-viewer-*",
+    "template-manager-*"
   ],
   "permissions": [
     "core:default",

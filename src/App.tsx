@@ -75,14 +75,23 @@ function TemplateManagerWindow() {
     applyTheme(theme);
   }, [theme]);
 
-  const handleClose = useCallback(async () => {
-    const { getCurrentWebviewWindow } = await import("@tauri-apps/api/webviewWindow");
+  // Escape key closes the window
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        getCurrentWebviewWindow().close();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const handleClose = useCallback(() => {
     getCurrentWebviewWindow().close();
   }, []);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      <TitleBar />
       <div className="flex-1 min-h-0">
         <TemplateManager onBack={handleClose} />
       </div>
