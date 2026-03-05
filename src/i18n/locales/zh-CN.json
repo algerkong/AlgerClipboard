@@ -65,7 +65,14 @@
     "fontFamily_microsoft-yahei": "微软雅黑",
     "fontFamily_noto-sans": "Noto Sans",
     "fontFamily_mono": "等宽字体",
-    "fontFamilyDesc": "更改界面显示字体"
+    "fontFamilyDesc": "更改界面显示字体",
+    "expireDays": "自动过期",
+    "expireNever": "永不",
+    "expire1day": "1天",
+    "expire7days": "7天",
+    "expire30days": "30天",
+    "expire90days": "90天",
+    "expireDaysDesc": "超时自动删除（收藏和置顶不受影响）"
   },
   "sync": {
     "title": "同步",

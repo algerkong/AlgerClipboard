@@ -158,6 +158,24 @@ fn get_clipboard_file_paths() -> Option<Vec<String>> {
     None
 }
 
+/// Run auto-cleanup based on stored settings
+fn run_auto_cleanup(db: &Arc<Database>) {
+    let max_count = db.get_setting("max_history")
+        .ok()
+        .flatten()
+        .and_then(|v| v.parse::<i64>().ok())
+        .unwrap_or(500);
+
+    let expire_days = db.get_setting("expire_days")
+        .ok()
+        .flatten()
+        .and_then(|v| v.parse::<i64>().ok());
+
+    if let Err(e) = db.auto_cleanup(max_count, expire_days) {
+        log::error!("Auto-cleanup failed: {}", e);
+    }
+}
+
 impl ClipboardMonitor {
     pub fn new(device_id: String) -> Self {
         ClipboardMonitor {
@@ -246,6 +264,7 @@ impl ClipboardMonitor {
                                     log::error!("Failed to insert file paths entry: {}", e);
                                 } else {
                                     log::info!("Captured {} file path(s)", paths.len());
+                                    run_auto_cleanup(&db);
                                     callback(entry);
                                 }
                             }
@@ -345,6 +364,7 @@ impl ClipboardMonitor {
                                             log::error!("Failed to insert image entry: {}", e);
                                         } else {
                                             log::info!("Captured image ({}x{})", img_data.width, img_data.height);
+                                            run_auto_cleanup(&db);
                                             callback(entry);
                                         }
                                     }
@@ -405,6 +425,7 @@ impl ClipboardMonitor {
                                         if let Err(e) = db.insert_entry(&entry) {
                                             log::error!("Failed to insert text entry: {}", e);
                                         } else {
+                                            run_auto_cleanup(&db);
                                             callback(entry);
                                         }
                                     }

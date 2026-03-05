@@ -359,6 +359,33 @@ impl Database {
         Ok(())
     }
 
+    /// Cleanup entries older than the given number of days (preserves favorites and pinned)
+    pub fn cleanup_expired_entries(&self, days: i64) -> Result<i64, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+        let cutoff = chrono::Utc::now() - chrono::Duration::days(days);
+        let cutoff_str = cutoff.to_rfc3339();
+
+        let count = conn.execute(
+            "UPDATE entries SET deleted = 1 WHERE deleted = 0 AND is_favorite = 0 AND is_pinned = 0 AND created_at < ?1",
+            params![cutoff_str],
+        )
+        .map_err(|e| format!("Failed to cleanup expired entries: {}", e))?;
+
+        Ok(count as i64)
+    }
+
+    /// Run both count-based and time-based cleanup
+    pub fn auto_cleanup(&self, max_count: i64, expire_days: Option<i64>) -> Result<(), String> {
+        self.cleanup_old_entries(max_count)?;
+        if let Some(days) = expire_days {
+            if days > 0 {
+                self.cleanup_expired_entries(days)?;
+            }
+        }
+        Ok(())
+    }
+
     pub fn cleanup_old_entries(&self, max_count: i64) -> Result<(), String> {
         let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 

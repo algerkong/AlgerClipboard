@@ -65,7 +65,14 @@
     "fontFamily_microsoft-yahei": "Microsoft YaHei",
     "fontFamily_noto-sans": "Noto Sans",
     "fontFamily_mono": "Monospace",
-    "fontFamilyDesc": "Change the interface font"
+    "fontFamilyDesc": "Change the interface font",
+    "expireDays": "Auto Expire",
+    "expireNever": "Never",
+    "expire1day": "1 Day",
+    "expire7days": "7 Days",
+    "expire30days": "30 Days",
+    "expire90days": "90 Days",
+    "expireDaysDesc": "Auto-delete after expiry (favorites and pinned are exempt)"
   },
   "sync": {
     "title": "Sync",

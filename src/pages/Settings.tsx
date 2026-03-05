@@ -128,6 +128,7 @@ function GeneralTab() {
   const { t, i18n } = useTranslation();
   const theme = useSettingsStore((s) => s.theme);
   const maxHistory = useSettingsStore((s) => s.maxHistory);
+  const expireDays = useSettingsStore((s) => s.expireDays);
   const pasteAndClose = useSettingsStore((s) => s.pasteAndClose);
   const autoStart = useSettingsStore((s) => s.autoStart);
   const locale = useSettingsStore((s) => s.locale);
@@ -135,6 +136,7 @@ function GeneralTab() {
   const fontFamily = useSettingsStore((s) => s.fontFamily);
   const setTheme = useSettingsStore((s) => s.setTheme);
   const setMaxHistory = useSettingsStore((s) => s.setMaxHistory);
+  const setExpireDays = useSettingsStore((s) => s.setExpireDays);
   const setPasteAndClose = useSettingsStore((s) => s.setPasteAndClose);
   const setAutoStart = useSettingsStore((s) => s.setAutoStart);
   const setLocale = useSettingsStore((s) => s.setLocale);
@@ -280,6 +282,38 @@ function GeneralTab() {
         />
         <p className="mt-1 text-xs2 text-muted-foreground/70">
           {t("settings.maxEntries")}
+        </p>
+      </section>
+
+      {/* Auto expire */}
+      <section>
+        <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
+          {t("settings.expireDays")}
+        </label>
+        <div className="flex gap-1.5 mt-2">
+          {[
+            { value: 0, labelKey: "settings.expireNever" },
+            { value: 1, labelKey: "settings.expire1day" },
+            { value: 7, labelKey: "settings.expire7days" },
+            { value: 30, labelKey: "settings.expire30days" },
+            { value: 90, labelKey: "settings.expire90days" },
+          ].map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setExpireDays(opt.value)}
+              className={cn(
+                "flex-1 flex items-center justify-center py-1.5 rounded-md text-xs font-medium transition-colors",
+                expireDays === opt.value
+                  ? "bg-primary/15 text-primary ring-1 ring-primary/30"
+                  : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+              )}
+            >
+              {t(opt.labelKey)}
+            </button>
+          ))}
+        </div>
+        <p className="mt-1 text-xs2 text-muted-foreground/70">
+          {t("settings.expireDaysDesc")}
         </p>
       </section>
 

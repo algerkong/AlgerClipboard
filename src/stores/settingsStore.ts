@@ -50,6 +50,7 @@ const FONT_SIZE_MIGRATION: Record<string, UIScale> = {
 interface SettingsState {
   theme: Theme;
   maxHistory: number;
+  expireDays: number; // 0 = never expire
   autoStart: boolean;
   pasteAndClose: boolean;
   locale: string;
@@ -60,6 +61,7 @@ interface SettingsState {
   loadSettings: () => Promise<void>;
   setTheme: (theme: Theme) => Promise<void>;
   setMaxHistory: (max: number) => Promise<void>;
+  setExpireDays: (days: number) => Promise<void>;
   setAutoStart: (enabled: boolean) => Promise<void>;
   setPasteAndClose: (enabled: boolean) => Promise<void>;
   setLocale: (locale: string) => Promise<void>;
@@ -71,6 +73,7 @@ interface SettingsState {
 export const useSettingsStore = create<SettingsState>((set) => ({
   theme: "dark",
   maxHistory: 500,
+  expireDays: 0,
   autoStart: false,
   pasteAndClose: true,
   locale: "zh-CN",
@@ -83,6 +86,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       const [
         theme,
         maxHistory,
+        expireDays,
         pasteAndClose,
         locale,
         uiScale,
@@ -92,6 +96,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       ] = await Promise.all([
         getSetting("theme"),
         getSetting("max_history"),
+        getSetting("expire_days"),
         getSetting("paste_and_close"),
         getSetting("locale"),
         getSetting("ui_scale"),
@@ -118,6 +123,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       set({
         theme: (theme as Theme) ?? "dark",
         maxHistory: maxHistory ? parseInt(maxHistory, 10) : 500,
+        expireDays: expireDays ? parseInt(expireDays, 10) : 0,
         autoStart: autoStartEnabled,
         pasteAndClose: pasteAndClose !== "false",
         locale: locale ?? "zh-CN",
@@ -144,6 +150,15 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       await updateSetting("max_history", String(max));
     } catch (err) {
       console.error("Failed to save max_history:", err);
+    }
+  },
+
+  setExpireDays: async (days: number) => {
+    set({ expireDays: days });
+    try {
+      await updateSetting("expire_days", String(days));
+    } catch (err) {
+      console.error("Failed to save expire_days:", err);
     }
   },
 
