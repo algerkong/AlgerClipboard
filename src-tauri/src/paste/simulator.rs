@@ -16,6 +16,104 @@ pub fn paste_text(text: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// Set clipboard to file list (CF_HDROP) and simulate Ctrl+V paste
+#[cfg(target_os = "windows")]
+pub fn paste_files(paths: &[&str]) -> Result<(), String> {
+    use windows_sys::Win32::Foundation::{HWND, FALSE};
+    use windows_sys::Win32::System::DataExchange::{
+        OpenClipboard, CloseClipboard, EmptyClipboard, SetClipboardData,
+    };
+    use windows_sys::Win32::System::Memory::{
+        GlobalAlloc, GlobalLock, GlobalUnlock, GMEM_MOVEABLE, GMEM_ZEROINIT,
+    };
+    use windows_sys::Win32::System::Ole::CF_HDROP;
+
+    // Build wide-char file paths: each null-terminated, double-null at end
+    let mut wide_paths: Vec<u16> = Vec::new();
+    for path in paths {
+        let path = path.trim();
+        if path.is_empty() {
+            continue;
+        }
+        for c in path.encode_utf16() {
+            wide_paths.push(c);
+        }
+        wide_paths.push(0); // null terminator for this path
+    }
+    wide_paths.push(0); // double-null terminator
+
+    // DROPFILES struct: 20 bytes header
+    // pFiles (u32) = offset to file list = 20
+    // pt.x (i32) = 0, pt.y (i32) = 0
+    // fNC (i32) = 0
+    // fWide (i32) = 1 (wide chars)
+    let dropfiles_size: usize = 20;
+    let total_size = dropfiles_size + wide_paths.len() * 2;
+
+    unsafe {
+        let hmem = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, total_size);
+        if hmem.is_null() {
+            return Err("Failed to allocate global memory".to_string());
+        }
+
+        let ptr = GlobalLock(hmem);
+        if ptr.is_null() {
+            return Err("Failed to lock global memory".to_string());
+        }
+
+        // Write DROPFILES header
+        let buf = ptr as *mut u8;
+        // pFiles = 20 (offset to file list)
+        std::ptr::copy_nonoverlapping(
+            &(dropfiles_size as u32) as *const u32 as *const u8,
+            buf,
+            4,
+        );
+        // pt.x = 0, pt.y = 0 (bytes 4-11) - already zeroed
+        // fNC = 0 (bytes 12-15) - already zeroed
+        // fWide = 1 (bytes 16-19)
+        let f_wide: i32 = 1;
+        std::ptr::copy_nonoverlapping(
+            &f_wide as *const i32 as *const u8,
+            buf.add(16),
+            4,
+        );
+
+        // Write file paths after header
+        std::ptr::copy_nonoverlapping(
+            wide_paths.as_ptr() as *const u8,
+            buf.add(dropfiles_size),
+            wide_paths.len() * 2,
+        );
+
+        GlobalUnlock(hmem);
+
+        if OpenClipboard(0 as HWND) == FALSE {
+            return Err("Failed to open clipboard".to_string());
+        }
+
+        EmptyClipboard();
+
+        let result = SetClipboardData(CF_HDROP as u32, hmem);
+        CloseClipboard();
+
+        if result.is_null() {
+            return Err("Failed to set clipboard data".to_string());
+        }
+    }
+
+    thread::sleep(Duration::from_millis(50));
+    simulate_paste()?;
+
+    Ok(())
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn paste_files(paths: &[&str]) -> Result<(), String> {
+    // Fallback: paste as text on non-Windows platforms
+    paste_text(&paths.join("\n"))
+}
+
 /// Load image from path, set on clipboard, and simulate Ctrl+V paste
 pub fn paste_image(path: &str) -> Result<(), String> {
     let img = image::open(path).map_err(|e| format!("Failed to open image: {}", e))?;

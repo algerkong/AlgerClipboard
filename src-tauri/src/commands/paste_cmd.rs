@@ -25,9 +25,19 @@ pub fn paste_entry(
     let _mode = mode.unwrap_or_else(|| "default".to_string());
 
     match entry.content_type {
+        crate::clipboard::entry::ContentType::FilePaths => {
+            if let Some(text) = &entry.text_content {
+                let paths: Vec<&str> = text.lines().filter(|l| !l.trim().is_empty()).collect();
+                if paths.is_empty() {
+                    return Err("No file paths available".to_string());
+                }
+                simulator::paste_files(&paths)?;
+            } else {
+                return Err("No file paths available".to_string());
+            }
+        }
         crate::clipboard::entry::ContentType::PlainText
-        | crate::clipboard::entry::ContentType::RichText
-        | crate::clipboard::entry::ContentType::FilePaths => {
+        | crate::clipboard::entry::ContentType::RichText => {
             if let Some(text) = &entry.text_content {
                 simulator::paste_text(text)?;
             } else {
