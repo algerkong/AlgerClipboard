@@ -13,6 +13,87 @@ pub struct ClipboardMonitor {
     device_id: String,
 }
 
+/// Read HTML content from Windows clipboard (CF_HTML format)
+#[cfg(target_os = "windows")]
+fn get_clipboard_html() -> Option<String> {
+    use windows_sys::Win32::Foundation::{HWND, FALSE};
+    use windows_sys::Win32::System::DataExchange::{
+        OpenClipboard, CloseClipboard, GetClipboardData, RegisterClipboardFormatW,
+    };
+    use windows_sys::Win32::System::Memory::{GlobalLock, GlobalUnlock, GlobalSize};
+
+    unsafe {
+        // Register CF_HTML format
+        let format_name: Vec<u16> = "HTML Format\0".encode_utf16().collect();
+        let cf_html = RegisterClipboardFormatW(format_name.as_ptr());
+        if cf_html == 0 {
+            return None;
+        }
+
+        if OpenClipboard(0 as HWND) == FALSE {
+            return None;
+        }
+
+        let handle = GetClipboardData(cf_html);
+        if handle.is_null() {
+            CloseClipboard();
+            return None;
+        }
+
+        let ptr = GlobalLock(handle);
+        if ptr.is_null() {
+            CloseClipboard();
+            return None;
+        }
+
+        let size = GlobalSize(handle);
+        if size == 0 {
+            GlobalUnlock(handle);
+            CloseClipboard();
+            return None;
+        }
+
+        let data = std::slice::from_raw_parts(ptr as *const u8, size);
+        let raw = String::from_utf8_lossy(data).to_string();
+
+        GlobalUnlock(handle);
+        CloseClipboard();
+
+        // CF_HTML format has a header with StartFragment/EndFragment markers
+        // Extract the actual HTML fragment
+        let start_marker = "StartFragment:";
+        let end_marker = "EndFragment:";
+
+        let start_offset = raw.find(start_marker).and_then(|pos| {
+            let after = &raw[pos + start_marker.len()..];
+            after.trim_start().split_whitespace().next()?.parse::<usize>().ok()
+        });
+
+        let end_offset = raw.find(end_marker).and_then(|pos| {
+            let after = &raw[pos + end_marker.len()..];
+            after.trim_start().split_whitespace().next()?.parse::<usize>().ok()
+        });
+
+        match (start_offset, end_offset) {
+            (Some(start), Some(end)) if start < end && end <= raw.len() => {
+                let fragment = &raw[start..end];
+                let trimmed = fragment.trim();
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(trimmed.to_string())
+                }
+            }
+            _ => None,
+        }
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn get_clipboard_html() -> Option<String> {
+    None
+}
+
 /// Read copied file paths from Windows clipboard (CF_HDROP format)
 #[cfg(target_os = "windows")]
 fn get_clipboard_file_paths() -> Option<Vec<String>> {
@@ -292,12 +373,20 @@ impl ClipboardMonitor {
                                         }
                                     }
                                     Ok(None) => {
+                                        // Check if HTML content is available
+                                        let html_content = get_clipboard_html();
+                                        let content_type = if html_content.is_some() {
+                                            ContentType::RichText
+                                        } else {
+                                            ContentType::PlainText
+                                        };
+
                                         let now = chrono::Utc::now().to_rfc3339();
                                         let entry = ClipboardEntry {
                                             id: uuid::Uuid::new_v4().to_string(),
-                                            content_type: ContentType::PlainText,
+                                            content_type,
                                             text_content: Some(text),
-                                            html_content: None,
+                                            html_content,
                                             blob_path: None,
                                             thumbnail_path: None,
                                             content_hash: hash,

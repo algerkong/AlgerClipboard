@@ -1,5 +1,6 @@
-import { memo, useCallback, useState, useEffect } from "react";
-import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages, Pin, Eye, Copy, ClipboardPaste, Maximize2, Cloud, Upload, CloudAlert, ScanText } from "lucide-react";
+import { memo, useCallback, useState, useEffect, useMemo } from "react";
+import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages, Pin, Eye, Copy, ClipboardPaste, Maximize2, Cloud, Upload, CloudAlert, ScanText, Code } from "lucide-react";
+import DOMPurify from "dompurify";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { pasteEntry, getThumbnailBase64 } from "@/services/clipboardService";
 import type { ClipboardEntry } from "@/types";
@@ -61,6 +62,7 @@ function getIcon(type: string) {
   switch (type) {
     case "Image": return <ImageIcon className="w-3 h-3 text-blue-400/70" />;
     case "FilePaths": return <FolderOpen className="w-3 h-3 text-amber-400/70" />;
+    case "RichText": return <Code className="w-3 h-3 text-purple-400/70" />;
     default: return <FileText className="w-3 h-3 text-muted-foreground/70" />;
   }
 }
@@ -106,8 +108,17 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
   const [showViewer, setShowViewer] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const hasText = entry.content_type === "PlainText" || entry.content_type === "RichText";
+  const isRichText = entry.content_type === "RichText" && !!entry.html_content;
   const isImage = entry.content_type === "Image";
   const isLongText = hasText && (entry.text_content?.length ?? 0) > 120;
+
+  const sanitizedHtml = useMemo(() => {
+    if (!isRichText || !entry.html_content) return "";
+    return DOMPurify.sanitize(entry.html_content, {
+      ALLOWED_TAGS: ["b", "i", "u", "em", "strong", "s", "span", "br", "p", "ul", "ol", "li", "a", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "code", "pre", "sub", "sup", "table", "tr", "td", "th", "thead", "tbody"],
+      ALLOWED_ATTR: ["style", "href"],
+    });
+  }, [isRichText, entry.html_content]);
   const showTranslateHint = hasText && entry.text_content ? isNonChinese(entry.text_content) : false;
   const imageSrc = useImageSrc(entry);
 
@@ -226,6 +237,11 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
               draggable={false}
               onClick={(e) => { e.stopPropagation(); handleOpenImageViewer(); }}
             />
+          ) : isRichText ? (
+            <div
+              className="text-base2 leading-relaxed text-foreground line-clamp-2 break-all rich-text-preview"
+              dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+            />
           ) : (
             <p className="text-base2 leading-relaxed text-foreground line-clamp-2 break-all">
               {getPreview(entry, t)}
@@ -339,6 +355,7 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
       {showViewer && entry.text_content && (
         <TextViewer
           text={entry.text_content}
+          htmlContent={entry.html_content}
           onClose={() => setShowViewer(false)}
         />
       )}

@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { X, Copy, Languages } from "lucide-react";
+import { useState, useMemo } from "react";
+import { X, Copy, Languages, Code, Eye } from "lucide-react";
+import DOMPurify from "dompurify";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { TranslateDialog } from "@/components/TranslateDialog";
@@ -7,6 +8,7 @@ import { toast } from "sonner";
 
 interface Props {
   text: string;
+  htmlContent?: string | null;
   onClose: () => void;
 }
 
@@ -49,11 +51,18 @@ function isNonChinese(text: string): boolean {
   return chineseChars / cleaned.length < 0.3;
 }
 
-export function TextViewer({ text, onClose }: Props) {
+export function TextViewer({ text, htmlContent, onClose }: Props) {
   const { t } = useTranslation();
   const isCode = looksLikeCode(text);
   const showTranslateHint = isNonChinese(text);
   const [showTranslate, setShowTranslate] = useState(false);
+  const hasHtml = !!htmlContent;
+  const [viewMode, setViewMode] = useState<"rendered" | "source">(hasHtml ? "rendered" : "source");
+
+  const sanitizedHtml = useMemo(() => {
+    if (!htmlContent) return "";
+    return DOMPurify.sanitize(htmlContent);
+  }, [htmlContent]);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(text);
@@ -75,6 +84,16 @@ export function TextViewer({ text, onClose }: Props) {
             {isCode ? t("viewer.codePreview") : t("viewer.fullText")}
           </span>
           <div className="flex items-center gap-1">
+            {hasHtml && (
+              <button
+                onClick={() => setViewMode(viewMode === "rendered" ? "source" : "rendered")}
+                className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs2 font-medium text-purple-400 bg-purple-400/10 hover:bg-purple-400/20 transition-colors"
+                title={viewMode === "rendered" ? t("viewer.viewSource") : t("viewer.viewRendered")}
+              >
+                {viewMode === "rendered" ? <Code className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                {viewMode === "rendered" ? t("viewer.viewSource") : t("viewer.viewRendered")}
+              </button>
+            )}
             {showTranslateHint && (
               <button
                 onClick={() => setShowTranslate(true)}
@@ -102,16 +121,23 @@ export function TextViewer({ text, onClose }: Props) {
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-3">
-          <pre
-            className={cn(
-              "text-sm2 leading-relaxed whitespace-pre-wrap break-all",
-              isCode
-                ? "font-mono bg-muted/30 rounded-md p-3 text-foreground border border-border/20"
-                : "text-foreground"
-            )}
-          >
-            {text}
-          </pre>
+          {hasHtml && viewMode === "rendered" ? (
+            <div
+              className="text-sm2 leading-relaxed text-foreground rich-text-preview"
+              dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+            />
+          ) : (
+            <pre
+              className={cn(
+                "text-sm2 leading-relaxed whitespace-pre-wrap break-all",
+                isCode
+                  ? "font-mono bg-muted/30 rounded-md p-3 text-foreground border border-border/20"
+                  : "text-foreground"
+              )}
+            >
+              {text}
+            </pre>
+          )}
         </div>
       </div>
 

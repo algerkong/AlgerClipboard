@@ -163,7 +163,9 @@
     "fullText": "Full Text",
     "codePreview": "Code Preview",
     "copy": "Copy",
-    "translateHint": "Translate"
+    "translateHint": "Translate",
+    "viewSource": "Source",
+    "viewRendered": "Rendered"
   },
   "imageViewer": {
     "title": "Image Preview",

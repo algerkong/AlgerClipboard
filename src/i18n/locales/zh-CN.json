@@ -163,7 +163,9 @@
     "fullText": "查看全文",
     "codePreview": "代码预览",
     "copy": "复制",
-    "translateHint": "翻译"
+    "translateHint": "翻译",
+    "viewSource": "源码",
+    "viewRendered": "渲染"
   },
   "imageViewer": {
     "title": "图片预览",

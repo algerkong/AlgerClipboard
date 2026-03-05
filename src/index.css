@@ -222,3 +222,51 @@ body {
   outline-offset: 2px;
   border-radius: 4px;
 }
+
+/* Rich text preview styles */
+.rich-text-preview {
+  font-size: inherit;
+  line-height: 1.5;
+}
+.rich-text-preview * {
+  margin: 0;
+  padding: 0;
+}
+.rich-text-preview b,
+.rich-text-preview strong {
+  font-weight: 600;
+}
+.rich-text-preview i,
+.rich-text-preview em {
+  font-style: italic;
+}
+.rich-text-preview u {
+  text-decoration: underline;
+}
+.rich-text-preview a {
+  color: var(--primary);
+  text-decoration: underline;
+}
+.rich-text-preview ul,
+.rich-text-preview ol {
+  padding-left: 1.2em;
+}
+.rich-text-preview blockquote {
+  border-left: 2px solid var(--border);
+  padding-left: 0.5em;
+  opacity: 0.8;
+}
+.rich-text-preview code {
+  background: var(--muted);
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+.rich-text-preview table {
+  border-collapse: collapse;
+}
+.rich-text-preview td,
+.rich-text-preview th {
+  border: 1px solid var(--border);
+  padding: 0.2em 0.4em;
+}
