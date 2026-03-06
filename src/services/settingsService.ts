@@ -18,3 +18,7 @@ export async function setAutoStart(enabled: boolean): Promise<void> {
 export async function getAutoStart(): Promise<boolean> {
   return invoke("get_auto_start");
 }
+
+export async function updateToggleShortcut(shortcut: string): Promise<void> {
+  return invoke("update_toggle_shortcut", { shortcut });
+}

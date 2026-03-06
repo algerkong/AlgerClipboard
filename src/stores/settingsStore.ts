@@ -4,6 +4,7 @@ import {
   updateSetting,
   setAutoStart as setAutoStartApi,
   getAutoStart,
+  updateToggleShortcut,
 } from "@/services/settingsService";
 import { listen } from "@tauri-apps/api/event";
 
@@ -57,6 +58,7 @@ interface SettingsState {
   locale: string;
   uiScale: UIScale;
   fontFamily: FontFamily;
+  toggleShortcut: string;
   isPinned: boolean; // non-persisted, controls auto-hide on blur
 
   loadSettings: () => Promise<void>;
@@ -68,6 +70,7 @@ interface SettingsState {
   setLocale: (locale: string) => Promise<void>;
   setUIScale: (scale: UIScale) => Promise<void>;
   setFontFamily: (family: FontFamily) => Promise<void>;
+  setToggleShortcut: (shortcut: string) => Promise<void>;
   setIsPinned: (pinned: boolean) => void;
 }
 
@@ -80,6 +83,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   locale: "zh-CN",
   uiScale: "md",
   fontFamily: "system",
+  toggleShortcut: "CmdOrCtrl+Shift+V",
   isPinned: true,
 
   loadSettings: async () => {
@@ -94,6 +98,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         oldFontSize,
         fontFamily,
         autoStartEnabled,
+        toggleShortcut,
       ] = await Promise.all([
         getSetting("theme"),
         getSetting("max_history"),
@@ -104,6 +109,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         getSetting("font_size"),
         getSetting("font_family"),
         getAutoStart(),
+        getSetting("toggle_shortcut"),
       ]);
 
       // Migrate old font_size to ui_scale
@@ -130,6 +136,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         locale: locale ?? "zh-CN",
         uiScale: scale,
         fontFamily: ff,
+        toggleShortcut: toggleShortcut?.trim() || "CmdOrCtrl+Shift+V",
       });
     } catch (err) {
       console.error("Failed to load settings:", err);
@@ -207,6 +214,20 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       await updateSetting("font_family", family);
     } catch (err) {
       console.error("Failed to save font_family:", err);
+    }
+  },
+
+  setToggleShortcut: async (shortcut: string) => {
+    const normalized = shortcut.trim();
+    if (!normalized) return;
+    const prev = useSettingsStore.getState().toggleShortcut;
+    set({ toggleShortcut: normalized });
+    try {
+      await updateToggleShortcut(normalized);
+    } catch (err) {
+      set({ toggleShortcut: prev });
+      console.error("Failed to save toggle_shortcut:", err);
+      throw err;
     }
   },
 

@@ -99,6 +99,84 @@ const TABS: { key: SettingsTab; labelKey: string; icon: React.ReactNode }[] = [
   },
 ];
 
+const MODIFIER_KEYS = new Set(["Shift", "Control", "Meta", "Alt"]);
+
+function normalizeShortcutMainKey(event: KeyboardEvent): string | null {
+  const { code, key } = event;
+
+  if (/^Key[A-Z]$/.test(code)) {
+    return code.slice(3);
+  }
+
+  if (/^Digit\d$/.test(code)) {
+    return code.slice(5);
+  }
+
+  if (/^F([1-9]|1\d|2[0-4])$/.test(code)) {
+    return code;
+  }
+
+  const byCode: Record<string, string> = {
+    Space: "Space",
+    Enter: "Enter",
+    NumpadEnter: "Enter",
+    Tab: "Tab",
+    Backspace: "Backspace",
+    Delete: "Delete",
+    Insert: "Insert",
+    Home: "Home",
+    End: "End",
+    PageUp: "PageUp",
+    PageDown: "PageDown",
+    ArrowUp: "Up",
+    ArrowDown: "Down",
+    ArrowLeft: "Left",
+    ArrowRight: "Right",
+    Escape: "Escape",
+  };
+
+  if (byCode[code]) {
+    return byCode[code];
+  }
+
+  if (key.length === 1 && /[a-z0-9]/i.test(key)) {
+    return key.toUpperCase();
+  }
+
+  return null;
+}
+
+function buildShortcutFromKeyboardEvent(event: KeyboardEvent): string | null {
+  if (MODIFIER_KEYS.has(event.key)) {
+    return null;
+  }
+
+  const mainKey = normalizeShortcutMainKey(event);
+  if (!mainKey) {
+    return null;
+  }
+
+  const hasModifier =
+    event.metaKey || event.ctrlKey || event.altKey || event.shiftKey;
+  if (!hasModifier) {
+    return null;
+  }
+
+  const parts: string[] = [];
+  if (event.metaKey || event.ctrlKey) {
+    parts.push("CmdOrCtrl");
+  }
+  if (event.altKey) {
+    parts.push("Alt");
+  }
+  if (event.shiftKey) {
+    parts.push("Shift");
+  }
+  parts.push(mainKey);
+
+  return parts.join("+");
+}
+
 /* ─── Toggle switch helper ─── */
 function Toggle({
   value,
@@ -143,6 +221,7 @@ function GeneralTab() {
   const locale = useSettingsStore((s) => s.locale);
   const uiScale = useSettingsStore((s) => s.uiScale);
   const fontFamily = useSettingsStore((s) => s.fontFamily);
+  const toggleShortcut = useSettingsStore((s) => s.toggleShortcut);
   const setTheme = useSettingsStore((s) => s.setTheme);
   const setMaxHistory = useSettingsStore((s) => s.setMaxHistory);
   const setExpireDays = useSettingsStore((s) => s.setExpireDays);
@@ -151,6 +230,48 @@ function GeneralTab() {
   const setLocale = useSettingsStore((s) => s.setLocale);
   const setUIScale = useSettingsStore((s) => s.setUIScale);
   const setFontFamily = useSettingsStore((s) => s.setFontFamily);
+  const setToggleShortcut = useSettingsStore((s) => s.setToggleShortcut);
+  const [isRecordingShortcut, setIsRecordingShortcut] = useState(false);
+
+  useEffect(() => {
+    if (!isRecordingShortcut) {
+      return;
+    }
+
+    const handleRecordShortcut = (event: KeyboardEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (event.key === "Escape") {
+        setIsRecordingShortcut(false);
+        return;
+      }
+
+      if (MODIFIER_KEYS.has(event.key)) {
+        return;
+      }
+
+      const nextShortcut = buildShortcutFromKeyboardEvent(event);
+      if (!nextShortcut) {
+        toast.error(t("settings.shortcutInvalid"));
+        return;
+      }
+
+      setIsRecordingShortcut(false);
+      setToggleShortcut(nextShortcut)
+        .then(() => {
+          toast.success(t("settings.shortcutSaved"));
+        })
+        .catch(() => {
+          toast.error(t("settings.shortcutInvalid"));
+        });
+    };
+
+    window.addEventListener("keydown", handleRecordShortcut, true);
+    return () => {
+      window.removeEventListener("keydown", handleRecordShortcut, true);
+    };
+  }, [isRecordingShortcut, setToggleShortcut, t]);
 
   const themes: { value: Theme; labelKey: string; icon: React.ReactNode }[] = [
     {
@@ -354,6 +475,32 @@ function GeneralTab() {
           </div>
           <Toggle value={autoStart} onChange={setAutoStart} />
         </div>
+      </section>
+
+      {/* Toggle shortcut */}
+      <section>
+        <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
+          {t("settings.toggleShortcut")}
+        </label>
+        <div className="mt-2 flex items-center gap-2">
+          <div className="flex-1 h-7 px-2 text-xs bg-muted/30 border border-border/50 rounded-md text-foreground flex items-center">
+            {isRecordingShortcut ? t("settings.shortcutRecording") : toggleShortcut}
+          </div>
+          <button
+            onClick={() => setIsRecordingShortcut((prev) => !prev)}
+            className={cn(
+              "h-7 px-3 text-xs font-medium rounded-md transition-colors",
+              isRecordingShortcut
+                ? "bg-muted/50 text-muted-foreground hover:bg-muted/60"
+                : "bg-primary/15 text-primary hover:bg-primary/25",
+            )}
+          >
+            {isRecordingShortcut ? t("template.cancel") : t("settings.shortcutRecord")}
+          </button>
+        </div>
+        <p className="mt-1 text-xs2 text-muted-foreground/70">
+          {t("settings.toggleShortcutDesc")}
+        </p>
       </section>
     </div>
   );
