@@ -7,3 +7,8 @@ src-tauri/target/
 .claude/
 CLAUDE.md
 docs/plans/
+
+# Tauri signing keys
+~/.tauri/
+*.key
+*.key.pub
