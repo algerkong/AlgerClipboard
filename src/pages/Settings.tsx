@@ -45,6 +45,10 @@ import {
   type CacheInfo,
 } from "@/services/clipboardService";
 import { open as openFolderDialog } from "@tauri-apps/plugin-dialog";
+import {
+  checkForUpdates,
+  downloadAndInstall,
+} from "@/services/updateService";
 import type { ClipboardStats } from "@/types";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -222,6 +226,8 @@ function GeneralTab() {
   const uiScale = useSettingsStore((s) => s.uiScale);
   const fontFamily = useSettingsStore((s) => s.fontFamily);
   const toggleShortcut = useSettingsStore((s) => s.toggleShortcut);
+  const autoCheckUpdate = useSettingsStore((s) => s.autoCheckUpdate);
+  const autoDownloadUpdate = useSettingsStore((s) => s.autoDownloadUpdate);
   const setTheme = useSettingsStore((s) => s.setTheme);
   const setMaxHistory = useSettingsStore((s) => s.setMaxHistory);
   const setExpireDays = useSettingsStore((s) => s.setExpireDays);
@@ -231,7 +237,10 @@ function GeneralTab() {
   const setUIScale = useSettingsStore((s) => s.setUIScale);
   const setFontFamily = useSettingsStore((s) => s.setFontFamily);
   const setToggleShortcut = useSettingsStore((s) => s.setToggleShortcut);
+  const setAutoCheckUpdate = useSettingsStore((s) => s.setAutoCheckUpdate);
+  const setAutoDownloadUpdate = useSettingsStore((s) => s.setAutoDownloadUpdate);
   const [isRecordingShortcut, setIsRecordingShortcut] = useState(false);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
 
   useEffect(() => {
     if (!isRecordingShortcut) {
@@ -501,6 +510,68 @@ function GeneralTab() {
         <p className="mt-1 text-xs2 text-muted-foreground/70">
           {t("settings.toggleShortcutDesc")}
         </p>
+      </section>
+
+      {/* Auto check update */}
+      <section>
+        <div className="flex items-center justify-between">
+          <div>
+            <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
+              {t("settings.autoCheckUpdate")}
+            </label>
+            <p className="mt-0.5 text-xs2 text-muted-foreground/70">
+              {t("settings.autoCheckUpdateDesc")}
+            </p>
+          </div>
+          <Toggle value={autoCheckUpdate} onChange={setAutoCheckUpdate} />
+        </div>
+      </section>
+
+      {/* Auto download update */}
+      <section>
+        <div className="flex items-center justify-between">
+          <div>
+            <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
+              {t("settings.autoDownloadUpdate")}
+            </label>
+            <p className="mt-0.5 text-xs2 text-muted-foreground/70">
+              {t("settings.autoDownloadUpdateDesc")}
+            </p>
+          </div>
+          <Toggle value={autoDownloadUpdate} onChange={setAutoDownloadUpdate} />
+        </div>
+      </section>
+
+      {/* Check for updates button */}
+      <section>
+        <button
+          disabled={isCheckingUpdate}
+          onClick={async () => {
+            setIsCheckingUpdate(true);
+            try {
+              const info = await checkForUpdates();
+              if (info) {
+                toast.success(t("update.available", { version: info.version }));
+                await downloadAndInstall(info.update);
+              } else {
+                toast.info(t("update.latest"));
+              }
+            } catch {
+              toast.error(t("update.failed"));
+            } finally {
+              setIsCheckingUpdate(false);
+            }
+          }}
+          className={cn(
+            "w-full h-7 px-3 text-xs font-medium rounded-md transition-colors",
+            "bg-primary/15 text-primary hover:bg-primary/25",
+            "disabled:opacity-50 disabled:cursor-not-allowed",
+          )}
+        >
+          {isCheckingUpdate
+            ? t("settings.checkingUpdate")
+            : t("settings.checkUpdate")}
+        </button>
       </section>
     </div>
   );

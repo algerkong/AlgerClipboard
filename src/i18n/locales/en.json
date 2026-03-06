@@ -97,7 +97,20 @@
     "restartRequired": "Cache directory changed. Restart the app to apply.",
     "cacheMaxSize": "Cache Size Limit",
     "cacheUnlimited": "Unlimited",
-    "restartApp": "Restart App"
+    "restartApp": "Restart App",
+    "autoCheckUpdate": "Auto Check for Updates",
+    "autoCheckUpdateDesc": "Check for updates when the app starts",
+    "autoDownloadUpdate": "Auto Download Updates",
+    "autoDownloadUpdateDesc": "Automatically download and install updates",
+    "checkUpdate": "Check for Updates",
+    "checkingUpdate": "Checking..."
+  },
+  "update": {
+    "available": "New version {{version}} available",
+    "downloading": "Downloading update...",
+    "ready": "Update downloaded, restarting...",
+    "latest": "You are on the latest version",
+    "failed": "Update check failed"
   },
   "sync": {
     "title": "Sync",

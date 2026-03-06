@@ -59,6 +59,8 @@ interface SettingsState {
   uiScale: UIScale;
   fontFamily: FontFamily;
   toggleShortcut: string;
+  autoCheckUpdate: boolean;
+  autoDownloadUpdate: boolean;
   isPinned: boolean; // non-persisted, controls auto-hide on blur
 
   loadSettings: () => Promise<void>;
@@ -71,6 +73,8 @@ interface SettingsState {
   setUIScale: (scale: UIScale) => Promise<void>;
   setFontFamily: (family: FontFamily) => Promise<void>;
   setToggleShortcut: (shortcut: string) => Promise<void>;
+  setAutoCheckUpdate: (enabled: boolean) => Promise<void>;
+  setAutoDownloadUpdate: (enabled: boolean) => Promise<void>;
   setIsPinned: (pinned: boolean) => void;
 }
 
@@ -84,6 +88,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   uiScale: "md",
   fontFamily: "system",
   toggleShortcut: "CmdOrCtrl+Shift+V",
+  autoCheckUpdate: true,
+  autoDownloadUpdate: false,
   isPinned: true,
 
   loadSettings: async () => {
@@ -99,6 +105,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         fontFamily,
         autoStartEnabled,
         toggleShortcut,
+        autoCheckUpdate,
+        autoDownloadUpdate,
       ] = await Promise.all([
         getSetting("theme"),
         getSetting("max_history"),
@@ -110,6 +118,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         getSetting("font_family"),
         getAutoStart(),
         getSetting("toggle_shortcut"),
+        getSetting("auto_check_update"),
+        getSetting("auto_download_update"),
       ]);
 
       // Migrate old font_size to ui_scale
@@ -137,6 +147,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         uiScale: scale,
         fontFamily: ff,
         toggleShortcut: toggleShortcut?.trim() || "CmdOrCtrl+Shift+V",
+        autoCheckUpdate: autoCheckUpdate !== "false",
+        autoDownloadUpdate: autoDownloadUpdate === "true",
       });
     } catch (err) {
       console.error("Failed to load settings:", err);
@@ -228,6 +240,24 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       set({ toggleShortcut: prev });
       console.error("Failed to save toggle_shortcut:", err);
       throw err;
+    }
+  },
+
+  setAutoCheckUpdate: async (enabled: boolean) => {
+    set({ autoCheckUpdate: enabled });
+    try {
+      await updateSetting("auto_check_update", String(enabled));
+    } catch (err) {
+      console.error("Failed to save auto_check_update:", err);
+    }
+  },
+
+  setAutoDownloadUpdate: async (enabled: boolean) => {
+    set({ autoDownloadUpdate: enabled });
+    try {
+      await updateSetting("auto_download_update", String(enabled));
+    } catch (err) {
+      console.error("Failed to save auto_download_update:", err);
     }
   },
 

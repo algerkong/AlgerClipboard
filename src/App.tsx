@@ -11,6 +11,7 @@ import { ImageViewerPage } from "@/components/ImageViewer";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useSyncStore } from "@/stores/syncStore";
+import { checkForUpdates, downloadAndInstall } from "@/services/updateService";
 import type { ClipboardEntry } from "@/types";
 
 // Detect window type from URL params
@@ -126,6 +127,26 @@ function MainApp() {
     fetchHistory();
     loadAccounts();
   }, [loadSettings, fetchHistory, loadAccounts]);
+
+  // Auto-check for updates on startup
+  const autoCheckUpdate = useSettingsStore((s) => s.autoCheckUpdate);
+  const autoDownloadUpdate = useSettingsStore((s) => s.autoDownloadUpdate);
+  useEffect(() => {
+    if (!autoCheckUpdate) return;
+    const timer = setTimeout(async () => {
+      try {
+        const info = await checkForUpdates();
+        if (info) {
+          if (autoDownloadUpdate) {
+            await downloadAndInstall(info.update);
+          }
+        }
+      } catch {
+        // silently ignore update check failures on startup
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [autoCheckUpdate, autoDownloadUpdate]);
 
   // Sync i18n language with stored locale
   useEffect(() => {
