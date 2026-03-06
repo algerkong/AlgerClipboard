@@ -10,7 +10,45 @@ permissions:
   contents: write
 
 jobs:
+  # Extract changelog for the release body
+  changelog:
+    runs-on: ubuntu-latest
+    outputs:
+      release_body: ${{ steps.extract.outputs.body }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract changelog for current version
+        id: extract
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          # Extract content between the first ## [version] and the next ## or ---
+          BODY=$(awk -v ver="$VERSION" '
+            BEGIN { found=0; collecting=0 }
+            /^## \[/ {
+              if (collecting) exit
+              if (index($0, "[" ver "]")) { found=1; collecting=1; next }
+            }
+            /^---$/ {
+              if (collecting) exit
+            }
+            collecting { print }
+          ' CHANGELOG.md)
+
+          if [ -z "$BODY" ]; then
+            BODY="See the [CHANGELOG](https://github.com/algerkong/AlgerClipboard/blob/$GITHUB_REF_NAME/CHANGELOG.md) for details."
+          fi
+
+          # Write to output using delimiter
+          {
+            echo "body<<CHANGELOG_EOF"
+            echo "$BODY"
+            echo "CHANGELOG_EOF"
+          } >> "$GITHUB_OUTPUT"
+
   build:
+    needs: changelog
     strategy:
       fail-fast: false
       matrix:
@@ -72,13 +110,12 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'AlgerClipboard ${{ github.ref_name }}'
-          releaseBody: |
-            See the [CHANGELOG](https://github.com/algerkong/AlgerClipboard/commits/${{ github.ref_name }}) for details.
+          releaseBody: ${{ needs.changelog.outputs.release_body }}
           releaseDraft: true
           prerelease: false
           args: --target ${{ matrix.target }}
 
-  # Upload all artifacts to the same release
+  # Publish the draft release
   publish:
     needs: build
     runs-on: ubuntu-latest

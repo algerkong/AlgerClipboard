@@ -1,5 +1,43 @@
 # Changelog
 
+## [1.4.0] - 2026-03-06
+
+### New Features
+
+- **Configurable toggle shortcut**: Global shortcut to show/hide clipboard is now customizable in settings. Includes a key-recording UI — click and press any key combination to set your preferred shortcut
+- **Dynamic shortcut registration**: Shortcut changes take effect immediately without restarting the app
+- **Project website**: Added official project website with i18n support
+
+### Bug Fixes
+
+- **Cross-platform clipboard capture**: Improved image and file capture logic with better deduplication across platforms
+- **Window reopen behavior**: Only reset to home view when the window is actually reopened (not on every focus). Improved toast notification and search bar behavior
+
+### Maintenance
+
+- **Code cleanup**: Removed compiler warnings and unused sync scheduler code
+
+---
+
+## [1.4.0] - 2026-03-06 (中文)
+
+### 新功能
+
+- **可配置切换快捷键**: 显示/隐藏剪贴板的全局快捷键现在可在设置中自定义。提供按键录制 UI — 点击后按下任意组合键即可设置
+- **动态快捷键注册**: 修改快捷键后立即生效，无需重启应用
+- **项目官网**: 新增项目官方网站，支持多语言
+
+### Bug 修复
+
+- **跨平台剪贴板捕获**: 改进图片和文件的捕获逻辑，优化跨平台去重策略
+- **窗口重新打开行为**: 仅在窗口真正重新打开时才重置到首页（而非每次获得焦点时）。改进了 toast 通知和搜索框行为
+
+### 维护
+
+- **代码清理**: 移除编译器警告和未使用的同步调度器代码
+
+---
+
 ## [1.3.1] - 2026-03-05
 
 ### Bug Fixes
