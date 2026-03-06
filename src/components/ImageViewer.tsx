@@ -279,7 +279,7 @@ export function ImageViewerPage() {
         </div>
       )}
 
-      <Toaster position="bottom-center" richColors duration={2000} toastOptions={{ style: { fontSize: "0.857rem", padding: "0.571rem 0.857rem" } }} />
+      <Toaster position="top-center" richColors duration={2000} toastOptions={{ style: { fontSize: "0.857rem", padding: "0.571rem 0.857rem" } }} />
     </div>
   );
 }

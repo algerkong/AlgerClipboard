@@ -5,6 +5,10 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { useSyncStore } from "@/stores/syncStore";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
+interface Props {
+  onClose: () => void;
+}
+
 function SyncIndicator() {
   const { t } = useTranslation();
   const syncStatus = useSyncStore((s) => s.syncStatus);
@@ -53,12 +57,11 @@ function SyncIndicator() {
   );
 }
 
-export function TitleBar() {
+export function TitleBar({ onClose }: Props) {
   const { t } = useTranslation();
   const isPinned = useSettingsStore((s) => s.isPinned);
   const setIsPinned = useSettingsStore((s) => s.setIsPinned);
 
-  const handleClose = () => getCurrentWebviewWindow().hide();
   const handleMinimize = () => getCurrentWebviewWindow().minimize();
   const handleTogglePin = async () => {
     const win = getCurrentWebviewWindow();
@@ -89,7 +92,7 @@ export function TitleBar() {
           <Minus className="w-3 h-3" />
         </button>
         <button
-          onClick={handleClose}
+          onClick={onClose}
           className="flex items-center justify-center w-6 h-6 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
         >
           <X className="w-3 h-3" />

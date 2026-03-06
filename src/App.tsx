@@ -95,7 +95,7 @@ function TemplateManagerWindow() {
       <div className="flex-1 min-h-0">
         <TemplateManager onBack={handleClose} />
       </div>
-      <Toaster position="bottom-center" richColors duration={2000} toastOptions={{ style: { fontSize: "0.857rem", padding: "0.571rem 0.857rem" } }} />
+      <Toaster position="top-center" richColors duration={2000} toastOptions={{ style: { fontSize: "0.857rem", padding: "0.571rem 0.857rem" } }} />
     </div>
   );
 }
@@ -103,6 +103,7 @@ function TemplateManagerWindow() {
 function MainApp() {
   const { i18n } = useTranslation();
   const [showSettings, setShowSettings] = React.useState(false);
+  const shouldResetOnNextFocusRef = useRef(false);
   const fetchHistory = useClipboardStore((s) => s.fetchHistory);
   const addEntry = useClipboardStore((s) => s.addEntry);
   const theme = useSettingsStore((s) => s.theme);
@@ -212,11 +213,35 @@ function MainApp() {
     return () => { unlisten.then((fn) => fn()); };
   }, [setSyncStatus, fetchHistory]);
 
-  // Reset to home view when window regains focus
+  const hideMainWindow = useCallback(() => {
+    shouldResetOnNextFocusRef.current = true;
+    getCurrentWebviewWindow().hide();
+  }, []);
+
+  // Reset to home view only after the window was previously hidden
   useEffect(() => {
     const unlisten = listen("tauri://focus", () => {
+      if (!shouldResetOnNextFocusRef.current) {
+        return;
+      }
+
+      shouldResetOnNextFocusRef.current = false;
       setShowSettings(false);
       useClipboardStore.getState().resetView();
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, []);
+
+  // Mark reset when main window is shown by backend paths (shortcut/tray/single-instance)
+  useEffect(() => {
+    const unlisten = listen("main-window-opened", () => {
+      shouldResetOnNextFocusRef.current = true;
+
+      if (document.hasFocus()) {
+        shouldResetOnNextFocusRef.current = false;
+        setShowSettings(false);
+        useClipboardStore.getState().resetView();
+      }
     });
     return () => { unlisten.then((fn) => fn()); };
   }, []);
@@ -226,11 +251,11 @@ function MainApp() {
   useEffect(() => {
     const unlisten = listen("tauri://blur", () => {
       if (!isPinned) {
-        getCurrentWebviewWindow().hide();
+        hideMainWindow();
       }
     });
     return () => { unlisten.then((fn) => fn()); };
-  }, [isPinned]);
+  }, [hideMainWindow, isPinned]);
 
   // Escape key hides the window
   useEffect(() => {
@@ -240,20 +265,20 @@ function MainApp() {
         if (showSettings) {
           setShowSettings(false);
         } else {
-          getCurrentWebviewWindow().hide();
+          hideMainWindow();
         }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showSettings]);
+  }, [hideMainWindow, showSettings]);
 
   const handleOpenSettings = useCallback(() => setShowSettings(true), []);
   const handleCloseSettings = useCallback(() => setShowSettings(false), []);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      <TitleBar />
+      <TitleBar onClose={hideMainWindow} />
       <div className="flex-1 min-h-0">
         {showSettings ? (
           <div className="h-full animate-slide-in">
@@ -263,7 +288,7 @@ function MainApp() {
           <ClipboardPanel onOpenSettings={handleOpenSettings} />
         )}
       </div>
-      <Toaster position="bottom-center" richColors duration={2000} toastOptions={{ style: { fontSize: "0.857rem", padding: "0.571rem 0.857rem" } }} />
+      <Toaster position="top-center" richColors duration={2000} toastOptions={{ style: { fontSize: "0.857rem", padding: "0.571rem 0.857rem" } }} />
     </div>
   );
 }
