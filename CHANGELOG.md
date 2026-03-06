@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.5.0] - 2026-03-06
+
+### New Features
+
+- **Multi-platform TitleBar adaptation**: The custom title bar now adapts to each platform's native conventions
+  - **macOS**: Faux-native red/yellow/green traffic light buttons on the left side, with window blur dimming effect
+  - **Linux**: Configurable window button position (left or right) via Settings > General
+  - **Windows**: Unchanged — square icon buttons on the right side
+- **Platform detection**: Added `tauri-plugin-os` for runtime OS detection, exposed via `usePlatform()` React hook
+
+---
+
+## [1.5.0] - 2026-03-06 (中文)
+
+### 新功能
+
+- **多平台标题栏适配**: 自定义标题栏现在根据不同平台的原生习惯自适应布局
+  - **macOS**: 左侧仿原生红黄绿交通灯按钮，窗口失焦时按钮自动变灰
+  - **Linux**: 可在 设置 > 通用 中配置窗口按钮位置（左侧或右侧）
+  - **Windows**: 保持不变 — 右侧方形图标按钮
+- **平台检测**: 新增 `tauri-plugin-os` 运行时系统检测，通过 `usePlatform()` React hook 提供
+
+---
+
 ## [1.4.0] - 2026-03-06
 
 ### New Features
