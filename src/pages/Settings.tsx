@@ -25,6 +25,7 @@ import {
   useSettingsStore,
   type UIScale,
   type FontFamily,
+  type ButtonPosition,
 } from "@/stores/settingsStore";
 import { useTranslateStore } from "@/stores/translateStore";
 import { useClipboardStore } from "@/stores/clipboardStore";
@@ -53,6 +54,7 @@ import type { ClipboardStats } from "@/types";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { usePlatform } from "@/contexts/PlatformContext";
 
 type Theme = "light" | "dark" | "system";
 type SettingsTab = "general" | "sync" | "translate" | "data";
@@ -239,6 +241,9 @@ function GeneralTab() {
   const setToggleShortcut = useSettingsStore((s) => s.setToggleShortcut);
   const setAutoCheckUpdate = useSettingsStore((s) => s.setAutoCheckUpdate);
   const setAutoDownloadUpdate = useSettingsStore((s) => s.setAutoDownloadUpdate);
+  const buttonPosition = useSettingsStore((s) => s.buttonPosition);
+  const setButtonPosition = useSettingsStore((s) => s.setButtonPosition);
+  const platform = usePlatform();
   const [isRecordingShortcut, setIsRecordingShortcut] = useState(false);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
 
@@ -402,6 +407,34 @@ function GeneralTab() {
           {t("settings.fontFamilyDesc")}
         </p>
       </section>
+
+      {/* Button position (Linux only) */}
+      {platform === "linux" && (
+        <section>
+          <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
+            {t("settings.buttonPosition")}
+          </label>
+          <div className="flex gap-1.5 mt-2">
+            {(["left", "right"] as ButtonPosition[]).map((pos) => (
+              <button
+                key={pos}
+                onClick={() => setButtonPosition(pos)}
+                className={cn(
+                  "flex-1 flex items-center justify-center py-1.5 rounded-md text-xs font-medium transition-colors",
+                  buttonPosition === pos
+                    ? "bg-primary/15 text-primary ring-1 ring-primary/30"
+                    : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                )}
+              >
+                {t(`settings.buttonPosition${pos.charAt(0).toUpperCase() + pos.slice(1)}`)}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1 text-xs2 text-muted-foreground/70">
+            {t("settings.buttonPositionDesc")}
+          </p>
+        </section>
+      )}
 
       {/* Max history */}
       <section>
@@ -1607,12 +1640,14 @@ function DataTab() {
 /* ─── Settings Page ─── */
 export function SettingsPage({ onBack }: Props) {
   const { t } = useTranslation();
+  const platform = usePlatform();
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
 
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center gap-2 px-2 py-1.5 border-b border-border/30 shrink-0">
+      <div data-tauri-drag-region className="flex items-center gap-2 px-2 py-1.5 border-b border-border/30 shrink-0">
+        {platform === "macos" && <div className="w-14" />}
         <button
           onClick={onBack}
           className="flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"

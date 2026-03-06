@@ -11,6 +11,7 @@ import { listen } from "@tauri-apps/api/event";
 type Theme = "light" | "dark" | "system";
 export type UIScale = "xs" | "sm" | "md" | "lg" | "xl";
 export type FontFamily = "system" | "microsoft-yahei" | "noto-sans" | "mono";
+export type ButtonPosition = "left" | "right";
 
 const UI_SCALE_MAP: Record<UIScale, string> = {
   xs: "12px",
@@ -61,6 +62,7 @@ interface SettingsState {
   toggleShortcut: string;
   autoCheckUpdate: boolean;
   autoDownloadUpdate: boolean;
+  buttonPosition: ButtonPosition;
   isPinned: boolean; // non-persisted, controls auto-hide on blur
 
   loadSettings: () => Promise<void>;
@@ -75,6 +77,7 @@ interface SettingsState {
   setToggleShortcut: (shortcut: string) => Promise<void>;
   setAutoCheckUpdate: (enabled: boolean) => Promise<void>;
   setAutoDownloadUpdate: (enabled: boolean) => Promise<void>;
+  setButtonPosition: (position: ButtonPosition) => Promise<void>;
   setIsPinned: (pinned: boolean) => void;
 }
 
@@ -90,6 +93,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   toggleShortcut: "CmdOrCtrl+Shift+V",
   autoCheckUpdate: true,
   autoDownloadUpdate: false,
+  buttonPosition: "right",
   isPinned: true,
 
   loadSettings: async () => {
@@ -107,6 +111,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         toggleShortcut,
         autoCheckUpdate,
         autoDownloadUpdate,
+        buttonPosition,
       ] = await Promise.all([
         getSetting("theme"),
         getSetting("max_history"),
@@ -120,6 +125,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         getSetting("toggle_shortcut"),
         getSetting("auto_check_update"),
         getSetting("auto_download_update"),
+        getSetting("button_position"),
       ]);
 
       // Migrate old font_size to ui_scale
@@ -149,6 +155,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         toggleShortcut: toggleShortcut?.trim() || "CmdOrCtrl+Shift+V",
         autoCheckUpdate: autoCheckUpdate !== "false",
         autoDownloadUpdate: autoDownloadUpdate === "true",
+        buttonPosition: (buttonPosition as ButtonPosition) || "right",
       });
     } catch (err) {
       console.error("Failed to load settings:", err);
@@ -258,6 +265,15 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       await updateSetting("auto_download_update", String(enabled));
     } catch (err) {
       console.error("Failed to save auto_download_update:", err);
+    }
+  },
+
+  setButtonPosition: async (position: ButtonPosition) => {
+    set({ buttonPosition: position });
+    try {
+      await updateSetting("button_position", position);
+    } catch (err) {
+      console.error("Failed to save button_position:", err);
     }
   },
 

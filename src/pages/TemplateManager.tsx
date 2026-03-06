@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { useTemplateStore } from "@/stores/templateStore";
 import { useTranslation } from "react-i18next";
+import { usePlatform } from "@/contexts/PlatformContext";
 import type { Template } from "@/types";
 
 interface Props {
@@ -27,6 +28,7 @@ interface Props {
 
 export function TemplateManager({ onBack }: Props) {
   const { t } = useTranslation();
+  const platform = usePlatform();
   const templates = useTemplateStore((s) => s.templates);
   const loading = useTemplateStore((s) => s.loading);
   const fetchTemplates = useTemplateStore((s) => s.fetchTemplates);
@@ -102,6 +104,7 @@ export function TemplateManager({ onBack }: Props) {
     <div className="flex flex-col h-full">
       {/* Header / Title bar */}
       <div data-tauri-drag-region className="flex items-center gap-2 px-3 py-2 border-b border-border/30 select-none shrink-0">
+        {platform === "macos" && <div className="w-14" />}
         <span data-tauri-drag-region className="text-xs font-medium text-foreground">{t("template.title")}</span>
         <div data-tauri-drag-region className="flex-1" />
         <Button size="xs" onClick={openCreate}>

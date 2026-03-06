@@ -10,6 +10,7 @@ import { TemplateManager } from "@/pages/TemplateManager";
 import { ImageViewerPage } from "@/components/ImageViewer";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { PlatformProvider } from "@/contexts/PlatformContext";
 import { useSyncStore } from "@/stores/syncStore";
 import { checkForUpdates, downloadAndInstall } from "@/services/updateService";
 import type { ClipboardEntry } from "@/types";
@@ -46,10 +47,18 @@ function App() {
 
   // If this is a template manager window, render standalone template manager
   if (isTemplateManager) {
-    return <TemplateManagerWindow />;
+    return (
+      <PlatformProvider>
+        <TemplateManagerWindow />
+      </PlatformProvider>
+    );
   }
 
-  return <MainApp />;
+  return (
+    <PlatformProvider>
+      <MainApp />
+    </PlatformProvider>
+  );
 }
 
 function TemplateManagerWindow() {

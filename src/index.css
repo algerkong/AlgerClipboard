@@ -208,6 +208,49 @@ body {
   animation: slideInRight 0.2s ease-out;
 }
 
+/* macOS-style traffic light buttons */
+.macos-btn {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: filter 150ms ease;
+}
+.macos-btn svg {
+  width: 8px;
+  height: 8px;
+  opacity: 0;
+  stroke-width: 2.5;
+}
+.macos-btn-group:hover .macos-btn svg {
+  opacity: 1;
+}
+.macos-btn-close {
+  background-color: #FF5F57;
+}
+.macos-btn-minimize {
+  background-color: #FEBC2E;
+}
+.macos-btn-fullscreen {
+  background-color: #28C840;
+  opacity: 0.5;
+  cursor: default;
+}
+.macos-btn-close svg { color: #4d0000; }
+.macos-btn-minimize svg { color: #995700; }
+
+/* macOS buttons inactive when window loses focus */
+.window-blurred .macos-btn-close,
+.window-blurred .macos-btn-minimize,
+.window-blurred .macos-btn-fullscreen {
+  background-color: #CDCDCD;
+}
+.window-blurred .macos-btn svg {
+  opacity: 0 !important;
+}
+
 /* Toast styling */
 [data-sonner-toaster] {
   --normal-bg: var(--card);

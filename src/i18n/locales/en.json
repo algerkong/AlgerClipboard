@@ -103,7 +103,11 @@
     "autoDownloadUpdate": "Auto Download Updates",
     "autoDownloadUpdateDesc": "Automatically download and install updates",
     "checkUpdate": "Check for Updates",
-    "checkingUpdate": "Checking..."
+    "checkingUpdate": "Checking...",
+    "buttonPosition": "Window Button Position",
+    "buttonPositionDesc": "Place window control buttons on the left or right side",
+    "buttonPositionLeft": "Left",
+    "buttonPositionRight": "Right"
   },
   "update": {
     "available": "New version {{version}} available",

@@ -103,7 +103,11 @@
     "autoDownloadUpdate": "自动下载更新",
     "autoDownloadUpdateDesc": "自动下载并安装更新",
     "checkUpdate": "检查更新",
-    "checkingUpdate": "检查中..."
+    "checkingUpdate": "检查中...",
+    "buttonPosition": "窗口按钮位置",
+    "buttonPositionDesc": "窗口控制按钮放在左侧或右侧",
+    "buttonPositionLeft": "左侧",
+    "buttonPositionRight": "右侧"
   },
   "update": {
     "available": "发现新版本 {{version}}",
