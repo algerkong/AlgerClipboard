@@ -8,6 +8,296 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
+#[cfg(target_os = "windows")]
+fn get_clipboard_png() -> Option<Vec<u8>> {
+    use windows_sys::Win32::Foundation::{FALSE, HWND};
+    use windows_sys::Win32::System::DataExchange::{
+        CloseClipboard, GetClipboardData, OpenClipboard, RegisterClipboardFormatW,
+    };
+    use windows_sys::Win32::System::Memory::{GlobalLock, GlobalSize, GlobalUnlock};
+
+    unsafe {
+        let format_name: Vec<u16> = "PNG\0".encode_utf16().collect();
+        let cf_png = RegisterClipboardFormatW(format_name.as_ptr());
+        if cf_png == 0 {
+            return None;
+        }
+
+        if OpenClipboard(0 as HWND) == FALSE {
+            return None;
+        }
+
+        let handle = GetClipboardData(cf_png);
+        if handle.is_null() {
+            CloseClipboard();
+            return None;
+        }
+
+        let ptr = GlobalLock(handle);
+        if ptr.is_null() {
+            CloseClipboard();
+            return None;
+        }
+
+        let size = GlobalSize(handle);
+        if size == 0 {
+            GlobalUnlock(handle);
+            CloseClipboard();
+            return None;
+        }
+
+        let data = std::slice::from_raw_parts(ptr as *const u8, size).to_vec();
+
+        GlobalUnlock(handle);
+        CloseClipboard();
+
+        if data.is_empty() {
+            None
+        } else {
+            Some(data)
+        }
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn get_clipboard_png() -> Option<Vec<u8>> {
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn get_clipboard_dib(format: u32) -> Option<Vec<u8>> {
+    use windows_sys::Win32::Foundation::{FALSE, HWND};
+    use windows_sys::Win32::System::DataExchange::{
+        CloseClipboard, GetClipboardData, OpenClipboard,
+    };
+    use windows_sys::Win32::System::Memory::{GlobalLock, GlobalSize, GlobalUnlock};
+
+    unsafe {
+        if OpenClipboard(0 as HWND) == FALSE {
+            return None;
+        }
+
+        let handle = GetClipboardData(format);
+        if handle.is_null() {
+            CloseClipboard();
+            return None;
+        }
+
+        let ptr = GlobalLock(handle);
+        if ptr.is_null() {
+            CloseClipboard();
+            return None;
+        }
+
+        let size = GlobalSize(handle);
+        if size == 0 {
+            GlobalUnlock(handle);
+            CloseClipboard();
+            return None;
+        }
+
+        let dib = std::slice::from_raw_parts(ptr as *const u8, size).to_vec();
+
+        GlobalUnlock(handle);
+        CloseClipboard();
+
+        if dib.is_empty() {
+            None
+        } else {
+            Some(dib)
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn dib_to_image(dib: &[u8]) -> Option<DynamicImage> {
+    if dib.len() < 40 {
+        return None;
+    }
+
+    let header_size = u32::from_le_bytes(dib[0..4].try_into().ok()?) as usize;
+    if header_size < 40 || dib.len() < header_size {
+        return None;
+    }
+
+    let width = i32::from_le_bytes(dib[4..8].try_into().ok()?);
+    let height = i32::from_le_bytes(dib[8..12].try_into().ok()?);
+    let bit_count = u16::from_le_bytes(dib[14..16].try_into().ok()?);
+    let compression = u32::from_le_bytes(dib[16..20].try_into().ok()?);
+    let colors_used = u32::from_le_bytes(dib[32..36].try_into().ok()?);
+
+    if width <= 0 || height == 0 {
+        return None;
+    }
+
+    let width_u32 = width as u32;
+    let height_abs = height.unsigned_abs();
+    let top_down = height < 0;
+
+    let masks_size = if header_size == 40 && compression == 3 {
+        match bit_count {
+            16 | 32 => 12,
+            _ => 0,
+        }
+    } else {
+        0
+    };
+
+    let palette_size = if bit_count <= 8 {
+        let colors = if colors_used != 0 {
+            colors_used
+        } else {
+            1u32 << bit_count
+        };
+        colors as usize * 4
+    } else {
+        0
+    };
+
+    let pixel_offset = header_size
+        .checked_add(masks_size)?
+        .checked_add(palette_size)?;
+    if pixel_offset >= dib.len() {
+        return None;
+    }
+
+    let mut bmp = Vec::with_capacity(dib.len() + 14);
+    let file_size = (dib.len() + 14) as u32;
+    bmp.extend_from_slice(b"BM");
+    bmp.extend_from_slice(&file_size.to_le_bytes());
+    bmp.extend_from_slice(&[0; 4]);
+    bmp.extend_from_slice(&((pixel_offset + 14) as u32).to_le_bytes());
+    bmp.extend_from_slice(dib);
+
+    let image = image::load_from_memory_with_format(&bmp, image::ImageFormat::Bmp).ok()?;
+
+    if image.width() != width_u32 || image.height() != height_abs || top_down {
+        return Some(image);
+    }
+
+    Some(image)
+}
+
+#[cfg(target_os = "windows")]
+fn get_clipboard_windows_image() -> Option<DynamicImage> {
+    const CF_DIB: u32 = 8;
+    const CF_DIBV5: u32 = 17;
+
+    if let Some(png_bytes) = get_clipboard_png() {
+        if let Ok(image) = image::load_from_memory(&png_bytes) {
+            return Some(image);
+        }
+    }
+
+    for format in [CF_DIBV5, CF_DIB] {
+        if let Some(dib) = get_clipboard_dib(format) {
+            if let Some(image) = dib_to_image(&dib) {
+                return Some(image);
+            }
+        }
+    }
+
+    None
+}
+
+#[cfg(target_os = "macos")]
+fn get_clipboard_macos_image() -> Option<DynamicImage> {
+    let script = r#"
+use framework "AppKit"
+use framework "Foundation"
+set pb to current application's NSPasteboard's generalPasteboard()
+set imageData to pb's dataForType:"public.png"
+if imageData is missing value then
+    set imageData to pb's dataForType:"public.tiff"
+end if
+if imageData is missing value then
+    return ""
+end if
+return (imageData's base64EncodedStringWithOptions:0) as text
+"#;
+
+    let output = std::process::Command::new("osascript")
+        .arg("-e")
+        .arg(script)
+        .output()
+        .ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    let encoded = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if encoded.is_empty() {
+        return None;
+    }
+
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(encoded)
+        .ok()?;
+    image::load_from_memory(&bytes).ok()
+}
+
+#[cfg(target_os = "linux")]
+fn get_clipboard_linux_image() -> Option<DynamicImage> {
+    for command in [
+        (
+            "xclip",
+            vec!["-selection", "clipboard", "-t", "image/png", "-o"],
+        ),
+        ("wl-paste", vec!["-t", "image/png"]),
+    ] {
+        if let Ok(output) = std::process::Command::new(command.0)
+            .args(command.1)
+            .output()
+        {
+            if output.status.success() && !output.stdout.is_empty() {
+                if let Ok(image) = image::load_from_memory(&output.stdout) {
+                    return Some(image);
+                }
+            }
+        }
+    }
+
+    None
+}
+
+fn get_clipboard_image() -> Option<DynamicImage> {
+    let mut clipboard = arboard::Clipboard::new().ok()?;
+
+    if let Ok(img_data) = clipboard.get_image() {
+        let rgba = image::RgbaImage::from_raw(
+            img_data.width as u32,
+            img_data.height as u32,
+            img_data.bytes.into_owned(),
+        )?;
+        return Some(DynamicImage::ImageRgba8(rgba));
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        return get_clipboard_windows_image();
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        return get_clipboard_macos_image();
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        return get_clipboard_linux_image();
+    }
+
+    #[allow(unreachable_code)]
+    None
+}
+
+fn encode_png(image: &DynamicImage) -> Result<Vec<u8>, image::ImageError> {
+    let mut png_bytes = Vec::new();
+    image.write_to(&mut Cursor::new(&mut png_bytes), image::ImageFormat::Png)?;
+    Ok(png_bytes)
+}
+
 pub struct ClipboardMonitor {
     running: Arc<AtomicBool>,
     device_id: String,
@@ -16,11 +306,11 @@ pub struct ClipboardMonitor {
 /// Read HTML content from Windows clipboard (CF_HTML format)
 #[cfg(target_os = "windows")]
 fn get_clipboard_html() -> Option<String> {
-    use windows_sys::Win32::Foundation::{HWND, FALSE};
+    use windows_sys::Win32::Foundation::{FALSE, HWND};
     use windows_sys::Win32::System::DataExchange::{
-        OpenClipboard, CloseClipboard, GetClipboardData, RegisterClipboardFormatW,
+        CloseClipboard, GetClipboardData, OpenClipboard, RegisterClipboardFormatW,
     };
-    use windows_sys::Win32::System::Memory::{GlobalLock, GlobalUnlock, GlobalSize};
+    use windows_sys::Win32::System::Memory::{GlobalLock, GlobalSize, GlobalUnlock};
 
     unsafe {
         // Register CF_HTML format
@@ -66,12 +356,22 @@ fn get_clipboard_html() -> Option<String> {
 
         let start_offset = raw.find(start_marker).and_then(|pos| {
             let after = &raw[pos + start_marker.len()..];
-            after.trim_start().split_whitespace().next()?.parse::<usize>().ok()
+            after
+                .trim_start()
+                .split_whitespace()
+                .next()?
+                .parse::<usize>()
+                .ok()
         });
 
         let end_offset = raw.find(end_marker).and_then(|pos| {
             let after = &raw[pos + end_marker.len()..];
-            after.trim_start().split_whitespace().next()?.parse::<usize>().ok()
+            after
+                .trim_start()
+                .split_whitespace()
+                .next()?
+                .parse::<usize>()
+                .ok()
         });
 
         match (start_offset, end_offset) {
@@ -93,7 +393,8 @@ fn get_clipboard_html() -> Option<String> {
 fn get_clipboard_html() -> Option<String> {
     let output = std::process::Command::new("osascript")
         .arg("-e")
-        .arg(r#"
+        .arg(
+            r#"
 use framework "AppKit"
 set pb to current application's NSPasteboard's generalPasteboard()
 set htmlData to pb's dataForType:"public.html"
@@ -101,14 +402,19 @@ if htmlData is not missing value then
     set htmlStr to (current application's NSString's alloc()'s initWithData:htmlData encoding:4)
     return htmlStr as text
 end if
-"#)
+"#,
+        )
         .output()
         .ok()?;
     if !output.status.success() {
         return None;
     }
     let html = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if html.is_empty() { None } else { Some(html) }
+    if html.is_empty() {
+        None
+    } else {
+        Some(html)
+    }
 }
 
 #[cfg(target_os = "linux")]
@@ -143,9 +449,9 @@ fn get_clipboard_html() -> Option<String> {
 /// Read copied file paths from Windows clipboard (CF_HDROP format)
 #[cfg(target_os = "windows")]
 fn get_clipboard_file_paths() -> Option<Vec<String>> {
-    use windows_sys::Win32::Foundation::{HWND, FALSE};
+    use windows_sys::Win32::Foundation::{FALSE, HWND};
     use windows_sys::Win32::System::DataExchange::{
-        OpenClipboard, CloseClipboard, GetClipboardData,
+        CloseClipboard, GetClipboardData, OpenClipboard,
     };
     use windows_sys::Win32::System::Memory::GlobalLock;
     use windows_sys::Win32::System::Memory::GlobalUnlock;
@@ -203,7 +509,8 @@ fn get_clipboard_file_paths() -> Option<Vec<String>> {
 fn get_clipboard_file_paths() -> Option<Vec<String>> {
     let output = std::process::Command::new("osascript")
         .arg("-e")
-        .arg(r#"
+        .arg(
+            r#"
 use framework "AppKit"
 set pb to current application's NSPasteboard's generalPasteboard()
 set types to pb's types() as list
@@ -215,7 +522,8 @@ if types contains "NSFilenamesPboardType" or types contains "public.file-url" th
     end repeat
     return out
 end if
-"#)
+"#,
+        )
         .output()
         .ok()?;
     if !output.status.success() {
@@ -227,14 +535,24 @@ end if
         .map(|l| l.trim().to_string())
         .filter(|l| !l.is_empty())
         .collect();
-    if paths.is_empty() { None } else { Some(paths) }
+    if paths.is_empty() {
+        None
+    } else {
+        Some(paths)
+    }
 }
 
 #[cfg(target_os = "linux")]
 fn get_clipboard_file_paths() -> Option<Vec<String>> {
     // Try X11 first (xclip with gnome-copied-files MIME)
     if let Ok(output) = std::process::Command::new("xclip")
-        .args(["-selection", "clipboard", "-t", "x-special/gnome-copied-files", "-o"])
+        .args([
+            "-selection",
+            "clipboard",
+            "-t",
+            "x-special/gnome-copied-files",
+            "-o",
+        ])
         .output()
     {
         if output.status.success() {
@@ -287,10 +605,8 @@ fn url_decode(s: &str) -> String {
     let mut i = 0;
     while i < bytes.len() {
         if bytes[i] == b'%' && i + 2 < bytes.len() {
-            if let Ok(val) = u8::from_str_radix(
-                &String::from_utf8_lossy(&bytes[i + 1..i + 3]),
-                16,
-            ) {
+            if let Ok(val) = u8::from_str_radix(&String::from_utf8_lossy(&bytes[i + 1..i + 3]), 16)
+            {
                 result.push(val);
                 i += 3;
                 continue;
@@ -304,13 +620,15 @@ fn url_decode(s: &str) -> String {
 
 /// Run auto-cleanup based on stored settings
 fn run_auto_cleanup(db: &Arc<Database>, blob_store: &Arc<BlobStore>) {
-    let max_count = db.get_setting("max_history")
+    let max_count = db
+        .get_setting("max_history")
         .ok()
         .flatten()
         .and_then(|v| v.parse::<i64>().ok())
         .unwrap_or(500);
 
-    let expire_days = db.get_setting("expire_days")
+    let expire_days = db
+        .get_setting("expire_days")
         .ok()
         .flatten()
         .and_then(|v| v.parse::<i64>().ok());
@@ -320,7 +638,8 @@ fn run_auto_cleanup(db: &Arc<Database>, blob_store: &Arc<BlobStore>) {
     }
 
     // Cache size limit cleanup
-    let max_mb = db.get_setting("cache_max_size_mb")
+    let max_mb = db
+        .get_setting("cache_max_size_mb")
         .ok()
         .flatten()
         .and_then(|v| v.parse::<i64>().ok())
@@ -353,27 +672,27 @@ impl ClipboardMonitor {
         running.store(true, Ordering::SeqCst);
 
         thread::spawn(move || {
-            let mut clipboard = match arboard::Clipboard::new() {
-                Ok(cb) => cb,
-                Err(e) => {
-                    log::error!("Failed to create clipboard instance: {}", e);
-                    return;
-                }
-            };
-
             let mut last_text_hash = String::new();
             let mut last_image_hash = String::new();
             let mut last_files_hash = String::new();
 
             // Initialize with current clipboard content to avoid capturing existing content on startup
-            if let Ok(text) = clipboard.get_text() {
-                if !text.is_empty() {
-                    last_text_hash = compute_hash(text.as_bytes());
+            if let Ok(mut clipboard) = arboard::Clipboard::new() {
+                if let Ok(text) = clipboard.get_text() {
+                    if !text.is_empty() {
+                        last_text_hash = compute_hash(text.as_bytes());
+                    }
+                }
+            } else {
+                log::error!("Failed to create clipboard instance for text initialization");
+            }
+
+            if let Some(image) = get_clipboard_image() {
+                if let Ok(png_bytes) = encode_png(&image) {
+                    last_image_hash = compute_hash(&png_bytes);
                 }
             }
-            if let Ok(img) = clipboard.get_image() {
-                last_image_hash = compute_hash(&img.bytes);
-            }
+
             if let Some(paths) = get_clipboard_file_paths() {
                 let joined = paths.join("\n");
                 last_files_hash = compute_hash(joined.as_bytes());
@@ -384,11 +703,13 @@ impl ClipboardMonitor {
 
                 // 1. Check file paths FIRST (highest priority - file copies)
                 if let Some(paths) = get_clipboard_file_paths() {
+                    captured = true;
                     let joined = paths.join("\n");
                     let hash = compute_hash(joined.as_bytes());
                     if hash != last_files_hash {
                         last_files_hash = hash.clone();
-                        captured = true;
+                        last_image_hash.clear();
+                        last_text_hash.clear();
 
                         match db.find_by_hash(&hash) {
                             Ok(Some(existing)) => {
@@ -436,10 +757,21 @@ impl ClipboardMonitor {
 
                 // 2. Check image clipboard (before text, to avoid text overshadowing images)
                 if !captured {
-                    if let Ok(img_data) = clipboard.get_image() {
-                        let hash = compute_hash(&img_data.bytes);
+                    if let Some(image) = get_clipboard_image() {
+                        let png_bytes = match encode_png(&image) {
+                            Ok(bytes) => bytes,
+                            Err(e) => {
+                                log::error!("Failed to encode clipboard image as PNG: {}", e);
+                                thread::sleep(Duration::from_millis(500));
+                                continue;
+                            }
+                        };
+
+                        let hash = compute_hash(&png_bytes);
                         if hash != last_image_hash {
                             last_image_hash = hash.clone();
+                            last_files_hash.clear();
+                            last_text_hash.clear();
                             captured = true;
 
                             match db.find_by_hash(&hash) {
@@ -452,80 +784,66 @@ impl ClipboardMonitor {
                                 Ok(None) => {
                                     let entry_id = uuid::Uuid::new_v4().to_string();
 
-                                    if let Some(rgba) = image::RgbaImage::from_raw(
-                                        img_data.width as u32,
-                                        img_data.height as u32,
-                                        img_data.bytes.to_vec(),
-                                    ) {
-                                        let dyn_image = DynamicImage::ImageRgba8(rgba);
+                                    let blob_path =
+                                        match blob_store.save_blob(&entry_id, &png_bytes, "png") {
+                                            Ok(p) => p,
+                                            Err(e) => {
+                                                log::error!("Failed to save blob: {}", e);
+                                                thread::sleep(Duration::from_millis(500));
+                                                continue;
+                                            }
+                                        };
 
-                                        // Save full image as PNG
-                                        let mut png_bytes = Vec::new();
-                                        if let Err(e) = dyn_image.write_to(
-                                            &mut Cursor::new(&mut png_bytes),
-                                            image::ImageFormat::Png,
-                                        ) {
-                                            log::error!("Failed to encode image as PNG: {}", e);
-                                            thread::sleep(Duration::from_millis(500));
-                                            continue;
-                                        }
-
-                                        let blob_path =
-                                            match blob_store.save_blob(&entry_id, &png_bytes, "png")
+                                    let thumb = image.thumbnail(200, 200);
+                                    let thumbnail_path = if thumb.width() < image.width()
+                                        || thumb.height() < image.height()
+                                    {
+                                        match encode_png(&thumb) {
+                                            Ok(thumb_bytes)
+                                                if thumb_bytes.len() < png_bytes.len() =>
                                             {
-                                                Ok(p) => p,
-                                                Err(e) => {
-                                                    log::error!("Failed to save blob: {}", e);
-                                                    thread::sleep(Duration::from_millis(500));
-                                                    continue;
-                                                }
-                                            };
-
-                                        // Generate and save thumbnail
-                                        let thumb = dyn_image.thumbnail(200, 200);
-                                        let mut thumb_bytes = Vec::new();
-                                        let thumbnail_path = if thumb
-                                            .write_to(
-                                                &mut Cursor::new(&mut thumb_bytes),
-                                                image::ImageFormat::Png,
-                                            )
-                                            .is_ok()
-                                        {
-                                            blob_store
-                                                .save_thumbnail(&entry_id, &thumb_bytes)
-                                                .ok()
-                                        } else {
-                                            None
-                                        };
-
-                                        let now = chrono::Utc::now().to_rfc3339();
-                                        let entry = ClipboardEntry {
-                                            id: entry_id,
-                                            content_type: ContentType::Image,
-                                            text_content: None,
-                                            html_content: None,
-                                            blob_path: Some(blob_path),
-                                            thumbnail_path,
-                                            content_hash: hash,
-                                            source_app: None,
-                                            device_id: device_id.clone(),
-                                            is_favorite: false,
-                                            is_pinned: false,
-                                            tags: Vec::new(),
-                                            created_at: now.clone(),
-                                            updated_at: now,
-                                            synced_at: None,
-                                            sync_status: SyncStatus::Local,
-                                            sync_version: 0,
-                                        };
-
-                                        if let Err(e) = db.insert_entry(&entry) {
-                                            log::error!("Failed to insert image entry: {}", e);
-                                        } else {
-                                            log::info!("Captured image ({}x{})", img_data.width, img_data.height);
-                                            run_auto_cleanup(&db, &blob_store);
-                                            callback(entry);
+                                                blob_store
+                                                    .save_thumbnail(&entry_id, &thumb_bytes)
+                                                    .ok()
+                                            }
+                                            Ok(_) => None,
+                                            Err(_) => None,
                                         }
+                                    } else {
+                                        None
+                                    };
+
+                                    let now = chrono::Utc::now().to_rfc3339();
+                                    let entry = ClipboardEntry {
+                                        id: entry_id,
+                                        content_type: ContentType::Image,
+                                        text_content: None,
+                                        html_content: None,
+                                        blob_path: Some(blob_path),
+                                        thumbnail_path,
+                                        content_hash: hash,
+                                        source_app: None,
+                                        device_id: device_id.clone(),
+                                        is_favorite: false,
+                                        is_pinned: false,
+                                        tags: Vec::new(),
+                                        created_at: now.clone(),
+                                        updated_at: now,
+                                        synced_at: None,
+                                        sync_status: SyncStatus::Local,
+                                        sync_version: 0,
+                                    };
+
+                                    if let Err(e) = db.insert_entry(&entry) {
+                                        log::error!("Failed to insert image entry: {}", e);
+                                    } else {
+                                        log::info!(
+                                            "Captured image ({}x{})",
+                                            image.width(),
+                                            image.height()
+                                        );
+                                        run_auto_cleanup(&db, &blob_store);
+                                        callback(entry);
                                     }
                                 }
                                 Err(e) => {
@@ -538,58 +856,62 @@ impl ClipboardMonitor {
 
                 // 3. Check text clipboard (lowest priority)
                 if !captured {
-                    if let Ok(text) = clipboard.get_text() {
-                        if !text.is_empty() {
-                            let hash = compute_hash(text.as_bytes());
-                            if hash != last_text_hash {
-                                last_text_hash = hash.clone();
+                    if let Ok(mut clipboard) = arboard::Clipboard::new() {
+                        if let Ok(text) = clipboard.get_text() {
+                            if !text.is_empty() {
+                                let hash = compute_hash(text.as_bytes());
+                                if hash != last_text_hash {
+                                    last_text_hash = hash.clone();
+                                    last_files_hash.clear();
+                                    last_image_hash.clear();
 
-                                match db.find_by_hash(&hash) {
-                                    Ok(Some(existing)) => {
-                                        let _ = db.update_entry_timestamp(&existing.id);
-                                        if let Ok(Some(updated)) = db.get_entry(&existing.id) {
-                                            callback(updated);
+                                    match db.find_by_hash(&hash) {
+                                        Ok(Some(existing)) => {
+                                            let _ = db.update_entry_timestamp(&existing.id);
+                                            if let Ok(Some(updated)) = db.get_entry(&existing.id) {
+                                                callback(updated);
+                                            }
                                         }
-                                    }
-                                    Ok(None) => {
-                                        // Check if HTML content is available
-                                        let html_content = get_clipboard_html();
-                                        let content_type = if html_content.is_some() {
-                                            ContentType::RichText
-                                        } else {
-                                            ContentType::PlainText
-                                        };
+                                        Ok(None) => {
+                                            // Check if HTML content is available
+                                            let html_content = get_clipboard_html();
+                                            let content_type = if html_content.is_some() {
+                                                ContentType::RichText
+                                            } else {
+                                                ContentType::PlainText
+                                            };
 
-                                        let now = chrono::Utc::now().to_rfc3339();
-                                        let entry = ClipboardEntry {
-                                            id: uuid::Uuid::new_v4().to_string(),
-                                            content_type,
-                                            text_content: Some(text),
-                                            html_content,
-                                            blob_path: None,
-                                            thumbnail_path: None,
-                                            content_hash: hash,
-                                            source_app: None,
-                                            device_id: device_id.clone(),
-                                            is_favorite: false,
-                                            is_pinned: false,
-                                            tags: Vec::new(),
-                                            created_at: now.clone(),
-                                            updated_at: now,
-                                            synced_at: None,
-                                            sync_status: SyncStatus::Local,
-                                            sync_version: 0,
-                                        };
+                                            let now = chrono::Utc::now().to_rfc3339();
+                                            let entry = ClipboardEntry {
+                                                id: uuid::Uuid::new_v4().to_string(),
+                                                content_type,
+                                                text_content: Some(text),
+                                                html_content,
+                                                blob_path: None,
+                                                thumbnail_path: None,
+                                                content_hash: hash,
+                                                source_app: None,
+                                                device_id: device_id.clone(),
+                                                is_favorite: false,
+                                                is_pinned: false,
+                                                tags: Vec::new(),
+                                                created_at: now.clone(),
+                                                updated_at: now,
+                                                synced_at: None,
+                                                sync_status: SyncStatus::Local,
+                                                sync_version: 0,
+                                            };
 
-                                        if let Err(e) = db.insert_entry(&entry) {
-                                            log::error!("Failed to insert text entry: {}", e);
-                                        } else {
-                                            run_auto_cleanup(&db, &blob_store);
-                                            callback(entry);
+                                            if let Err(e) = db.insert_entry(&entry) {
+                                                log::error!("Failed to insert text entry: {}", e);
+                                            } else {
+                                                run_auto_cleanup(&db, &blob_store);
+                                                callback(entry);
+                                            }
                                         }
-                                    }
-                                    Err(e) => {
-                                        log::error!("Failed to check hash: {}", e);
+                                        Err(e) => {
+                                            log::error!("Failed to check hash: {}", e);
+                                        }
                                     }
                                 }
                             }
@@ -600,9 +922,5 @@ impl ClipboardMonitor {
                 thread::sleep(Duration::from_millis(500));
             }
         });
-    }
-
-    pub fn stop(&self) {
-        self.running.store(false, Ordering::SeqCst);
     }
 }
