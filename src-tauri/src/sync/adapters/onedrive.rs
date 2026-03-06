@@ -1,4 +1,4 @@
-use super::{CloudStorageAdapter, RemoteFile};
+use super::CloudStorageAdapter;
 use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -24,13 +24,6 @@ impl OneDriveAdapter {
             client_id: client_id.to_string(),
             tokens: Mutex::new(tokens),
         }
-    }
-
-    pub fn auth_url(client_id: &str, port: u16) -> String {
-        format!(
-            "https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?client_id={}&redirect_uri=http://127.0.0.1:{}/callback&response_type=code&scope=Files.ReadWrite.All offline_access",
-            client_id, port
-        )
     }
 
     pub async fn exchange_code(client_id: &str, code: &str, redirect_uri: &str) -> Result<OneDriveTokens, String> {
@@ -156,50 +149,6 @@ impl CloudStorageAdapter for OneDriveAdapter {
         } else {
             Err(format!("Delete failed with status: {}", resp.status()))
         }
-    }
-
-    async fn list(&self, remote_dir: &str) -> Result<Vec<RemoteFile>, String> {
-        let token = self.ensure_token().await?;
-        let dir = remote_dir.trim_start_matches('/');
-        let url = if dir.is_empty() || dir == "." {
-            "https://graph.microsoft.com/v1.0/me/drive/root:/AlgerClipboard:/children".to_string()
-        } else {
-            format!("https://graph.microsoft.com/v1.0/me/drive/root:/AlgerClipboard/{}:/children", dir)
-        };
-
-        let resp = self.client.get(&url)
-            .bearer_auth(&token)
-            .send()
-            .await
-            .map_err(|e| format!("List failed: {}", e))?;
-
-        if resp.status().as_u16() == 404 {
-            return Ok(vec![]);
-        }
-
-        let body: serde_json::Value = resp.json().await
-            .map_err(|e| format!("Parse error: {}", e))?;
-
-        let files = body["value"].as_array()
-            .map(|arr| arr.iter().map(|item| RemoteFile {
-                path: item["name"].as_str().unwrap_or("").to_string(),
-                size: item["size"].as_u64().unwrap_or(0),
-                modified: item["lastModifiedDateTime"].as_str().map(|s| s.to_string()),
-                is_dir: item.get("folder").is_some(),
-            }).collect())
-            .unwrap_or_default();
-
-        Ok(files)
-    }
-
-    async fn exists(&self, remote_path: &str) -> Result<bool, String> {
-        let token = self.ensure_token().await?;
-        let resp = self.client.get(&self.graph_path(remote_path))
-            .bearer_auth(&token)
-            .send()
-            .await
-            .map_err(|e| format!("Exists check failed: {}", e))?;
-        Ok(resp.status().is_success())
     }
 
     async fn mkdir(&self, remote_path: &str) -> Result<(), String> {

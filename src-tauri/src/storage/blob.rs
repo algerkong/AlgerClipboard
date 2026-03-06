@@ -42,8 +42,7 @@ impl BlobStore {
         let relative_path = format!("blobs/{}.{}", id, ext);
         let full_path = self.base_dir.join(&relative_path);
 
-        std::fs::write(&full_path, data)
-            .map_err(|e| format!("Failed to save blob: {}", e))?;
+        std::fs::write(&full_path, data).map_err(|e| format!("Failed to save blob: {}", e))?;
 
         Ok(relative_path)
     }
@@ -52,23 +51,13 @@ impl BlobStore {
         let relative_path = format!("thumbnails/{}.png", id);
         let full_path = self.base_dir.join(&relative_path);
 
-        std::fs::write(&full_path, data)
-            .map_err(|e| format!("Failed to save thumbnail: {}", e))?;
+        std::fs::write(&full_path, data).map_err(|e| format!("Failed to save thumbnail: {}", e))?;
 
         Ok(relative_path)
     }
 
     pub fn get_blob_path(&self, relative_path: &str) -> PathBuf {
         self.base_dir.join(relative_path)
-    }
-
-    pub fn delete_blob(&self, relative_path: &str) -> Result<(), String> {
-        let full_path = self.base_dir.join(relative_path);
-        if full_path.exists() {
-            std::fs::remove_file(&full_path)
-                .map_err(|e| format!("Failed to delete blob: {}", e))?;
-        }
-        Ok(())
     }
 
     /// Get cache statistics
@@ -88,35 +77,12 @@ impl BlobStore {
         })
     }
 
-    /// Delete blob and thumbnail files for given entry IDs
-    pub fn delete_blobs_for_entries(&self, blob_paths: &[String], thumbnail_paths: &[String]) -> Result<u64, String> {
-        let mut freed: u64 = 0;
-
-        for bp in blob_paths {
-            let full = self.base_dir.join(bp);
-            if full.exists() {
-                if let Ok(meta) = std::fs::metadata(&full) {
-                    freed += meta.len();
-                }
-                let _ = std::fs::remove_file(&full);
-            }
-        }
-
-        for tp in thumbnail_paths {
-            let full = self.base_dir.join(tp);
-            if full.exists() {
-                if let Ok(meta) = std::fs::metadata(&full) {
-                    freed += meta.len();
-                }
-                let _ = std::fs::remove_file(&full);
-            }
-        }
-
-        Ok(freed)
-    }
-
     /// Clean up orphaned files (blobs/thumbnails not referenced by any DB entry)
-    pub fn cleanup_orphans(&self, known_blob_paths: &[String], known_thumb_paths: &[String]) -> Result<u64, String> {
+    pub fn cleanup_orphans(
+        &self,
+        known_blob_paths: &[String],
+        known_thumb_paths: &[String],
+    ) -> Result<u64, String> {
         let mut freed: u64 = 0;
 
         // Clean orphan blobs
@@ -166,8 +132,9 @@ impl BlobStore {
                     if let Ok(meta) = entry.metadata() {
                         if meta.is_file() {
                             let dst = dst_dir.join(entry.file_name());
-                            std::fs::copy(entry.path(), &dst)
-                                .map_err(|e| format!("Failed to copy {}: {}", entry.path().display(), e))?;
+                            std::fs::copy(entry.path(), &dst).map_err(|e| {
+                                format!("Failed to copy {}: {}", entry.path().display(), e)
+                            })?;
                             files_copied += 1;
                             bytes_copied += meta.len();
                         }
@@ -176,12 +143,19 @@ impl BlobStore {
             }
         }
 
-        Ok(MigrationResult { files_copied, bytes_copied })
+        Ok(MigrationResult {
+            files_copied,
+            bytes_copied,
+        })
     }
 
     /// Delete oldest non-favorite blobs until total size is under max_bytes.
     /// `oldest_entries` should be pre-sorted by created_at ASC, non-favorite only.
-    pub fn cleanup_by_size_limit(&self, max_bytes: u64, oldest_entries: &[(Option<String>, Option<String>)]) -> Result<u64, String> {
+    pub fn cleanup_by_size_limit(
+        &self,
+        max_bytes: u64,
+        oldest_entries: &[(Option<String>, Option<String>)],
+    ) -> Result<u64, String> {
         let info = self.get_cache_info()?;
         if info.total_size_bytes <= max_bytes {
             return Ok(0);

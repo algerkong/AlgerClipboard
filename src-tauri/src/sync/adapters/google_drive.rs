@@ -1,4 +1,4 @@
-use super::{CloudStorageAdapter, RemoteFile};
+use super::CloudStorageAdapter;
 use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -30,13 +30,6 @@ impl GoogleDriveAdapter {
             tokens: Mutex::new(tokens),
             folder_cache: Mutex::new(HashMap::new()),
         }
-    }
-
-    pub fn auth_url(client_id: &str, port: u16) -> String {
-        format!(
-            "https://accounts.google.com/o/oauth2/v2/auth?client_id={}&redirect_uri=http://127.0.0.1:{}/callback&response_type=code&scope=https://www.googleapis.com/auth/drive.file&access_type=offline&prompt=consent",
-            client_id, port
-        )
     }
 
     pub async fn exchange_code(client_id: &str, client_secret: &str, code: &str, redirect_uri: &str) -> Result<GoogleTokens, String> {
@@ -297,40 +290,6 @@ impl CloudStorageAdapter for GoogleDriveAdapter {
                 .map_err(|e| format!("Delete failed: {}", e))?;
         }
         Ok(())
-    }
-
-    async fn list(&self, remote_dir: &str) -> Result<Vec<RemoteFile>, String> {
-        let token = self.ensure_token().await?;
-        let folder_id = self.resolve_folder_id(remote_dir).await?;
-
-        let resp = self.client.get("https://www.googleapis.com/drive/v3/files")
-            .bearer_auth(&token)
-            .query(&[
-                ("q", &format!("'{}' in parents and trashed=false", folder_id)),
-                ("fields", &"files(id,name,size,modifiedTime,mimeType)".to_string()),
-            ])
-            .send()
-            .await
-            .map_err(|e| format!("List failed: {}", e))?;
-
-        let body: serde_json::Value = resp.json().await
-            .map_err(|e| format!("Parse error: {}", e))?;
-
-        let files = body["files"].as_array()
-            .map(|arr| arr.iter().map(|f| RemoteFile {
-                path: f["name"].as_str().unwrap_or("").to_string(),
-                size: f["size"].as_str().and_then(|s| s.parse().ok()).unwrap_or(0),
-                modified: f["modifiedTime"].as_str().map(|s| s.to_string()),
-                is_dir: f["mimeType"].as_str() == Some("application/vnd.google-apps.folder"),
-            }).collect())
-            .unwrap_or_default();
-
-        Ok(files)
-    }
-
-    async fn exists(&self, remote_path: &str) -> Result<bool, String> {
-        let (parent_id, file_name) = self.resolve_parent_folder(remote_path).await?;
-        Ok(self.find_file_in_folder(&file_name, &parent_id).await?.is_some())
     }
 
     async fn mkdir(&self, remote_path: &str) -> Result<(), String> {

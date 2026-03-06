@@ -57,7 +57,8 @@ pub struct Database {
 
 impl Database {
     pub fn new(db_path: &std::path::Path) -> Result<Self, String> {
-        let conn = Connection::open(db_path).map_err(|e| format!("Failed to open database: {}", e))?;
+        let conn =
+            Connection::open(db_path).map_err(|e| format!("Failed to open database: {}", e))?;
 
         conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;")
             .map_err(|e| format!("Failed to set pragmas: {}", e))?;
@@ -124,14 +125,11 @@ impl Database {
         .map_err(|e| format!("Failed to create tables: {}", e))?;
 
         // Migration: add is_pinned column if it doesn't exist (for existing DBs)
-        let _ = conn.execute_batch(
-            "ALTER TABLE entries ADD COLUMN is_pinned INTEGER DEFAULT 0;"
-        );
+        let _ = conn.execute_batch("ALTER TABLE entries ADD COLUMN is_pinned INTEGER DEFAULT 0;");
 
         // Migration: add sync_version column
-        let _ = conn.execute_batch(
-            "ALTER TABLE entries ADD COLUMN sync_version INTEGER DEFAULT 0;"
-        );
+        let _ =
+            conn.execute_batch("ALTER TABLE entries ADD COLUMN sync_version INTEGER DEFAULT 0;");
 
         // Sync accounts table
         conn.execute_batch(
@@ -147,8 +145,9 @@ impl Database {
                 enabled INTEGER DEFAULT 1,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
-            );"
-        ).map_err(|e| format!("Failed to create sync_accounts table: {}", e))?;
+            );",
+        )
+        .map_err(|e| format!("Failed to create sync_accounts table: {}", e))?;
 
         Ok(())
     }
@@ -203,9 +202,7 @@ impl Database {
             .map_err(|e| format!("Prepare error: {}", e))?;
 
         let mut rows = stmt
-            .query_map(params![hash], |row| {
-                Ok(row_to_entry_inner(row))
-            })
+            .query_map(params![hash], |row| Ok(row_to_entry_inner(row)))
             .map_err(|e| format!("Query error: {}", e))?;
 
         match rows.next() {
@@ -263,9 +260,7 @@ impl Database {
             .map_err(|e| format!("Prepare error: {}", e))?;
 
         let entries = stmt
-            .query_map(params_refs.as_slice(), |row| {
-                Ok(row_to_entry_inner(row))
-            })
+            .query_map(params_refs.as_slice(), |row| Ok(row_to_entry_inner(row)))
             .map_err(|e| format!("Query error: {}", e))?;
 
         let mut result = Vec::new();
@@ -290,9 +285,7 @@ impl Database {
             .map_err(|e| format!("Prepare error: {}", e))?;
 
         let mut rows = stmt
-            .query_map(params![id], |row| {
-                Ok(row_to_entry_inner(row))
-            })
+            .query_map(params![id], |row| Ok(row_to_entry_inner(row)))
             .map_err(|e| format!("Query error: {}", e))?;
 
         match rows.next() {
@@ -498,23 +491,29 @@ impl Database {
     pub fn get_clipboard_stats(&self) -> Result<ClipboardStats, String> {
         let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
-        let total: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM entries WHERE deleted = 0",
-            [],
-            |row| row.get(0),
-        ).map_err(|e| format!("Stats error: {}", e))?;
+        let total: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM entries WHERE deleted = 0",
+                [],
+                |row| row.get(0),
+            )
+            .map_err(|e| format!("Stats error: {}", e))?;
 
-        let favorites: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM entries WHERE deleted = 0 AND is_favorite = 1",
-            [],
-            |row| row.get(0),
-        ).map_err(|e| format!("Stats error: {}", e))?;
+        let favorites: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM entries WHERE deleted = 0 AND is_favorite = 1",
+                [],
+                |row| row.get(0),
+            )
+            .map_err(|e| format!("Stats error: {}", e))?;
 
-        let pinned: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM entries WHERE deleted = 0 AND is_pinned = 1",
-            [],
-            |row| row.get(0),
-        ).map_err(|e| format!("Stats error: {}", e))?;
+        let pinned: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM entries WHERE deleted = 0 AND is_pinned = 1",
+                [],
+                |row| row.get(0),
+            )
+            .map_err(|e| format!("Stats error: {}", e))?;
 
         // Type distribution
         let mut stmt = conn.prepare(
@@ -533,11 +532,13 @@ impl Database {
             .collect();
 
         // Daily trend (last 7 days)
-        let mut stmt = conn.prepare(
-            "SELECT DATE(created_at) as day, COUNT(*) as cnt
+        let mut stmt = conn
+            .prepare(
+                "SELECT DATE(created_at) as day, COUNT(*) as cnt
              FROM entries WHERE deleted = 0 AND created_at >= DATE('now', '-7 days')
-             GROUP BY day ORDER BY day"
-        ).map_err(|e| format!("Prepare error: {}", e))?;
+             GROUP BY day ORDER BY day",
+            )
+            .map_err(|e| format!("Prepare error: {}", e))?;
 
         let daily_trend: Vec<DailyCount> = stmt
             .query_map([], |row| {
@@ -664,7 +665,9 @@ impl Database {
         let params_refs: Vec<&dyn rusqlite::types::ToSql> =
             param_values.iter().map(|p| p.as_ref()).collect();
 
-        let mut stmt = conn.prepare(&sql).map_err(|e| format!("Prepare error: {}", e))?;
+        let mut stmt = conn
+            .prepare(&sql)
+            .map_err(|e| format!("Prepare error: {}", e))?;
 
         let rows = stmt
             .query_map(params_refs.as_slice(), |row| {
@@ -880,44 +883,6 @@ impl Database {
         Ok((blob_paths, thumb_paths))
     }
 
-    /// Get blob/thumbnail paths for entries that exceed the cache limit
-    /// Returns paths of the oldest non-favorite entries exceeding max_count
-    pub fn get_entries_to_cleanup(&self, max_count: i64) -> Result<(Vec<String>, Vec<String>), String> {
-        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
-
-        let mut stmt = conn
-            .prepare(
-                "SELECT blob_path, thumbnail_path FROM entries
-                 WHERE deleted = 0 AND is_favorite = 0 AND (blob_path IS NOT NULL OR thumbnail_path IS NOT NULL)
-                 ORDER BY created_at DESC
-                 LIMIT -1 OFFSET ?1"
-            )
-            .map_err(|e| format!("Prepare error: {}", e))?;
-
-        let mut blob_paths = Vec::new();
-        let mut thumb_paths = Vec::new();
-
-        let rows = stmt
-            .query_map(params![max_count], |row| {
-                let bp: Option<String> = row.get(0)?;
-                let tp: Option<String> = row.get(1)?;
-                Ok((bp, tp))
-            })
-            .map_err(|e| format!("Query error: {}", e))?;
-
-        for row in rows {
-            let (bp, tp) = row.map_err(|e| format!("Row error: {}", e))?;
-            if let Some(b) = bp {
-                blob_paths.push(b);
-            }
-            if let Some(t) = tp {
-                thumb_paths.push(t);
-            }
-        }
-
-        Ok((blob_paths, thumb_paths))
-    }
-
     /// Get blob/thumbnail paths of non-favorite entries ordered by created_at ASC (oldest first)
     pub fn get_blobs_oldest_first(&self) -> Result<Vec<(Option<String>, Option<String>)>, String> {
         let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
@@ -968,23 +933,25 @@ impl Database {
             "SELECT id, provider, config, sync_frequency, interval_minutes, encryption_enabled, last_sync_at, last_sync_version, enabled, created_at, updated_at FROM sync_accounts ORDER BY created_at"
         ).map_err(|e| format!("Prepare error: {}", e))?;
 
-        let rows = stmt.query_map([], |row| {
-            let enc: i32 = row.get("encryption_enabled")?;
-            let en: i32 = row.get("enabled")?;
-            Ok(SyncAccount {
-                id: row.get("id")?,
-                provider: row.get("provider")?,
-                config: row.get("config")?,
-                sync_frequency: row.get("sync_frequency")?,
-                interval_minutes: row.get("interval_minutes")?,
-                encryption_enabled: enc != 0,
-                last_sync_at: row.get("last_sync_at")?,
-                last_sync_version: row.get("last_sync_version")?,
-                enabled: en != 0,
-                created_at: row.get("created_at")?,
-                updated_at: row.get("updated_at")?,
+        let rows = stmt
+            .query_map([], |row| {
+                let enc: i32 = row.get("encryption_enabled")?;
+                let en: i32 = row.get("enabled")?;
+                Ok(SyncAccount {
+                    id: row.get("id")?,
+                    provider: row.get("provider")?,
+                    config: row.get("config")?,
+                    sync_frequency: row.get("sync_frequency")?,
+                    interval_minutes: row.get("interval_minutes")?,
+                    encryption_enabled: enc != 0,
+                    last_sync_at: row.get("last_sync_at")?,
+                    last_sync_version: row.get("last_sync_version")?,
+                    enabled: en != 0,
+                    created_at: row.get("created_at")?,
+                    updated_at: row.get("updated_at")?,
+                })
             })
-        }).map_err(|e| format!("Query error: {}", e))?;
+            .map_err(|e| format!("Query error: {}", e))?;
 
         let mut result = Vec::new();
         for row in rows {
@@ -1053,7 +1020,8 @@ impl Database {
              FROM entries WHERE (sync_version > ?1 OR sync_status = 'local') AND deleted = 0 ORDER BY created_at ASC"
         ).map_err(|e| format!("Prepare error: {}", e))?;
 
-        let entries = stmt.query_map(params![version], |row| Ok(row_to_entry_inner(row)))
+        let entries = stmt
+            .query_map(params![version], |row| Ok(row_to_entry_inner(row)))
             .map_err(|e| format!("Query error: {}", e))?;
 
         let mut result = Vec::new();
@@ -1066,12 +1034,18 @@ impl Database {
         Ok(result)
     }
 
-    pub fn update_entry_sync_status(&self, id: &str, status: &str, synced_at: &str) -> Result<(), String> {
+    pub fn update_entry_sync_status(
+        &self,
+        id: &str,
+        status: &str,
+        synced_at: &str,
+    ) -> Result<(), String> {
         let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
         conn.execute(
             "UPDATE entries SET sync_status = ?1, synced_at = ?2, updated_at = ?3 WHERE id = ?4",
             params![status, synced_at, now_iso(), id],
-        ).map_err(|e| format!("Failed to update sync status: {}", e))?;
+        )
+        .map_err(|e| format!("Failed to update sync status: {}", e))?;
         Ok(())
     }
 
@@ -1080,23 +1054,27 @@ impl Database {
         conn.execute(
             "UPDATE entries SET sync_version = sync_version + 1, updated_at = ?1 WHERE id = ?2",
             params![now_iso(), id],
-        ).map_err(|e| format!("Failed to increment sync version: {}", e))?;
-        let version: i64 = conn.query_row(
-            "SELECT sync_version FROM entries WHERE id = ?1",
-            params![id],
-            |row| row.get(0),
-        ).map_err(|e| format!("Failed to read sync version: {}", e))?;
+        )
+        .map_err(|e| format!("Failed to increment sync version: {}", e))?;
+        let version: i64 = conn
+            .query_row(
+                "SELECT sync_version FROM entries WHERE id = ?1",
+                params![id],
+                |row| row.get(0),
+            )
+            .map_err(|e| format!("Failed to read sync version: {}", e))?;
         Ok(version)
     }
 
     /// Get IDs of soft-deleted entries that were previously synced (need deletion propagated)
     pub fn get_deleted_synced_entry_ids(&self) -> Result<Vec<String>, String> {
         let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
-        let mut stmt = conn.prepare(
-            "SELECT id FROM entries WHERE deleted = 1 AND sync_version > 0"
-        ).map_err(|e| format!("Prepare error: {}", e))?;
+        let mut stmt = conn
+            .prepare("SELECT id FROM entries WHERE deleted = 1 AND sync_version > 0")
+            .map_err(|e| format!("Prepare error: {}", e))?;
 
-        let ids = stmt.query_map([], |row| row.get::<_, String>(0))
+        let ids = stmt
+            .query_map([], |row| row.get::<_, String>(0))
             .map_err(|e| format!("Query error: {}", e))?
             .filter_map(|r| r.ok())
             .collect();
@@ -1106,11 +1084,13 @@ impl Database {
     /// Check if an entry exists in the database (including soft-deleted entries)
     pub fn entry_exists(&self, id: &str) -> Result<bool, String> {
         let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
-        let count: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM entries WHERE id = ?1",
-            params![id],
-            |row| row.get(0),
-        ).map_err(|e| format!("Query error: {}", e))?;
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM entries WHERE id = ?1",
+                params![id],
+                |row| row.get(0),
+            )
+            .map_err(|e| format!("Query error: {}", e))?;
         Ok(count > 0)
     }
 }
