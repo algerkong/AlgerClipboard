@@ -9,12 +9,12 @@ mod sync;
 use clipboard::monitor::ClipboardMonitor;
 use commands::clipboard_cmd::AppDatabase;
 use commands::paste_cmd::AppBlobStore;
+use commands::settings_cmd::{register_toggle_shortcut, DEFAULT_TOGGLE_SHORTCUT};
 use storage::blob::BlobStore;
 use storage::database::Database;
 use std::sync::Arc;
 use tauri::Emitter;
 use tauri::Manager;
-use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 use tauri::tray::{TrayIconBuilder, MouseButton, MouseButtonState};
 use tauri::menu::{Menu, MenuItem};
 use tauri_plugin_autostart::MacosLauncher;
@@ -33,6 +33,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             if let Some(win) = app.get_webview_window("main") {
+                let _ = app.emit("main-window-opened", serde_json::json!({}));
                 let _ = win.show();
                 let _ = win.set_focus();
             }
@@ -80,28 +81,32 @@ pub fn run() {
                 let _ = app_handle.emit("clipboard-changed", &entry);
             });
 
-            // Global shortcut: CmdOrCtrl+Shift+V to toggle window visibility
-            let shortcut_window = app.get_webview_window("main").unwrap();
-            let shortcut_str = "CmdOrCtrl+Shift+V";
-            match shortcut_str.parse::<Shortcut>() {
-                Ok(shortcut) => {
-                    log::info!("Registering global shortcut: {}", shortcut_str);
-                    match app.global_shortcut().on_shortcut(shortcut, move |_app, _shortcut, event| {
-                        if event.state == ShortcutState::Pressed {
-                            log::info!("Global shortcut triggered");
-                            if shortcut_window.is_visible().unwrap_or(false) {
-                                let _ = shortcut_window.hide();
-                            } else {
-                                let _ = shortcut_window.show();
-                                let _ = shortcut_window.set_focus();
-                            }
+            let shortcut_str = db
+                .get_setting("toggle_shortcut")
+                .ok()
+                .flatten()
+                .filter(|s| !s.trim().is_empty())
+                .unwrap_or_else(|| DEFAULT_TOGGLE_SHORTCUT.to_string());
+
+            match register_toggle_shortcut(app.handle(), &shortcut_str) {
+                Ok(_) => {
+                    log::info!("Global shortcut registered: {}", shortcut_str);
+                }
+                Err(e) => {
+                    log::error!("Failed to register global shortcut '{}': {}", shortcut_str, e);
+                    if shortcut_str != DEFAULT_TOGGLE_SHORTCUT {
+                        if let Err(default_err) = register_toggle_shortcut(app.handle(), DEFAULT_TOGGLE_SHORTCUT) {
+                            log::error!(
+                                "Failed to fallback to default shortcut '{}': {}",
+                                DEFAULT_TOGGLE_SHORTCUT,
+                                default_err
+                            );
+                        } else {
+                            let _ = db.set_setting("toggle_shortcut", DEFAULT_TOGGLE_SHORTCUT);
+                            log::warn!("Fell back to default shortcut: {}", DEFAULT_TOGGLE_SHORTCUT);
                         }
-                    }) {
-                        Ok(_) => log::info!("Global shortcut registered successfully"),
-                        Err(e) => log::error!("Failed to register global shortcut: {:?}", e),
                     }
                 }
-                Err(e) => log::error!("Failed to parse shortcut '{}': {:?}", shortcut_str, e),
             }
 
             // System tray with Show + Quit menu
@@ -117,6 +122,7 @@ pub fn run() {
                     match event.id.as_ref() {
                         "quit" => app.exit(0),
                         "show" => {
+                            let _ = app.emit("main-window-opened", serde_json::json!({}));
                             let _ = tray_window.show();
                             let _ = tray_window.set_focus();
                         }
@@ -132,6 +138,7 @@ pub fn run() {
                     {
                         let app = tray.app_handle();
                         if let Some(win) = app.get_webview_window("main") {
+                            let _ = app.emit("main-window-opened", serde_json::json!({}));
                             let _ = win.show();
                             let _ = win.set_focus();
                         }
@@ -167,6 +174,7 @@ pub fn run() {
             commands::clipboard_cmd::open_in_explorer,
             commands::settings_cmd::get_settings,
             commands::settings_cmd::update_settings,
+            commands::settings_cmd::update_toggle_shortcut,
             commands::settings_cmd::set_auto_start,
             commands::settings_cmd::get_auto_start,
             commands::paste_cmd::paste_entry,
