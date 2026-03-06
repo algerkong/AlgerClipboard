@@ -1,6 +1,7 @@
 use crate::clipboard::entry::{ClipboardEntry, ContentType, SyncStatus};
 use crate::storage::blob::BlobStore;
 use crate::storage::database::{compute_hash, Database};
+use base64::Engine;
 use image::DynamicImage;
 use std::io::Cursor;
 use std::sync::atomic::{AtomicBool, Ordering};
