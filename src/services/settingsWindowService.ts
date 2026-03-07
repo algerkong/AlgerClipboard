@@ -1,4 +1,6 @@
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import i18n from "@/i18n";
+import { getManagedWindowDecorations } from "@/services/windowOptions";
 
 let windowCounter = 0;
 
@@ -11,12 +13,12 @@ export async function openSettingsWindow(tab?: string) {
 
   const win = new WebviewWindow(label, {
     url,
-    title: "Settings",
+    title: i18n.t("settings.title"),
     width: 680,
     height: 560,
     minWidth: 560,
     minHeight: 460,
-    decorations: false,
+    ...getManagedWindowDecorations(),
     alwaysOnTop: true,
     center: true,
     shadow: true,

@@ -1,4 +1,5 @@
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { getManagedWindowDecorations } from "@/services/windowOptions";
 
 const VIEWER_SIZE_KEY = "image-viewer-size";
 
@@ -27,7 +28,7 @@ export async function openImageViewer(blobPath: string) {
     height: size.height,
     minWidth: 500,
     minHeight: 400,
-    decorations: false,
+    ...getManagedWindowDecorations(),
     alwaysOnTop: true,
     center: true,
     shadow: true,

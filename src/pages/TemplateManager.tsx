@@ -104,19 +104,21 @@ export function TemplateManager({ onBack }: Props) {
     <div className="flex flex-col h-full">
       {/* Header / Title bar */}
       <div data-tauri-drag-region className="flex items-center gap-2 px-3 py-2 border-b border-border/30 select-none shrink-0">
-        {platform === "macos" && <div className="w-14" />}
+        {platform === "macos" && <div className="w-[72px] shrink-0" />}
         <span data-tauri-drag-region className="text-xs font-medium text-foreground">{t("template.title")}</span>
         <div data-tauri-drag-region className="flex-1" />
         <Button size="xs" onClick={openCreate}>
           <Plus className="w-3 h-3" />
           {t("template.new")}
         </Button>
-        <button
-          onClick={onBack}
-          className="flex items-center justify-center w-6 h-6 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
+        {platform !== "macos" && (
+          <button
+            onClick={onBack}
+            className="flex items-center justify-center w-6 h-6 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       {/* Content */}

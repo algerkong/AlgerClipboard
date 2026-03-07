@@ -9,6 +9,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 interface Props {
   onClose: () => void;
+  title?: string;
+  showSyncIndicator?: boolean;
 }
 
 function SyncIndicator() {
@@ -56,26 +58,6 @@ function SyncIndicator() {
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
-  );
-}
-
-/* macOS-style traffic light close/minimize buttons */
-function MacTrafficLights({ onClose }: { onClose: () => void }) {
-  const handleMinimize = () => getCurrentWebviewWindow().minimize();
-
-  return (
-    <div className="macos-btn-group flex items-center gap-2 pl-3.5 pr-2">
-      <button onClick={onClose} className="macos-btn macos-btn-close">
-        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor">
-          <path d="M3 3l6 6M9 3l-6 6" />
-        </svg>
-      </button>
-      <button onClick={handleMinimize} className="macos-btn macos-btn-minimize">
-        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor">
-          <path d="M2 6h8" />
-        </svg>
-      </button>
-    </div>
   );
 }
 
@@ -138,19 +120,29 @@ function PinButton() {
   );
 }
 
-function TitleText() {
+function TitleText({
+  title,
+  showSyncIndicator = true,
+}: {
+  title?: string;
+  showSyncIndicator?: boolean;
+}) {
   const { t } = useTranslation();
   return (
     <div data-tauri-drag-region className="flex items-center gap-1.5">
       <span data-tauri-drag-region className="text-sm2 font-medium text-muted-foreground tracking-wide uppercase">
-        {t("titleBar.clipboard")}
+        {title ?? t("titleBar.clipboard")}
       </span>
-      <SyncIndicator />
+      {showSyncIndicator ? <SyncIndicator /> : null}
     </div>
   );
 }
 
-export function TitleBar({ onClose }: Props) {
+export function TitleBar({
+  onClose,
+  title,
+  showSyncIndicator = true,
+}: Props) {
   const platform = usePlatform();
   const buttonPosition = useSettingsStore((s) => s.buttonPosition);
   const [windowFocused, setWindowFocused] = useState(true);
@@ -167,12 +159,12 @@ export function TitleBar({ onClose }: Props) {
 
   const blurClass = platform === "macos" && !windowFocused ? "window-blurred" : "";
 
-  // macOS: traffic lights left, title center, pin right
+  // macOS: native title bar / traffic lights, custom content only
   if (platform === "macos") {
     return (
       <div data-tauri-drag-region className={`flex items-center justify-between h-8 bg-card/80 backdrop-blur-sm border-b border-border/50 select-none shrink-0 ${blurClass}`}>
-        <MacTrafficLights onClose={onClose} />
-        <TitleText />
+        <div className="w-[72px] shrink-0" />
+        <TitleText title={title} showSyncIndicator={showSyncIndicator} />
         <div className="pr-2">
           <PinButton />
         </div>
@@ -189,7 +181,7 @@ export function TitleBar({ onClose }: Props) {
         </div>
         <div data-tauri-drag-region className="flex-1" />
         <div className="pr-2">
-          <TitleText />
+          <TitleText title={title} showSyncIndicator={showSyncIndicator} />
         </div>
       </div>
     );
@@ -198,7 +190,7 @@ export function TitleBar({ onClose }: Props) {
   // Windows / Linux (buttons right, default)
   return (
     <div data-tauri-drag-region className="flex items-center justify-between h-8 px-3 bg-card/80 backdrop-blur-sm border-b border-border/50 select-none shrink-0">
-      <TitleText />
+      <TitleText title={title} showSyncIndicator={showSyncIndicator} />
       <div className="-mr-1">
         <WinLinuxButtons onClose={onClose} />
       </div>

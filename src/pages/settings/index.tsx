@@ -1,15 +1,7 @@
 import { useState } from "react";
-import {
-  ArrowLeft,
-  Settings2,
-  Cloud,
-  Languages,
-  Database,
-  Brain,
-} from "lucide-react";
+import { Settings2, Cloud, Languages, Database, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
-import { usePlatform } from "@/contexts/PlatformContext";
 import { GeneralTab } from "./GeneralTab";
 import { SyncTab } from "./SyncTab";
 import { TranslateTab } from "./TranslateTab";
@@ -52,27 +44,14 @@ const TABS: { key: SettingsTab; labelKey: string; icon: React.ReactNode }[] = [
 ];
 
 /* ─── Settings Page ─── */
-export function SettingsPage({ onBack, initialTab }: Props) {
+export function SettingsPage({ initialTab }: Props) {
   const { t } = useTranslation();
-  const platform = usePlatform();
   const [activeTab, setActiveTab] = useState<SettingsTab>(
     (initialTab as SettingsTab) || "general"
   );
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div data-tauri-drag-region className="flex items-center gap-2 px-2 py-1.5 border-b border-border/30 shrink-0">
-        {platform === "macos" && <div className="w-14" />}
-        <button
-          onClick={onBack}
-          className="flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-        </button>
-        <span className="text-xs font-medium">{t("settings.title")}</span>
-      </div>
-
       {/* Tab bar */}
       <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-border/30 shrink-0">
         {TABS.map((tab) => (

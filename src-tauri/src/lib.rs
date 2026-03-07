@@ -18,15 +18,47 @@ use storage::database::Database;
 use std::sync::Arc;
 use tauri::Emitter;
 use tauri::Manager;
+use tauri::WebviewUrl;
 use tauri::tray::{TrayIconBuilder, MouseButton, MouseButtonState};
 use tauri::menu::{Menu, MenuItem};
 use tauri_plugin_autostart::MacosLauncher;
+
+#[cfg(target_os = "macos")]
+use objc2_app_kit::{NSWindow, NSWindowTitleVisibility};
 
 fn get_device_id() -> String {
     let hostname = hostname::get()
         .map(|h| h.to_string_lossy().to_string())
         .unwrap_or_else(|_| "unknown".to_string());
     format!("{}-{}", hostname, &uuid::Uuid::new_v4().to_string()[..8])
+}
+
+fn create_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<tauri::WebviewWindow<R>> {
+    let mut builder = tauri::WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
+        .title("AlgerClipboard")
+        .inner_size(420.0, 480.0)
+        .min_inner_size(320.0, 400.0)
+        .resizable(true)
+        .always_on_top(true)
+        .visible(true)
+        .skip_taskbar(true)
+        .center()
+        .shadow(true);
+
+    #[cfg(target_os = "macos")]
+    {
+        builder = builder
+            .decorations(true)
+            .title_bar_style(tauri::TitleBarStyle::Overlay)
+            .hidden_title(true);
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        builder = builder.decorations(false);
+    }
+
+    builder.build()
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -50,6 +82,8 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_os::init())
         .setup(|app| {
+            let main_window = create_main_window(&app.handle())?;
+
             let app_data_dir = app.path().app_data_dir().expect("Failed to get app data dir");
             std::fs::create_dir_all(&app_data_dir).expect("Failed to create app data dir");
 
@@ -187,9 +221,12 @@ pub fn run() {
             let show = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &quit])?;
 
-            let tray_window = app.get_webview_window("main").unwrap();
-            TrayIconBuilder::new()
-                .icon(app.default_window_icon().cloned().unwrap())
+            let tray_window = main_window.clone();
+            let mut tray_builder = TrayIconBuilder::new();
+            if let Some(icon) = app.default_window_icon().cloned() {
+                tray_builder = tray_builder.icon(icon);
+            }
+            tray_builder
                 .menu(&menu)
                 .on_menu_event(move |app: &tauri::AppHandle, event| {
                     match event.id.as_ref() {
@@ -220,6 +257,15 @@ pub fn run() {
                     }
                 })
                 .build(app)?;
+
+            #[cfg(target_os = "macos")]
+            {
+                if let Ok(ns_window) = main_window.ns_window() {
+                    let window: &NSWindow = unsafe { &*ns_window.cast() };
+                    window.setTitleVisibility(NSWindowTitleVisibility::Hidden);
+                    window.setTitlebarAppearsTransparent(true);
+                }
+            }
 
             // Apply rounded corners on Windows 11+
             #[cfg(target_os = "windows")]

@@ -77,7 +77,7 @@ function App() {
   if (isDetail) {
     return (
       <PlatformProvider>
-        <DetailPage />
+        <DetailWindow />
       </PlatformProvider>
     );
   }
@@ -148,7 +148,7 @@ function TemplateManagerWindow() {
 }
 
 function SettingsWindow() {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const theme = useSettingsStore((s) => s.theme);
   const locale = useSettingsStore((s) => s.locale);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
@@ -172,6 +172,10 @@ function SettingsWindow() {
   }, [theme]);
 
   useEffect(() => {
+    void getCurrentWebviewWindow().setTitle(t("settings.title"));
+  }, [t, locale]);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         getCurrentWebviewWindow().close();
@@ -187,9 +191,52 @@ function SettingsWindow() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      <TitleBar onClose={handleClose} />
+      <TitleBar onClose={handleClose} title={t("settings.title")} showSyncIndicator={false} />
       <div className="flex-1 min-h-0">
         <SettingsPage onBack={handleClose} initialTab={initialSettingsTab} />
+      </div>
+      <Toaster position="top-center" richColors duration={2000} toastOptions={{ style: { fontSize: "0.857rem", padding: "0.571rem 0.857rem" } }} />
+    </div>
+  );
+}
+
+function DetailWindow() {
+  const { i18n, t } = useTranslation();
+  const theme = useSettingsStore((s) => s.theme);
+  const locale = useSettingsStore((s) => s.locale);
+  const loadSettings = useSettingsStore((s) => s.loadSettings);
+
+  useEffect(() => {
+    document.documentElement.classList.add("dark");
+  }, []);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  useEffect(() => {
+    if (locale && i18n.language !== locale) {
+      i18n.changeLanguage(locale);
+    }
+  }, [locale, i18n]);
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+
+  useEffect(() => {
+    void getCurrentWebviewWindow().setTitle(t("detail.title"));
+  }, [t, locale]);
+
+  const handleClose = useCallback(() => {
+    getCurrentWebviewWindow().close();
+  }, []);
+
+  return (
+    <div className="flex flex-col h-screen overflow-hidden">
+      <TitleBar onClose={handleClose} title={t("detail.title")} showSyncIndicator={false} />
+      <div className="flex-1 min-h-0">
+        <DetailPage />
       </div>
       <Toaster position="top-center" richColors duration={2000} toastOptions={{ style: { fontSize: "0.857rem", padding: "0.571rem 0.857rem" } }} />
     </div>

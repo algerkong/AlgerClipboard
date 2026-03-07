@@ -10,22 +10,7 @@
     "beforeBuildCommand": "pnpm build"
   },
   "app": {
-    "windows": [
-      {
-        "title": "AlgerClipboard",
-        "width": 420,
-        "height": 480,
-        "minWidth": 320,
-        "minHeight": 400,
-        "resizable": true,
-        "decorations": false,
-        "alwaysOnTop": true,
-        "visible": true,
-        "skipTaskbar": true,
-        "center": true,
-        "shadow": true
-      }
-    ],
+    "windows": [],
     "security": {
       "csp": null
     }

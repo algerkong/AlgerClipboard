@@ -8,6 +8,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { platform as getPlatform } from "@tauri-apps/plugin-os";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import {
@@ -23,6 +24,7 @@ const VIEWER_SIZE_KEY = "image-viewer-size";
 
 export function ImageViewerPage() {
   const { t } = useTranslation();
+  const isMacOS = getPlatform() === "macos";
   const params = new URLSearchParams(window.location.search);
   const blobPath = params.get("blobPath") ?? "";
 
@@ -164,7 +166,10 @@ export function ImageViewerPage() {
       {/* Title bar */}
       <div
         data-tauri-drag-region
-        className="flex items-center justify-between h-8 px-3 bg-card/80 backdrop-blur-sm border-b border-border/50 select-none shrink-0"
+        className={cn(
+          "flex items-center justify-between h-8 pr-3 bg-card/80 backdrop-blur-sm border-b border-border/50 select-none shrink-0",
+          isMacOS ? "pl-[76px]" : "pl-3",
+        )}
       >
         <div data-tauri-drag-region className="flex items-center gap-2">
           <span data-tauri-drag-region className="text-sm2 font-medium text-muted-foreground">
@@ -207,9 +212,11 @@ export function ImageViewerPage() {
               {t("imageViewer.translateText")}
             </button>
           )}
-          <button onClick={handleClose} className="flex items-center justify-center w-6 h-6 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors">
-            <X className="w-3 h-3" />
-          </button>
+          {!isMacOS && (
+            <button onClick={handleClose} className="flex items-center justify-center w-6 h-6 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors">
+              <X className="w-3 h-3" />
+            </button>
+          )}
         </div>
       </div>
 

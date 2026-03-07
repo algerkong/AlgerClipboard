@@ -1,4 +1,5 @@
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { getManagedWindowDecorations } from "@/services/windowOptions";
 
 let windowCounter = 0;
 
@@ -13,7 +14,7 @@ export async function openTemplateManager() {
     height: 520,
     minWidth: 360,
     minHeight: 400,
-    decorations: false,
+    ...getManagedWindowDecorations(),
     alwaysOnTop: true,
     center: true,
     shadow: true,

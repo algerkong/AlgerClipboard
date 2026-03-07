@@ -17,7 +17,7 @@ import {
 import DOMPurify from "dompurify";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useTranslation } from "react-i18next";
-import { toast, Toaster } from "sonner";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { getEntry, pasteEntry, updateEntryText } from "@/services/clipboardService";
 import { aiSummarize, updateAiSummary } from "@/services/aiService";
@@ -56,6 +56,32 @@ const LANGUAGES = [
   { value: "es", label: "Español" },
   { value: "ru", label: "Русский" },
 ];
+
+function HintIconButton({
+  label,
+  className,
+  children,
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  label: string;
+}) {
+  return (
+    <button
+      {...props}
+      className={cn(
+        "group relative p-1 rounded transition-colors",
+        className,
+      )}
+      aria-label={label}
+      title={label}
+    >
+      {children}
+      <span className="pointer-events-none absolute right-0 top-full z-20 mt-1.5 hidden whitespace-nowrap rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1 text-[11px] leading-none text-white shadow-lg group-hover:block group-focus-visible:block dark:border-zinc-300 dark:bg-zinc-50 dark:text-zinc-950">
+        {label}
+      </span>
+    </button>
+  );
+}
 
 export function DetailPage() {
   const { t, i18n } = useTranslation();
@@ -166,10 +192,6 @@ export function DetailPage() {
     }
   }, [entry, t]);
 
-  const handleClose = useCallback(() => {
-    getCurrentWebviewWindow().close();
-  }, []);
-
   if (!entry) {
     return (
       <div className="flex items-center justify-center h-screen bg-background text-muted-foreground">
@@ -181,72 +203,54 @@ export function DetailPage() {
   const hasText = entry.content_type === "PlainText" || entry.content_type === "RichText";
 
   return (
-    <div className="flex flex-col h-screen bg-background overflow-hidden">
-      {/* Title bar */}
-      <div
-        className="flex items-center justify-between px-3 py-1.5 border-b border-border/30 shrink-0"
-        data-tauri-drag-region
-      >
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-foreground" data-tauri-drag-region>
-            {t("detail.title")}
-          </span>
+    <div className="flex flex-col h-full bg-background overflow-hidden">
+      <div className="flex items-center gap-3 px-3 border-b border-border/30 shrink-0">
+        <div className="flex items-center gap-0 shrink-0">
+          {(["view", "translate", "ai"] as const).map((t2) => (
+            <button
+              key={t2}
+              onClick={() => setTab(t2)}
+              className={cn(
+                "flex items-center gap-1 px-3 py-1.5 text-xs2 font-medium transition-colors border-b-2",
+                tab === t2
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {t2 === "view" && <Eye className="w-3 h-3" />}
+              {t2 === "translate" && <Languages className="w-3 h-3" />}
+              {t2 === "ai" && <Brain className="w-3 h-3" />}
+              {t(`detail.tab${t2.charAt(0).toUpperCase() + t2.slice(1)}`)}
+            </button>
+          ))}
+        </div>
+        <div className="min-w-0 flex-1">
           {entry.source_app && (
-            <span className="text-2xs text-muted-foreground/60">
+            <span className="block truncate text-2xs text-muted-foreground/60">
               {entry.source_app}
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1">
-          {hasText && (
-            <>
-              <button
-                onClick={handleCopy}
-                className={cn(
-                  "p-1 rounded transition-colors",
-                  copied ? "text-green-400" : "text-muted-foreground hover:text-foreground"
-                )}
-                title={t("detail.copy")}
-              >
-                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              </button>
-              <button
-                onClick={handlePaste}
-                className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
-                title={t("detail.paste")}
-              >
-                <ClipboardPaste className="w-3.5 h-3.5" />
-              </button>
-            </>
-          )}
-          <button
-            onClick={handleClose}
-            className="p-1 rounded text-muted-foreground hover:text-red-400 transition-colors"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Tab bar */}
-      <div className="flex items-center gap-0 px-3 border-b border-border/30 shrink-0">
-        {(["view", "translate", "ai"] as const).map((t2) => (
-          <button
-            key={t2}
-            onClick={() => setTab(t2)}
-            className={cn(
-              "flex items-center gap-1 px-3 py-1.5 text-xs2 font-medium transition-colors border-b-2",
-              tab === t2
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {t2 === "view" && <Eye className="w-3 h-3" />}
-            {t2 === "translate" && <Languages className="w-3 h-3" />}
-            {t2 === "ai" && <Brain className="w-3 h-3" />}
-            {t(`detail.tab${t2.charAt(0).toUpperCase() + t2.slice(1)}`)}
-          </button>
-        ))}
+        {hasText && (
+          <div className="flex items-center gap-1 shrink-0">
+            <HintIconButton
+              onClick={handleCopy}
+              label={copied ? t("detail.copied") : t("detail.copy")}
+              className={cn(
+                copied ? "text-green-400" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+            </HintIconButton>
+            <HintIconButton
+              onClick={handlePaste}
+              label={t("detail.paste")}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <ClipboardPaste className="w-3.5 h-3.5" />
+            </HintIconButton>
+          </div>
+        )}
       </div>
 
       {/* Content */}
@@ -272,8 +276,6 @@ export function DetailPage() {
           />
         )}
       </div>
-
-      <Toaster position="top-center" richColors duration={2000} toastOptions={{ style: { fontSize: "0.857rem", padding: "0.571rem 0.857rem" } }} />
     </div>
   );
 }
