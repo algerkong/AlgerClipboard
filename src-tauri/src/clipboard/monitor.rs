@@ -1,3 +1,5 @@
+use crate::ai::classifier::classify_content;
+use crate::ai::language::detect_language;
 use crate::clipboard::entry::{ClipboardEntry, ContentType, SyncStatus};
 use crate::storage::blob::BlobStore;
 use crate::storage::database::{compute_hash, Database};
@@ -740,6 +742,8 @@ impl ClipboardMonitor {
                                     sync_status: SyncStatus::Local,
                                     sync_version: 0,
                                     ai_summary: None,
+                                    content_category: Some("FilePath".to_string()),
+                                    detected_language: None,
                                 };
 
                                 if let Err(e) = db.insert_entry(&entry) {
@@ -835,6 +839,8 @@ impl ClipboardMonitor {
                                         sync_status: SyncStatus::Local,
                                         sync_version: 0,
                                         ai_summary: None,
+                                        content_category: None,
+                                        detected_language: None,
                                     };
 
                                     if let Err(e) = db.insert_entry(&entry) {
@@ -884,6 +890,20 @@ impl ClipboardMonitor {
                                                 ContentType::PlainText
                                             };
 
+                                            // Classify content category and detect programming language
+                                            let category = classify_content(&text);
+                                            let language = if category == crate::ai::classifier::ContentCategory::Code {
+                                                let lang = detect_language(&text);
+                                                if lang != crate::ai::language::ProgrammingLanguage::Unknown {
+                                                    Some(lang.as_str().to_string())
+                                                } else {
+                                                    None
+                                                }
+                                            } else {
+                                                None
+                                            };
+                                            let category_str = Some(format!("{:?}", category));
+
                                             let now = chrono::Utc::now().to_rfc3339();
                                             let entry = ClipboardEntry {
                                                 id: uuid::Uuid::new_v4().to_string(),
@@ -904,6 +924,8 @@ impl ClipboardMonitor {
                                                 sync_status: SyncStatus::Local,
                                                 sync_version: 0,
                                                 ai_summary: None,
+                                                content_category: category_str,
+                                                detected_language: language,
                                             };
 
                                             if let Err(e) = db.insert_entry(&entry) {

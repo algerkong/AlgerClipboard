@@ -11,7 +11,14 @@
     "image": "图片",
     "file": "文件",
     "starred": "收藏",
-    "tag": "标签"
+    "tag": "标签",
+    "code": "代码",
+    "url": "链接",
+    "email": "邮件",
+    "json": "JSON",
+    "markdown": "Markdown",
+    "command": "命令",
+    "sql": "SQL"
   },
   "entryCard": {
     "image": "图片",

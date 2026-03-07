@@ -11,7 +11,14 @@
     "image": "Image",
     "file": "File",
     "starred": "Starred",
-    "tag": "Tag"
+    "tag": "Tag",
+    "code": "Code",
+    "url": "URL",
+    "email": "Email",
+    "json": "JSON",
+    "markdown": "Markdown",
+    "command": "Command",
+    "sql": "SQL"
   },
   "entryCard": {
     "image": "Image",

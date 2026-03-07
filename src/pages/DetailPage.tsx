@@ -417,6 +417,12 @@ function ViewTab({
       {/* Meta info */}
       <div className="flex items-center gap-3 px-3 py-1.5 border-t border-border/20 text-2xs text-muted-foreground/60 shrink-0">
         <span>{entry.content_type}</span>
+        {entry.content_category && entry.content_category !== "General" && (
+          <span className="text-blue-400">{entry.content_category}</span>
+        )}
+        {entry.detected_language && (
+          <span className="text-emerald-400">{entry.detected_language}</span>
+        )}
         {entry.text_content && (
           <span>{entry.text_content.length} chars</span>
         )}

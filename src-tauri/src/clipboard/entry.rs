@@ -77,4 +77,6 @@ pub struct ClipboardEntry {
     pub sync_status: SyncStatus,
     pub sync_version: i64,
     pub ai_summary: Option<String>,
+    pub content_category: Option<String>,
+    pub detected_language: Option<String>,
 }

@@ -337,6 +337,18 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
               {entry.ai_summary}
             </p>
           )}
+          {(entry.content_category && entry.content_category !== "General") && (
+            <div className="flex items-center gap-1 mt-0.5">
+              <span className="inline-flex items-center px-1.5 py-0 rounded text-2xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                {entry.content_category}
+              </span>
+              {entry.detected_language && (
+                <span className="inline-flex items-center px-1.5 py-0 rounded text-2xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  {entry.detected_language}
+                </span>
+              )}
+            </div>
+          )}
           <div className="flex items-center gap-1.5 mt-1 text-xs2 text-muted-foreground">
             {entry.is_pinned && (
               <Pin className="w-2.5 h-2.5 text-primary fill-primary/30" />
