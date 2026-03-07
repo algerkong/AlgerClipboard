@@ -1,5 +1,47 @@
 # Changelog
 
+## [1.5.2] - 2026-03-07
+
+### New Features
+
+- **AI Module**: Full AI integration with multi-provider support (OpenAI, Claude, Gemini, DeepSeek, Ollama, custom OpenAI-compatible)
+  - **AI Auto-Summary**: Automatically summarize long clipboard text entries, with configurable minimum length and summary language
+  - **AI Translation**: Use AI as an alternative to traditional translation APIs, toggle in the translate panel
+  - **Custom Prompts**: Configurable prompt templates for summary and translation with variable placeholders (`{language}`, `{max_length}`, `{from_lang}`, `{to_lang}`), with reset-to-default support
+  - **Dynamic Model Fetching**: Fetch available models from provider APIs instead of hardcoded lists
+  - **Provider Presets**: Pre-configured API endpoints for major AI providers
+- **Detail Window**: Standalone window for viewing, editing, translating, and summarizing clipboard entries. Replaces inline viewers with a dedicated 680x520 window featuring View/Translate/AI tabs
+- **Smart Classification**: Auto-classify clipboard entries on capture with content category detection (Code, Email, URL, JSON, XML, Markdown, SQL, Command Line, etc.) and programming language detection (19 languages)
+- **Settings in Separate Window**: Settings page now opens in its own window instead of inline, with a new AI configuration tab
+- **Context Menu Improvements**: Portal-based rendering to prevent overflow clipping, smart auto-positioning (flip when near edges, scroll when too tall), keyboard navigation (arrow keys + Enter), modern Fluent-style design with scale-in animation
+
+### Bug Fixes
+
+- **Paste simulation**: Improved paste reliability and URL handling
+
+---
+
+## [1.5.2] - 2026-03-07 (中文)
+
+### 新功能
+
+- **AI 模块**: 完整的 AI 集成，支持多种服务商（OpenAI、Claude、Gemini、DeepSeek、Ollama、自定义 OpenAI 兼容接口）
+  - **AI 自动摘要**: 自动为长文本剪贴板内容生成摘要，可配置最小长度和摘要语言
+  - **AI 翻译**: 使用 AI 作为传统翻译 API 的替代方案，在翻译面板中切换
+  - **自定义提示词**: 可配置摘要和翻译的提示词模板，支持变量占位符（`{language}`、`{max_length}`、`{from_lang}`、`{to_lang}`），支持重置为默认值
+  - **动态模型获取**: 从服务商 API 动态获取可用模型列表，而非硬编码
+  - **服务商预设**: 主流 AI 服务商的预配置 API 端点
+- **详情窗口**: 独立窗口查看、编辑、翻译和摘要剪贴板内容。用 680x520 的专用窗口替代内嵌查看器，包含查看/翻译/AI 三个标签页
+- **智能分类**: 剪贴板内容捕获时自动分类，包括内容类别检测（代码、邮件、URL、JSON、XML、Markdown、SQL、命令行等）和编程语言检测（19 种语言）
+- **设置独立窗口**: 设置页面现在在独立窗口中打开，新增 AI 配置标签页
+- **右键菜单优化**: 基于 Portal 渲染防止溢出裁切，智能自动定位（靠近边缘时自动翻转，过高时可滚动），键盘导航（方向键 + Enter），现代 Fluent 风格设计搭配缩放入场动画
+
+### Bug 修复
+
+- **粘贴模拟**: 改进粘贴可靠性和 URL 处理
+
+---
+
 ## [1.5.1] - 2026-03-07
 
 ### New Features
