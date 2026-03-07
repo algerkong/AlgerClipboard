@@ -6,7 +6,7 @@ pub struct ProviderPreset {
     pub name: String,
     pub adapter: String,
     pub base_url: String,
-    pub models: Vec<String>,
+    pub default_model: String,
     pub category: String,
 }
 
@@ -18,12 +18,7 @@ pub fn get_provider_presets() -> Vec<ProviderPreset> {
             name: "OpenAI".to_string(),
             adapter: "openai_compatible".to_string(),
             base_url: "https://api.openai.com/v1".to_string(),
-            models: vec![
-                "gpt-4o".to_string(),
-                "gpt-4o-mini".to_string(),
-                "gpt-4-turbo".to_string(),
-                "gpt-3.5-turbo".to_string(),
-            ],
+            default_model: "gpt-4o-mini".to_string(),
             category: "international".to_string(),
         },
         ProviderPreset {
@@ -31,11 +26,7 @@ pub fn get_provider_presets() -> Vec<ProviderPreset> {
             name: "Anthropic (Claude)".to_string(),
             adapter: "anthropic".to_string(),
             base_url: "https://api.anthropic.com".to_string(),
-            models: vec![
-                "claude-sonnet-4-20250514".to_string(),
-                "claude-haiku-4-5-20251001".to_string(),
-                "claude-3-5-sonnet-20241022".to_string(),
-            ],
+            default_model: "claude-sonnet-4-20250514".to_string(),
             category: "international".to_string(),
         },
         ProviderPreset {
@@ -43,11 +34,7 @@ pub fn get_provider_presets() -> Vec<ProviderPreset> {
             name: "Google Gemini".to_string(),
             adapter: "gemini".to_string(),
             base_url: "https://generativelanguage.googleapis.com".to_string(),
-            models: vec![
-                "gemini-2.0-flash".to_string(),
-                "gemini-1.5-pro".to_string(),
-                "gemini-1.5-flash".to_string(),
-            ],
+            default_model: "gemini-2.0-flash".to_string(),
             category: "international".to_string(),
         },
         // Domestic CN
@@ -56,10 +43,7 @@ pub fn get_provider_presets() -> Vec<ProviderPreset> {
             name: "DeepSeek".to_string(),
             adapter: "openai_compatible".to_string(),
             base_url: "https://api.deepseek.com/v1".to_string(),
-            models: vec![
-                "deepseek-chat".to_string(),
-                "deepseek-reasoner".to_string(),
-            ],
+            default_model: "deepseek-chat".to_string(),
             category: "domestic".to_string(),
         },
         ProviderPreset {
@@ -67,11 +51,7 @@ pub fn get_provider_presets() -> Vec<ProviderPreset> {
             name: "Qwen (Alibaba)".to_string(),
             adapter: "openai_compatible".to_string(),
             base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1".to_string(),
-            models: vec![
-                "qwen-turbo".to_string(),
-                "qwen-plus".to_string(),
-                "qwen-max".to_string(),
-            ],
+            default_model: "qwen-turbo".to_string(),
             category: "domestic".to_string(),
         },
         ProviderPreset {
@@ -79,11 +59,7 @@ pub fn get_provider_presets() -> Vec<ProviderPreset> {
             name: "Kimi (Moonshot)".to_string(),
             adapter: "openai_compatible".to_string(),
             base_url: "https://api.moonshot.cn/v1".to_string(),
-            models: vec![
-                "moonshot-v1-8k".to_string(),
-                "moonshot-v1-32k".to_string(),
-                "moonshot-v1-128k".to_string(),
-            ],
+            default_model: "moonshot-v1-8k".to_string(),
             category: "domestic".to_string(),
         },
         ProviderPreset {
@@ -91,11 +67,7 @@ pub fn get_provider_presets() -> Vec<ProviderPreset> {
             name: "GLM (Zhipu)".to_string(),
             adapter: "openai_compatible".to_string(),
             base_url: "https://open.bigmodel.cn/api/paas/v4".to_string(),
-            models: vec![
-                "glm-4-flash".to_string(),
-                "glm-4".to_string(),
-                "glm-4-plus".to_string(),
-            ],
+            default_model: "glm-4-flash".to_string(),
             category: "domestic".to_string(),
         },
         ProviderPreset {
@@ -103,11 +75,7 @@ pub fn get_provider_presets() -> Vec<ProviderPreset> {
             name: "ERNIE (Baidu)".to_string(),
             adapter: "openai_compatible".to_string(),
             base_url: "https://qianfan.baidubce.com/v2".to_string(),
-            models: vec![
-                "ernie-4.0-8k".to_string(),
-                "ernie-3.5-8k".to_string(),
-                "ernie-speed-8k".to_string(),
-            ],
+            default_model: "ernie-4.0-8k".to_string(),
             category: "domestic".to_string(),
         },
         ProviderPreset {
@@ -115,10 +83,7 @@ pub fn get_provider_presets() -> Vec<ProviderPreset> {
             name: "Doubao (ByteDance)".to_string(),
             adapter: "openai_compatible".to_string(),
             base_url: "https://ark.cn-beijing.volces.com/api/v3".to_string(),
-            models: vec![
-                "doubao-pro-4k".to_string(),
-                "doubao-lite-4k".to_string(),
-            ],
+            default_model: "doubao-pro-4k".to_string(),
             category: "domestic".to_string(),
         },
         // Local
@@ -127,12 +92,7 @@ pub fn get_provider_presets() -> Vec<ProviderPreset> {
             name: "Ollama".to_string(),
             adapter: "openai_compatible".to_string(),
             base_url: "http://localhost:11434/v1".to_string(),
-            models: vec![
-                "llama3".to_string(),
-                "mistral".to_string(),
-                "codellama".to_string(),
-                "qwen2".to_string(),
-            ],
+            default_model: "llama3".to_string(),
             category: "local".to_string(),
         },
         // Custom
@@ -141,7 +101,7 @@ pub fn get_provider_presets() -> Vec<ProviderPreset> {
             name: "Custom".to_string(),
             adapter: "openai_compatible".to_string(),
             base_url: String::new(),
-            models: Vec::new(),
+            default_model: String::new(),
             category: "custom".to_string(),
         },
     ]

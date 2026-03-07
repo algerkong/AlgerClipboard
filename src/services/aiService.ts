@@ -5,8 +5,13 @@ export interface ProviderPreset {
   name: string;
   adapter: string;
   base_url: string;
-  models: string[];
+  default_model: string;
   category: string;
+}
+
+export interface ModelInfo {
+  id: string;
+  name: string | null;
 }
 
 export interface AiConfig {
@@ -38,6 +43,10 @@ export function getAiConfig(): Promise<AiConfig> {
 
 export function saveAiConfig(config: AiConfig): Promise<void> {
   return invoke("save_ai_config", { config });
+}
+
+export function fetchAiModels(): Promise<ModelInfo[]> {
+  return invoke("fetch_ai_models");
 }
 
 export function testAiConnection(): Promise<string> {

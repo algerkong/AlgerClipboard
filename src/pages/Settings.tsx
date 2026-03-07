@@ -1679,10 +1679,14 @@ function AiTab() {
   const {
     providers,
     config,
+    models,
+    isFetchingModels,
+    fetchModelsError,
     isTesting,
     testResult,
     loadProviders,
     loadConfig,
+    loadModels,
     updateConfig,
     testConnection,
   } = useAiStore();
@@ -1692,6 +1696,13 @@ function AiTab() {
     loadProviders();
     loadConfig();
   }, [loadProviders, loadConfig]);
+
+  // Auto-fetch models when provider + api_key + base_url are ready
+  useEffect(() => {
+    if (config.provider && (config.api_key || config.provider === "ollama")) {
+      loadModels();
+    }
+  }, [config.provider, config.api_key, config.base_url, loadModels]);
 
   const selectedProvider = providers.find((p) => p.id === config.provider);
   const groupedProviders = {
@@ -1733,7 +1744,7 @@ function AiTab() {
             const preset = providers.find((p) => p.id === e.target.value);
             updateConfig({
               provider: e.target.value,
-              model: preset?.models[0] || "",
+              model: preset?.default_model || "",
               base_url: preset?.base_url || "",
             });
           }}
@@ -1805,39 +1816,53 @@ function AiTab() {
         </div>
       </div>
 
-      {/* Model selector */}
-      {selectedProvider && selectedProvider.models.length > 0 && (
+      {/* Model */}
+      {config.provider && (
         <div className="space-y-1.5">
-          <label className="text-sm2 text-muted-foreground">
-            {t("settings.ai.model")}
-          </label>
-          <select
-            value={config.model}
-            onChange={(e) => updateConfig({ model: e.target.value })}
-            className="w-full h-8 px-2 rounded-md border border-border bg-background text-sm2"
-          >
-            {selectedProvider.models.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* Custom model input for custom/ollama providers */}
-      {(config.provider === "custom" || config.provider === "ollama") && (
-        <div className="space-y-1.5">
-          <label className="text-sm2 text-muted-foreground">
-            {t("settings.ai.modelName")}
-          </label>
-          <input
-            type="text"
-            value={config.model}
-            onChange={(e) => updateConfig({ model: e.target.value })}
-            placeholder="model-name"
-            className="w-full h-8 px-2 rounded-md border border-border bg-background text-sm2"
-          />
+          <div className="flex items-center justify-between">
+            <label className="text-sm2 text-muted-foreground">
+              {t("settings.ai.model")}
+            </label>
+            {config.provider && (config.api_key || config.provider === "ollama") && (
+              <button
+                onClick={() => loadModels()}
+                disabled={isFetchingModels}
+                className="flex items-center gap-1 text-xs2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <RefreshCw className={cn("w-3 h-3", isFetchingModels && "animate-spin")} />
+                {t("settings.ai.fetchModels")}
+              </button>
+            )}
+          </div>
+          {models.length > 0 && !fetchModelsError ? (
+            <select
+              value={config.model}
+              onChange={(e) => updateConfig({ model: e.target.value })}
+              className="w-full h-8 px-2 rounded-md border border-border bg-background text-sm2"
+            >
+              {!models.find((m) => m.id === config.model) && config.model && (
+                <option value={config.model}>{config.model}</option>
+              )}
+              {models.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name || m.id}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              value={config.model}
+              onChange={(e) => updateConfig({ model: e.target.value })}
+              placeholder={selectedProvider?.default_model || "model-name"}
+              className="w-full h-8 px-2 rounded-md border border-border bg-background text-sm2"
+            />
+          )}
+          {fetchModelsError && (
+            <p className="text-xs2 text-muted-foreground">
+              {t("settings.ai.fetchModelsFailed")}
+            </p>
+          )}
         </div>
       )}
 

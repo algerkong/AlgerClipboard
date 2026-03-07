@@ -235,6 +235,7 @@ pub fn run() {
             commands::ai_cmd::get_ai_providers,
             commands::ai_cmd::get_ai_config,
             commands::ai_cmd::save_ai_config,
+            commands::ai_cmd::fetch_ai_models,
             commands::ai_cmd::test_ai_connection,
             commands::ai_cmd::ai_chat,
             commands::ai_cmd::ai_summarize,

@@ -3,7 +3,7 @@ use crate::ai::language::detect_language;
 use crate::ai::adapters::anthropic::AnthropicEngine;
 use crate::ai::adapters::gemini::GeminiEngine;
 use crate::ai::adapters::openai_compatible::OpenAiCompatibleEngine;
-use crate::ai::engine::{AiEngine, ChatMessage, ChatResponse};
+use crate::ai::engine::{AiEngine, ChatMessage, ChatResponse, ModelInfo};
 use crate::ai::providers::{get_provider_presets, ProviderPreset};
 use crate::commands::clipboard_cmd::AppDatabase;
 use serde::{Deserialize, Serialize};
@@ -94,6 +94,13 @@ pub fn get_ai_config(db: State<'_, AppDatabase>) -> Result<AiConfig, String> {
 #[tauri::command]
 pub fn save_ai_config(db: State<'_, AppDatabase>, config: AiConfig) -> Result<(), String> {
     save_ai_config_to_db(&db, &config)
+}
+
+#[tauri::command]
+pub async fn fetch_ai_models(db: State<'_, AppDatabase>) -> Result<Vec<ModelInfo>, String> {
+    let config = load_ai_config(&db);
+    let engine = build_engine(&config)?;
+    engine.list_models().await
 }
 
 #[tauri::command]

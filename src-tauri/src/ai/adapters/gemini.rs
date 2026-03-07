@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-use crate::ai::engine::{AiEngine, ChatMessage, ChatResponse, TokenUsage};
+use crate::ai::engine::{AiEngine, ChatMessage, ChatResponse, ModelInfo, TokenUsage};
 
 pub struct GeminiEngine {
     api_key: String,
@@ -71,6 +71,56 @@ struct GeminiErrorDetail {
 impl AiEngine for GeminiEngine {
     fn name(&self) -> &str {
         "gemini"
+    }
+
+    async fn list_models(&self) -> Result<Vec<ModelInfo>, String> {
+        let url = format!(
+            "{}/v1beta/models?key={}",
+            self.base_url.trim_end_matches('/'),
+            self.api_key
+        );
+
+        let resp = self.client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| format!("HTTP request failed: {}", e))?;
+
+        let status = resp.status();
+        let body = resp.text().await.map_err(|e| format!("Failed to read response: {}", e))?;
+
+        if !status.is_success() {
+            return Err(format!("API error ({}): {}", status, body));
+        }
+
+        #[derive(Deserialize)]
+        struct ModelsResponse {
+            models: Option<Vec<GeminiModel>>,
+        }
+        #[derive(Deserialize)]
+        struct GeminiModel {
+            name: Option<String>,
+            #[serde(rename = "displayName")]
+            display_name: Option<String>,
+        }
+
+        let parsed: ModelsResponse = serde_json::from_str(&body)
+            .map_err(|e| format!("Failed to parse models response: {}", e))?;
+
+        let models = parsed.models.unwrap_or_default()
+            .into_iter()
+            .filter_map(|m| {
+                // Gemini model names are like "models/gemini-2.0-flash" — strip prefix
+                let id = m.name?.strip_prefix("models/")?.to_string();
+                // Only include generateContent-capable models (skip embedding etc.)
+                if id.contains("embed") || id.contains("aqa") || id.contains("retrieval") {
+                    return None;
+                }
+                Some(ModelInfo { id: id.clone(), name: m.display_name.or(Some(id)) })
+            })
+            .collect();
+
+        Ok(models)
     }
 
     async fn chat(&self, messages: &[ChatMessage], model: &str) -> Result<ChatResponse, String> {

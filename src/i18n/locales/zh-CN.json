@@ -132,7 +132,9 @@
       "baseUrl": "API 地址",
       "testConnection": "测试连接",
       "testSuccess": "连接成功！",
-      "testFailed": "连接失败"
+      "testFailed": "连接失败",
+      "fetchModels": "获取模型",
+      "fetchModelsFailed": "获取模型列表失败，请手动输入模型名称"
     }
   },
   "update": {

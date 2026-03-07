@@ -2,6 +2,12 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModelInfo {
+    pub id: String,
+    pub name: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChatMessage {
     pub role: String,
     pub content: String,
@@ -25,6 +31,9 @@ pub struct TokenUsage {
 pub trait AiEngine: Send + Sync {
     fn name(&self) -> &str;
     async fn chat(&self, messages: &[ChatMessage], model: &str) -> Result<ChatResponse, String>;
+    async fn list_models(&self) -> Result<Vec<ModelInfo>, String> {
+        Ok(Vec::new())
+    }
     async fn test_connection(&self, model: &str) -> Result<String, String> {
         let msg = ChatMessage {
             role: "user".to_string(),

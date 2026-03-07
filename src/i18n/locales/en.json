@@ -132,7 +132,9 @@
       "baseUrl": "API Base URL",
       "testConnection": "Test Connection",
       "testSuccess": "Connection successful!",
-      "testFailed": "Connection failed"
+      "testFailed": "Connection failed",
+      "fetchModels": "Fetch Models",
+      "fetchModelsFailed": "Failed to fetch models, please enter model name manually"
     }
   },
   "update": {
