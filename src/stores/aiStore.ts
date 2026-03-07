@@ -33,6 +33,10 @@ const DEFAULT_CONFIG: AiConfig = {
   model: "",
   base_url: "",
   enabled: false,
+  auto_summary: false,
+  summary_min_length: 200,
+  summary_max_length: 100,
+  summary_language: "same",
 };
 
 export const useAiStore = create<AiState>((set, get) => ({

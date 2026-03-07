@@ -20,6 +20,10 @@ export interface AiConfig {
   model: string;
   base_url: string;
   enabled: boolean;
+  auto_summary: boolean;
+  summary_min_length: number;
+  summary_max_length: number;
+  summary_language: string;
 }
 
 export interface ChatMessage {

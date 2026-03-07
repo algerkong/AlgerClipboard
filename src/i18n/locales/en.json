@@ -134,7 +134,17 @@
       "testSuccess": "Connection successful!",
       "testFailed": "Connection failed",
       "fetchModels": "Fetch Models",
-      "fetchModelsFailed": "Failed to fetch models, please enter model name manually"
+      "fetchModelsFailed": "Failed to fetch models, please enter model name manually",
+      "autoSummary": "Auto Summarize",
+      "autoSummaryDesc": "Automatically summarize new clipboard entries",
+      "summaryMinLength": "Minimum Text Length",
+      "summaryMinLengthDesc": "Only summarize text longer than this (characters)",
+      "summaryMaxLength": "Summary Max Length",
+      "summaryMaxLengthDesc": "Maximum characters for the generated summary",
+      "summaryLanguage": "Summary Language",
+      "summaryLangSame": "Same as source",
+      "summaryLangZh": "Chinese",
+      "summaryLangEn": "English"
     }
   },
   "update": {

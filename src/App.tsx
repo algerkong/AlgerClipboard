@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Toaster } from "sonner";
 import { TitleBar } from "@/components/TitleBar";
 import { ClipboardPanel } from "@/pages/ClipboardPanel";
-import { SettingsPage } from "@/pages/Settings";
+import { SettingsPage } from "@/pages/settings";
 import { TemplateManager } from "@/pages/TemplateManager";
 import { ImageViewerPage } from "@/components/ImageViewer";
 import { openSettingsWindow } from "@/services/settingsWindowService";

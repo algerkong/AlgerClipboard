@@ -16,6 +16,10 @@ pub struct AiConfig {
     pub model: String,
     pub base_url: String,
     pub enabled: bool,
+    pub auto_summary: bool,
+    pub summary_min_length: u32,
+    pub summary_max_length: u32,
+    pub summary_language: String,
 }
 
 fn load_ai_config(db: &AppDatabase) -> AiConfig {
@@ -29,6 +33,29 @@ fn load_ai_config(db: &AppDatabase) -> AiConfig {
         .unwrap_or(None)
         .map(|v| v == "true")
         .unwrap_or(false);
+    let auto_summary = db
+        .0
+        .get_setting("ai_auto_summary")
+        .unwrap_or(None)
+        .map(|v| v == "true")
+        .unwrap_or(false);
+    let summary_min_length = db
+        .0
+        .get_setting("ai_summary_min_length")
+        .unwrap_or(None)
+        .and_then(|v| v.parse::<u32>().ok())
+        .unwrap_or(200);
+    let summary_max_length = db
+        .0
+        .get_setting("ai_summary_max_length")
+        .unwrap_or(None)
+        .and_then(|v| v.parse::<u32>().ok())
+        .unwrap_or(100);
+    let summary_language = db
+        .0
+        .get_setting("ai_summary_language")
+        .unwrap_or(None)
+        .unwrap_or_else(|| "same".to_string());
 
     AiConfig {
         provider,
@@ -36,6 +63,10 @@ fn load_ai_config(db: &AppDatabase) -> AiConfig {
         model,
         base_url,
         enabled,
+        auto_summary,
+        summary_min_length,
+        summary_max_length,
+        summary_language,
     }
 }
 
@@ -45,6 +76,10 @@ fn save_ai_config_to_db(db: &AppDatabase, config: &AiConfig) -> Result<(), Strin
     db.0.set_setting("ai_model", &config.model)?;
     db.0.set_setting("ai_base_url", &config.base_url)?;
     db.0.set_setting("ai_enabled", if config.enabled { "true" } else { "false" })?;
+    db.0.set_setting("ai_auto_summary", if config.auto_summary { "true" } else { "false" })?;
+    db.0.set_setting("ai_summary_min_length", &config.summary_min_length.to_string())?;
+    db.0.set_setting("ai_summary_max_length", &config.summary_max_length.to_string())?;
+    db.0.set_setting("ai_summary_language", &config.summary_language)?;
     Ok(())
 }
 
@@ -135,10 +170,22 @@ pub async fn ai_summarize(db: State<'_, AppDatabase>, text: String) -> Result<St
     }
     let engine = build_engine(&config)?;
 
+    let system_prompt = if config.summary_language == "same" {
+        format!(
+            "Summarize the following text concisely in the same language as the original text. Keep the summary under {} characters:",
+            config.summary_max_length
+        )
+    } else {
+        format!(
+            "Summarize the following text concisely in {}. Keep the summary under {} characters:",
+            config.summary_language, config.summary_max_length
+        )
+    };
+
     let messages = vec![
         ChatMessage {
             role: "system".to_string(),
-            content: "Summarize the following text concisely in the same language:".to_string(),
+            content: system_prompt,
         },
         ChatMessage {
             role: "user".to_string(),

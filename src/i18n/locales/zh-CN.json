@@ -134,7 +134,17 @@
       "testSuccess": "连接成功！",
       "testFailed": "连接失败",
       "fetchModels": "获取模型",
-      "fetchModelsFailed": "获取模型列表失败，请手动输入模型名称"
+      "fetchModelsFailed": "获取模型列表失败，请手动输入模型名称",
+      "autoSummary": "自动摘要",
+      "autoSummaryDesc": "自动为新的剪贴板内容生成摘要",
+      "summaryMinLength": "最小文本长度",
+      "summaryMinLengthDesc": "仅摘要超过此长度的文本（字符数）",
+      "summaryMaxLength": "摘要最大长度",
+      "summaryMaxLengthDesc": "生成摘要的最大字符数",
+      "summaryLanguage": "摘要语言",
+      "summaryLangSame": "与原文相同",
+      "summaryLangZh": "中文",
+      "summaryLangEn": "English"
     }
   },
   "update": {
