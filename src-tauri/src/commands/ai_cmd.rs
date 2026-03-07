@@ -296,6 +296,7 @@ pub fn save_ai_config(db: State<'_, AppDatabase>, config: AiConfig) -> Result<()
 pub async fn fetch_ai_models(db: State<'_, AppDatabase>) -> Result<Vec<ModelInfo>, String> {
     let config = load_ai_config(&db);
     let engine = build_engine(&config)?;
+    log::debug!("Fetching AI models via engine '{}'", engine.name());
     engine.list_models().await
 }
 
@@ -307,6 +308,11 @@ pub async fn test_ai_connection(db: State<'_, AppDatabase>) -> Result<String, St
     }
     let engine = build_engine(&config)?;
     let model = &config.model;
+    log::debug!(
+        "Testing AI connection via engine '{}' with model '{}'",
+        engine.name(),
+        model
+    );
     engine.test_connection(model).await
 }
 
@@ -320,6 +326,7 @@ pub async fn ai_chat(
         return Err("AI is not enabled".to_string());
     }
     let engine = build_engine(&config)?;
+    log::debug!("Running AI chat via engine '{}'", engine.name());
     engine.chat(&messages, &config.model).await
 }
 

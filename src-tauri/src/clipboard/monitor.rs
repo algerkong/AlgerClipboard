@@ -62,11 +62,6 @@ fn get_clipboard_png() -> Option<Vec<u8>> {
     }
 }
 
-#[cfg(not(target_os = "windows"))]
-fn get_clipboard_png() -> Option<Vec<u8>> {
-    None
-}
-
 #[cfg(target_os = "windows")]
 fn get_clipboard_dib(format: u32) -> Option<Vec<u8>> {
     use windows_sys::Win32::Foundation::{FALSE, HWND};
