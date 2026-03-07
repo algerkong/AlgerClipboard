@@ -1,5 +1,39 @@
 # Changelog
 
+## [1.5.1] - 2026-03-07
+
+### New Features
+
+- **Open URL in browser**: Clipboard entries containing URLs now show an "Open in Browser" button (hover action + context menu). Automatically detects `http://` and `https://` links in text content
+- **Configurable default browser**: Choose which browser opens URLs — System Default, Chrome, Firefox, Edge, Brave, or Safari (macOS). Configurable in Settings > General
+- **Smart window positioning**: Clipboard window now appears near the active text caret when triggered via shortcut. Falls back to mouse cursor position when caret is unavailable
+  - Windows: Uses `GetGUIThreadInfo` for precise caret detection with `GetCursorPos` fallback
+  - macOS/Linux: Uses Tauri cross-platform cursor position API
+
+### Bug Fixes
+
+- **macOS title bar**: Removed non-functional fullscreen (green) button, keeping only close and minimize
+- **Windows rounded corners**: Enabled native DWM rounded corners on Windows 11+ via `DWMWA_WINDOW_CORNER_PREFERENCE` API
+
+---
+
+## [1.5.1] - 2026-03-07 (中文)
+
+### 新功能
+
+- **浏览器打开链接**: 剪贴板内容包含 URL 时，显示「在浏览器中打开」按钮（悬浮操作 + 右键菜单）。自动检测文本中的 `http://` 和 `https://` 链接
+- **可配置默认浏览器**: 选择打开链接的浏览器 — 系统默认、Chrome、Firefox、Edge、Brave 或 Safari (macOS)。在 设置 > 通用 中配置
+- **智能窗口定位**: 通过快捷键呼出剪贴板时，窗口会出现在当前文本光标附近。无法获取光标时回退到鼠标位置
+  - Windows: 使用 `GetGUIThreadInfo` 精确获取光标位置，`GetCursorPos` 作为回退
+  - macOS/Linux: 使用 Tauri 跨平台光标位置 API
+
+### Bug 修复
+
+- **macOS 标题栏**: 移除无功能的全屏（绿色）按钮，仅保留关闭和最小化
+- **Windows 窗口圆角**: 通过 `DWMWA_WINDOW_CORNER_PREFERENCE` API 在 Windows 11+ 上启用原生 DWM 圆角
+
+---
+
 ## [1.5.0] - 2026-03-06
 
 ### New Features
