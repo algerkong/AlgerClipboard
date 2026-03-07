@@ -13,7 +13,21 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { PlatformProvider } from "@/contexts/PlatformContext";
 import { useSyncStore } from "@/stores/syncStore";
 import { checkForUpdates, downloadAndInstall } from "@/services/updateService";
+import { openUrl } from "@/services/settingsService";
 import type { ClipboardEntry } from "@/types";
+
+// Global safety net: intercept all <a> clicks and open in external browser
+document.addEventListener("click", (e) => {
+  const anchor = (e.target as HTMLElement).closest("a");
+  if (anchor) {
+    const href = anchor.getAttribute("href");
+    if (href && /^https?:\/\//i.test(href)) {
+      e.preventDefault();
+      e.stopPropagation();
+      openUrl(href).catch(() => {});
+    }
+  }
+}, true);
 
 // Detect window type from URL params
 const searchParams = new URLSearchParams(window.location.search);

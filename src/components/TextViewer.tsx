@@ -4,6 +4,7 @@ import DOMPurify from "dompurify";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { TranslateDialog } from "@/components/TranslateDialog";
+import { openUrl } from "@/services/settingsService";
 import { toast } from "sonner";
 
 interface Props {
@@ -125,6 +126,17 @@ export function TextViewer({ text, htmlContent, onClose }: Props) {
             <div
               className="text-sm2 leading-relaxed text-foreground rich-text-preview"
               dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+              onClick={(e) => {
+                const anchor = (e.target as HTMLElement).closest("a");
+                if (anchor) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const href = anchor.getAttribute("href");
+                  if (href && /^https?:\/\//i.test(href)) {
+                    openUrl(href).catch(() => toast.error(t("toast.openUrlFailed")));
+                  }
+                }
+              }}
             />
           ) : (
             <pre

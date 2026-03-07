@@ -8,8 +8,10 @@ mod sync;
 
 use clipboard::monitor::ClipboardMonitor;
 use commands::clipboard_cmd::AppDatabase;
-use commands::paste_cmd::AppBlobStore;
-use commands::settings_cmd::{register_toggle_shortcut, DEFAULT_TOGGLE_SHORTCUT};
+use commands::paste_cmd::{AppBlobStore, AppPasteTargetState, PasteTargetSnapshot};
+use commands::settings_cmd::{
+    register_toggle_shortcut, remember_current_foreground_window, DEFAULT_TOGGLE_SHORTCUT,
+};
 use storage::blob::BlobStore;
 use storage::database::Database;
 use std::sync::Arc;
@@ -33,6 +35,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             if let Some(win) = app.get_webview_window("main") {
+                remember_current_foreground_window(app);
                 let _ = app.emit("main-window-opened", serde_json::json!({}));
                 let _ = win.show();
                 let _ = win.set_focus();
@@ -68,6 +71,9 @@ pub fn run() {
             };
             let blob_store = Arc::new(BlobStore::new(&blob_base).expect("Failed to init blob store"));
             app.manage(AppBlobStore(blob_store.clone()));
+            app.manage(AppPasteTargetState(std::sync::Mutex::new(
+                PasteTargetSnapshot::default(),
+            )));
 
             let device_id = match db.get_setting("device_id") {
                 Ok(Some(id)) => id,
@@ -125,6 +131,7 @@ pub fn run() {
                     match event.id.as_ref() {
                         "quit" => app.exit(0),
                         "show" => {
+                            remember_current_foreground_window(app);
                             let _ = app.emit("main-window-opened", serde_json::json!({}));
                             let _ = tray_window.show();
                             let _ = tray_window.set_focus();
@@ -141,6 +148,7 @@ pub fn run() {
                     {
                         let app = tray.app_handle();
                         if let Some(win) = app.get_webview_window("main") {
+                            remember_current_foreground_window(&app);
                             let _ = app.emit("main-window-opened", serde_json::json!({}));
                             let _ = win.show();
                             let _ = win.set_focus();

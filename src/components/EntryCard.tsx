@@ -110,12 +110,26 @@ function isNonChinese(text: string): boolean {
   return chineseChars / cleaned.length < 0.3;
 }
 
-const URL_REGEX = /https?:\/\/[^\s<>"{}|\\^`[\]]+/i;
+// Negative lookahead stops before another http(s):// so encoded-space runs don't merge URLs
+const URL_REGEX = /https?:\/\/(?:(?!https?:\/\/)[^\s<>"{}|\\^`[\]])+/gi;
 
-function extractFirstUrl(text: string | null): string | null {
-  if (!text) return null;
-  const match = text.match(URL_REGEX);
-  return match ? match[0] : null;
+function extractUrls(text: string | null): string[] {
+  if (!text) return [];
+  const matches = text.match(URL_REGEX);
+  if (!matches) return [];
+  const cleaned = matches.map((url) =>
+    url
+      // Trim trailing URL-encoded whitespace (%20, %09, %0A, %0D)
+      .replace(/(%20|%09|%0[aAdD])+$/gi, "")
+      // Trim trailing punctuation unlikely to be part of the URL
+      .replace(/[.,;:!]+$/, "")
+  );
+  return [...new Set(cleaned)].filter((url) => url.length > 10);
+}
+
+function truncateUrl(url: string, max = 40): string {
+  if (url.length <= max) return url;
+  return url.substring(0, max - 1) + "\u2026";
 }
 
 export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEntry }) {
@@ -131,6 +145,7 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
   const isSelected = selectedId === entry.id;
   const [showTranslate, setShowTranslate] = useState(false);
   const [showViewer, setShowViewer] = useState(false);
+  const [showUrlPicker, setShowUrlPicker] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [showTagInput, setShowTagInput] = useState(false);
   const [tagInputValue, setTagInputValue] = useState("");
@@ -140,7 +155,7 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
   const isImage = entry.content_type === "Image";
   const isLongText = hasText && (entry.text_content?.length ?? 0) > 120;
 
-  const firstUrl = useMemo(() => extractFirstUrl(entry.text_content), [entry.text_content]);
+  const urls = useMemo(() => extractUrls(entry.text_content), [entry.text_content]);
 
   const sanitizedHtml = useMemo(() => {
     if (!isRichText || !entry.html_content) return "";
@@ -199,13 +214,19 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
           toast.success(t("toast.copied"));
         },
       });
-      if (firstUrl) {
+      if (urls.length === 1) {
         items.push({
           label: t("contextMenu.openInBrowser"),
           icon: <ExternalLink className="w-3.5 h-3.5" />,
           onClick: () => {
-            openUrl(firstUrl).catch(() => toast.error(t("toast.openUrlFailed")));
+            openUrl(urls[0]).catch(() => toast.error(t("toast.openUrlFailed")));
           },
+        });
+      } else if (urls.length > 1) {
+        items.push({
+          label: `${t("contextMenu.openInBrowser")} (${urls.length})`,
+          icon: <ExternalLink className="w-3.5 h-3.5" />,
+          onClick: () => setShowUrlPicker(true),
         });
       }
     }
@@ -290,6 +311,17 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
             <div
               className="text-base2 leading-relaxed text-foreground line-clamp-2 break-all rich-text-preview"
               dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+              onClick={(e) => {
+                const anchor = (e.target as HTMLElement).closest("a");
+                if (anchor) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const href = anchor.getAttribute("href");
+                  if (href && /^https?:\/\//i.test(href)) {
+                    openUrl(href).catch(() => toast.error(t("toast.openUrlFailed")));
+                  }
+                }
+              }}
             />
           ) : (
             <p className="text-base2 leading-relaxed text-foreground line-clamp-2 break-all">
@@ -394,11 +426,18 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
             <ScanText className="w-3 h-3" />
           </button>
         )}
-        {firstUrl && (
+        {urls.length > 0 && (
           <button
-            onClick={(e) => { e.stopPropagation(); openUrl(firstUrl).catch(() => toast.error(t("toast.openUrlFailed"))); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (urls.length === 1) {
+                openUrl(urls[0]).catch(() => toast.error(t("toast.openUrlFailed")));
+              } else {
+                setShowUrlPicker(true);
+              }
+            }}
             className="p-1 rounded text-muted-foreground hover:text-blue-400 transition-colors"
-            title={t("contextMenu.openInBrowser")}
+            title={urls.length > 1 ? `${t("contextMenu.openInBrowser")} (${urls.length})` : t("contextMenu.openInBrowser")}
           >
             <ExternalLink className="w-3 h-3" />
           </button>
@@ -473,6 +512,41 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
           text={entry.text_content}
           onClose={() => setShowTranslate(false)}
         />
+      )}
+
+      {/* URL picker dialog */}
+      {showUrlPicker && urls.length > 0 && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={(e) => { e.stopPropagation(); setShowUrlPicker(false); }}
+        >
+          <div
+            className="bg-background border border-border rounded-lg shadow-xl w-80 max-h-60 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-3 py-2 border-b border-border/50">
+              <span className="text-sm font-medium">{t("contextMenu.openInBrowser")} ({urls.length})</span>
+              <button onClick={() => setShowUrlPicker(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-48 p-1">
+              {urls.map((url, i) => (
+                <button
+                  key={i}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left text-sm hover:bg-accent/50 transition-colors"
+                  onClick={() => {
+                    openUrl(url).catch(() => toast.error(t("toast.openUrlFailed")));
+                    setShowUrlPicker(false);
+                  }}
+                >
+                  <ExternalLink className="w-3.5 h-3.5 shrink-0 text-blue-400" />
+                  <span className="truncate text-foreground">{truncateUrl(url, 50)}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

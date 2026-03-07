@@ -1,4 +1,5 @@
 use crate::commands::clipboard_cmd::AppDatabase;
+use crate::commands::paste_cmd::AppPasteTargetState;
 use tauri::Emitter;
 use tauri::Manager;
 use tauri::State;
@@ -134,6 +135,64 @@ fn position_near_caret(window: &tauri::WebviewWindow) {
     }
 }
 
+#[cfg(target_os = "windows")]
+fn get_foreground_window_handle() -> Option<isize> {
+    use windows_sys::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
+
+    unsafe {
+        let hwnd = GetForegroundWindow();
+        if hwnd.is_null() { None } else { Some(hwnd as isize) }
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn get_frontmost_bundle_id() -> Option<String> {
+    let output = std::process::Command::new("osascript")
+        .args([
+            "-e",
+            "tell application \"System Events\" to get bundle identifier of first process whose frontmost is true",
+        ])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let value = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if value.is_empty() { None } else { Some(value) }
+}
+
+#[cfg(target_os = "linux")]
+fn get_active_window_id() -> Option<String> {
+    let output = std::process::Command::new("xdotool")
+        .arg("getactivewindow")
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let value = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if value.is_empty() { None } else { Some(value) }
+}
+
+pub fn remember_current_foreground_window(app: &tauri::AppHandle) {
+    if let Some(state) = app.try_state::<AppPasteTargetState>() {
+        #[cfg(target_os = "windows")]
+        if let Some(hwnd) = get_foreground_window_handle() {
+            state.remember_windows_hwnd(hwnd);
+        }
+
+        #[cfg(target_os = "macos")]
+        if let Some(bundle_id) = get_frontmost_bundle_id() {
+            state.remember_macos_bundle_id(bundle_id);
+        }
+
+        #[cfg(target_os = "linux")]
+        if let Some(window_id) = get_active_window_id() {
+            state.remember_linux_window_id(window_id);
+        }
+    }
+}
+
 pub fn register_toggle_shortcut(app: &tauri::AppHandle, shortcut_str: &str) -> Result<(), String> {
     let normalized = shortcut_str.trim();
     if normalized.is_empty() {
@@ -155,6 +214,7 @@ pub fn register_toggle_shortcut(app: &tauri::AppHandle, shortcut_str: &str) -> R
                     if window.is_visible().unwrap_or(false) {
                         let _ = window.hide();
                     } else {
+                        remember_current_foreground_window(app);
                         position_near_caret(&window);
                         let _ = app.emit("main-window-opened", serde_json::json!({}));
                         let _ = window.show();

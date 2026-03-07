@@ -283,6 +283,10 @@ body {
 .rich-text-preview a {
   color: var(--primary);
   text-decoration: underline;
+  cursor: pointer;
+}
+.rich-text-preview a:hover {
+  opacity: 0.8;
 }
 .rich-text-preview ul,
 .rich-text-preview ol {
