@@ -5,7 +5,8 @@
   "windows": [
     "main",
     "image-viewer-*",
-    "template-manager-*"
+    "template-manager-*",
+    "settings-*"
   ],
   "permissions": [
     "core:default",

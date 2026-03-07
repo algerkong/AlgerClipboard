@@ -61,6 +61,7 @@ type SettingsTab = "general" | "sync" | "translate" | "data";
 
 interface Props {
   onBack: () => void;
+  initialTab?: string;
 }
 
 const languages = [
@@ -1664,10 +1665,12 @@ function DataTab() {
 }
 
 /* ─── Settings Page ─── */
-export function SettingsPage({ onBack }: Props) {
+export function SettingsPage({ onBack, initialTab }: Props) {
   const { t } = useTranslation();
   const platform = usePlatform();
-  const [activeTab, setActiveTab] = useState<SettingsTab>("general");
+  const [activeTab, setActiveTab] = useState<SettingsTab>(
+    (initialTab as SettingsTab) || "general"
+  );
 
   return (
     <div className="flex flex-col h-full">

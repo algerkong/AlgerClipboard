@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useTranslation } from "react-i18next";
@@ -8,6 +8,7 @@ import { ClipboardPanel } from "@/pages/ClipboardPanel";
 import { SettingsPage } from "@/pages/Settings";
 import { TemplateManager } from "@/pages/TemplateManager";
 import { ImageViewerPage } from "@/components/ImageViewer";
+import { openSettingsWindow } from "@/services/settingsWindowService";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { PlatformProvider } from "@/contexts/PlatformContext";
@@ -33,6 +34,8 @@ document.addEventListener("click", (e) => {
 const searchParams = new URLSearchParams(window.location.search);
 const isImageViewer = searchParams.get("window") === "image-viewer";
 const isTemplateManager = searchParams.get("window") === "template-manager";
+const isSettings = searchParams.get("window") === "settings";
+const initialSettingsTab = searchParams.get("tab") || undefined;
 
 function applyTheme(theme: "light" | "dark" | "system") {
   const root = document.documentElement;
@@ -64,6 +67,15 @@ function App() {
     return (
       <PlatformProvider>
         <TemplateManagerWindow />
+      </PlatformProvider>
+    );
+  }
+
+  // If this is a settings window, render standalone settings
+  if (isSettings) {
+    return (
+      <PlatformProvider>
+        <SettingsWindow />
       </PlatformProvider>
     );
   }
@@ -124,9 +136,57 @@ function TemplateManagerWindow() {
   );
 }
 
+function SettingsWindow() {
+  const { i18n } = useTranslation();
+  const theme = useSettingsStore((s) => s.theme);
+  const locale = useSettingsStore((s) => s.locale);
+  const loadSettings = useSettingsStore((s) => s.loadSettings);
+
+  useEffect(() => {
+    document.documentElement.classList.add("dark");
+  }, []);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  useEffect(() => {
+    if (locale && i18n.language !== locale) {
+      i18n.changeLanguage(locale);
+    }
+  }, [locale, i18n]);
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        getCurrentWebviewWindow().close();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const handleClose = useCallback(() => {
+    getCurrentWebviewWindow().close();
+  }, []);
+
+  return (
+    <div className="flex flex-col h-screen overflow-hidden">
+      <TitleBar onClose={handleClose} />
+      <div className="flex-1 min-h-0">
+        <SettingsPage onBack={handleClose} initialTab={initialSettingsTab} />
+      </div>
+      <Toaster position="top-center" richColors duration={2000} toastOptions={{ style: { fontSize: "0.857rem", padding: "0.571rem 0.857rem" } }} />
+    </div>
+  );
+}
+
 function MainApp() {
   const { i18n } = useTranslation();
-  const [showSettings, setShowSettings] = React.useState(false);
   const shouldResetOnNextFocusRef = useRef(false);
   const fetchHistory = useClipboardStore((s) => s.fetchHistory);
   const addEntry = useClipboardStore((s) => s.addEntry);
@@ -270,7 +330,6 @@ function MainApp() {
       }
 
       shouldResetOnNextFocusRef.current = false;
-      setShowSettings(false);
       useClipboardStore.getState().resetView();
     });
     return () => { unlisten.then((fn) => fn()); };
@@ -283,7 +342,6 @@ function MainApp() {
 
       if (document.hasFocus()) {
         shouldResetOnNextFocusRef.current = false;
-        setShowSettings(false);
         useClipboardStore.getState().resetView();
       }
     });
@@ -306,31 +364,22 @@ function MainApp() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
-        if (showSettings) {
-          setShowSettings(false);
-        } else {
-          hideMainWindow();
-        }
+        hideMainWindow();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [hideMainWindow, showSettings]);
+  }, [hideMainWindow]);
 
-  const handleOpenSettings = useCallback(() => setShowSettings(true), []);
-  const handleCloseSettings = useCallback(() => setShowSettings(false), []);
+  const handleOpenSettings = useCallback(() => {
+    openSettingsWindow();
+  }, []);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       <TitleBar onClose={hideMainWindow} />
       <div className="flex-1 min-h-0">
-        {showSettings ? (
-          <div className="h-full animate-slide-in">
-            <SettingsPage onBack={handleCloseSettings} />
-          </div>
-        ) : (
-          <ClipboardPanel onOpenSettings={handleOpenSettings} />
-        )}
+        <ClipboardPanel onOpenSettings={handleOpenSettings} />
       </div>
       <Toaster position="top-center" richColors duration={2000} toastOptions={{ style: { fontSize: "0.857rem", padding: "0.571rem 0.857rem" } }} />
     </div>
