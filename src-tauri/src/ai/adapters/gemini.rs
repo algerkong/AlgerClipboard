@@ -80,14 +80,18 @@ impl AiEngine for GeminiEngine {
             self.api_key
         );
 
-        let resp = self.client
+        let resp = self
+            .client
             .get(&url)
             .send()
             .await
             .map_err(|e| format!("HTTP request failed: {}", e))?;
 
         let status = resp.status();
-        let body = resp.text().await.map_err(|e| format!("Failed to read response: {}", e))?;
+        let body = resp
+            .text()
+            .await
+            .map_err(|e| format!("Failed to read response: {}", e))?;
 
         if !status.is_success() {
             return Err(format!("API error ({}): {}", status, body));
@@ -107,7 +111,9 @@ impl AiEngine for GeminiEngine {
         let parsed: ModelsResponse = serde_json::from_str(&body)
             .map_err(|e| format!("Failed to parse models response: {}", e))?;
 
-        let models = parsed.models.unwrap_or_default()
+        let models = parsed
+            .models
+            .unwrap_or_default()
             .into_iter()
             .filter_map(|m| {
                 // Gemini model names are like "models/gemini-2.0-flash" — strip prefix
@@ -116,7 +122,10 @@ impl AiEngine for GeminiEngine {
                 if id.contains("embed") || id.contains("aqa") || id.contains("retrieval") {
                     return None;
                 }
-                Some(ModelInfo { id: id.clone(), name: m.display_name.or(Some(id)) })
+                Some(ModelInfo {
+                    id: id.clone(),
+                    name: m.display_name.or(Some(id)),
+                })
             })
             .collect();
 
@@ -160,7 +169,8 @@ impl AiEngine for GeminiEngine {
 
         let request_body = GeminiRequest { contents };
 
-        let resp = self.client
+        let resp = self
+            .client
             .post(&url)
             .header("Content-Type", "application/json")
             .json(&request_body)
@@ -169,7 +179,10 @@ impl AiEngine for GeminiEngine {
             .map_err(|e| format!("HTTP request failed: {}", e))?;
 
         let status = resp.status();
-        let body = resp.text().await.map_err(|e| format!("Failed to read response: {}", e))?;
+        let body = resp
+            .text()
+            .await
+            .map_err(|e| format!("Failed to read response: {}", e))?;
 
         if !status.is_success() {
             if let Ok(err) = serde_json::from_str::<GeminiError>(&body) {

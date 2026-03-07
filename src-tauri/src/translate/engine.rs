@@ -46,5 +46,8 @@ pub async fn dispatch_translate(
         }
     }
 
-    Err(format!("All translation engines failed. Last error: {}", last_error))
+    Err(format!(
+        "All translation engines failed. Last error: {}",
+        last_error
+    ))
 }

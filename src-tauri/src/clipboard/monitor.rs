@@ -892,7 +892,9 @@ impl ClipboardMonitor {
 
                                             // Classify content category and detect programming language
                                             let category = classify_content(&text);
-                                            let language = if category == crate::ai::classifier::ContentCategory::Code {
+                                            let language = if category
+                                                == crate::ai::classifier::ContentCategory::Code
+                                            {
                                                 let lang = detect_language(&text);
                                                 if lang != crate::ai::language::ProgrammingLanguage::Unknown {
                                                     Some(lang.as_str().to_string())

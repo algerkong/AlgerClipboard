@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use md5::{Md5, Digest};
+use md5::{Digest, Md5};
 use serde::Deserialize;
 
 use super::engine::TranslateEngine;

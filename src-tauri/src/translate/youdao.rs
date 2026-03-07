@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 
 use super::engine::TranslateEngine;
 
@@ -51,7 +51,11 @@ impl TranslateEngine for YoudaoTranslator {
     async fn translate(&self, text: &str, from: &str, to: &str) -> Result<String, String> {
         // 有道API限制5000字符，超长时截断
         let char_count = text.chars().count();
-        log::debug!("Youdao translate: text length = {} chars, {} bytes", char_count, text.len());
+        log::debug!(
+            "Youdao translate: text length = {} chars, {} bytes",
+            char_count,
+            text.len()
+        );
         let text = if char_count > 5000 {
             let truncated_text: String = text.chars().take(5000).collect();
             log::warn!("Text too long ({} chars), truncating to 5000", char_count);
@@ -75,7 +79,11 @@ impl TranslateEngine for YoudaoTranslator {
 
         log::debug!(
             "Youdao sign params: appKey={}, input(truncated)={}, salt={}, curtime={}, sign={}",
-            self.app_key, truncated, salt, curtime, sign
+            self.app_key,
+            truncated,
+            salt,
+            curtime,
+            sign
         );
 
         let from_mapped = Self::map_lang(from);

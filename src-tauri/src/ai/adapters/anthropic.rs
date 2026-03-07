@@ -71,7 +71,8 @@ impl AiEngine for AnthropicEngine {
     async fn list_models(&self) -> Result<Vec<ModelInfo>, String> {
         let url = format!("{}/v1/models", self.base_url.trim_end_matches('/'));
 
-        let resp = self.client
+        let resp = self
+            .client
             .get(&url)
             .header("x-api-key", &self.api_key)
             .header("anthropic-version", "2023-06-01")
@@ -80,7 +81,10 @@ impl AiEngine for AnthropicEngine {
             .map_err(|e| format!("HTTP request failed: {}", e))?;
 
         let status = resp.status();
-        let body = resp.text().await.map_err(|e| format!("Failed to read response: {}", e))?;
+        let body = resp
+            .text()
+            .await
+            .map_err(|e| format!("Failed to read response: {}", e))?;
 
         if !status.is_success() {
             return Err(format!("API error ({}): {}", status, body));
@@ -99,9 +103,14 @@ impl AiEngine for AnthropicEngine {
         let parsed: ModelsResponse = serde_json::from_str(&body)
             .map_err(|e| format!("Failed to parse models response: {}", e))?;
 
-        let models = parsed.data.unwrap_or_default()
+        let models = parsed
+            .data
+            .unwrap_or_default()
             .into_iter()
-            .map(|m| ModelInfo { id: m.id.clone(), name: m.display_name.or(Some(m.id)) })
+            .map(|m| ModelInfo {
+                id: m.id.clone(),
+                name: m.display_name.or(Some(m.id)),
+            })
             .collect();
 
         Ok(models)
@@ -132,7 +141,8 @@ impl AiEngine for AnthropicEngine {
             messages: api_messages,
         };
 
-        let resp = self.client
+        let resp = self
+            .client
             .post(&url)
             .header("Content-Type", "application/json")
             .header("x-api-key", &self.api_key)
@@ -143,7 +153,10 @@ impl AiEngine for AnthropicEngine {
             .map_err(|e| format!("HTTP request failed: {}", e))?;
 
         let status = resp.status();
-        let body = resp.text().await.map_err(|e| format!("Failed to read response: {}", e))?;
+        let body = resp
+            .text()
+            .await
+            .map_err(|e| format!("Failed to read response: {}", e))?;
 
         if !status.is_success() {
             if let Ok(err) = serde_json::from_str::<AnthropicError>(&body) {

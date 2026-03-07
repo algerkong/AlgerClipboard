@@ -73,9 +73,15 @@ impl AiEngine for OpenAiCompatibleEngine {
             req = req.header("Authorization", format!("Bearer {}", self.api_key));
         }
 
-        let resp = req.send().await.map_err(|e| format!("HTTP request failed: {}", e))?;
+        let resp = req
+            .send()
+            .await
+            .map_err(|e| format!("HTTP request failed: {}", e))?;
         let status = resp.status();
-        let body = resp.text().await.map_err(|e| format!("Failed to read response: {}", e))?;
+        let body = resp
+            .text()
+            .await
+            .map_err(|e| format!("Failed to read response: {}", e))?;
 
         if !status.is_success() {
             return Err(format!("API error ({}): {}", status, body));
@@ -93,9 +99,14 @@ impl AiEngine for OpenAiCompatibleEngine {
         let parsed: ModelsResponse = serde_json::from_str(&body)
             .map_err(|e| format!("Failed to parse models response: {}", e))?;
 
-        let models = parsed.data.unwrap_or_default()
+        let models = parsed
+            .data
+            .unwrap_or_default()
             .into_iter()
-            .map(|m| ModelInfo { id: m.id.clone(), name: Some(m.id) })
+            .map(|m| ModelInfo {
+                id: m.id.clone(),
+                name: Some(m.id),
+            })
             .collect();
 
         Ok(models)
@@ -106,7 +117,9 @@ impl AiEngine for OpenAiCompatibleEngine {
 
         let request_body = OpenAiRequest { model, messages };
 
-        let mut req = self.client.post(&url)
+        let mut req = self
+            .client
+            .post(&url)
             .header("Content-Type", "application/json");
 
         if !self.api_key.is_empty() {
@@ -120,7 +133,10 @@ impl AiEngine for OpenAiCompatibleEngine {
             .map_err(|e| format!("HTTP request failed: {}", e))?;
 
         let status = resp.status();
-        let body = resp.text().await.map_err(|e| format!("Failed to read response: {}", e))?;
+        let body = resp
+            .text()
+            .await
+            .map_err(|e| format!("Failed to read response: {}", e))?;
 
         if !status.is_success() {
             if let Ok(err) = serde_json::from_str::<OpenAiError>(&body) {
