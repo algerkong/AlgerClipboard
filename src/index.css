@@ -312,6 +312,103 @@ body {
   padding: 0.2em 0.4em;
 }
 
+/* ─── Context Menu (modern Fluent-style) ─── */
+@keyframes contextMenuIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.context-menu {
+  min-width: 180px;
+  background: var(--popover);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px 0;
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.25),
+    0 2px 8px rgba(0, 0, 0, 0.12);
+  animation: contextMenuIn 0.12s ease-out;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+
+/* Subtle scrollbar */
+.context-menu::-webkit-scrollbar {
+  width: 4px;
+}
+.context-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+.context-menu::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.context-menu-divider {
+  height: 1px;
+  background: var(--border);
+  opacity: 0.5;
+  margin: 4px 8px;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: calc(100% - 8px);
+  margin: 0 4px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 13px;
+  line-height: 1;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s ease;
+  white-space: nowrap;
+}
+
+.context-menu-item:hover,
+.context-menu-item.active {
+  background: var(--accent);
+}
+
+.context-menu-item.danger {
+  color: #ef4444;
+}
+.context-menu-item.danger:hover,
+.context-menu-item.danger.active {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.context-menu-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.context-menu-item:hover .context-menu-icon,
+.context-menu-item.active .context-menu-icon {
+  opacity: 1;
+}
+
+.context-menu-label {
+  flex: 1;
+}
+
 /* OCR text layer — transparent text with visible selection highlight */
 .ocr-selectable-text::selection {
   background: oklch(0.6 0.18 250 / 0.4);
