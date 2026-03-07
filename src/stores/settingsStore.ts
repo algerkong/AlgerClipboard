@@ -113,6 +113,7 @@ interface SettingsState {
   toggleShortcut: string;
   autoCheckUpdate: boolean;
   autoDownloadUpdate: boolean;
+  systemNotificationsEnabled: boolean;
   buttonPosition: ButtonPosition;
   defaultBrowser: string;
   isPinned: boolean; // non-persisted, controls auto-hide on blur
@@ -129,6 +130,7 @@ interface SettingsState {
   setToggleShortcut: (shortcut: string) => Promise<void>;
   setAutoCheckUpdate: (enabled: boolean) => Promise<void>;
   setAutoDownloadUpdate: (enabled: boolean) => Promise<void>;
+  setSystemNotificationsEnabled: (enabled: boolean) => Promise<void>;
   setButtonPosition: (position: ButtonPosition) => Promise<void>;
   setDefaultBrowser: (browser: string) => Promise<void>;
   setIsPinned: (pinned: boolean) => void;
@@ -146,6 +148,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   toggleShortcut: "CmdOrCtrl+Shift+V",
   autoCheckUpdate: true,
   autoDownloadUpdate: false,
+  systemNotificationsEnabled: true,
   buttonPosition: "right",
   defaultBrowser: "system",
   isPinned: true,
@@ -165,6 +168,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         toggleShortcut,
         autoCheckUpdate,
         autoDownloadUpdate,
+        systemNotificationsEnabled,
         buttonPosition,
         defaultBrowser,
       ] = await Promise.all([
@@ -180,6 +184,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         getSetting("toggle_shortcut"),
         getSetting("auto_check_update"),
         getSetting("auto_download_update"),
+        getSetting("system_notifications_enabled"),
         getSetting("button_position"),
         getSetting("default_browser"),
       ]);
@@ -211,6 +216,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         toggleShortcut: toggleShortcut?.trim() || "CmdOrCtrl+Shift+V",
         autoCheckUpdate: autoCheckUpdate !== "false",
         autoDownloadUpdate: autoDownloadUpdate === "true",
+        systemNotificationsEnabled: systemNotificationsEnabled !== "false",
         buttonPosition: (buttonPosition as ButtonPosition) || "right",
         defaultBrowser: defaultBrowser || "system",
       });
@@ -322,6 +328,15 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       await updateSetting("auto_download_update", String(enabled));
     } catch (err) {
       console.error("Failed to save auto_download_update:", err);
+    }
+  },
+
+  setSystemNotificationsEnabled: async (enabled: boolean) => {
+    set({ systemNotificationsEnabled: enabled });
+    try {
+      await updateSetting("system_notifications_enabled", String(enabled));
+    } catch (err) {
+      console.error("Failed to save system_notifications_enabled:", err);
     }
   },
 

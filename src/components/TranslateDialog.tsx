@@ -13,7 +13,7 @@ import { useCapabilityStore } from "@/stores/capabilityStore";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { openSettingsWindow } from "@/services/settingsWindowService";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 const LANGUAGES = [
   { value: "auto", labelKey: "translate.auto" },

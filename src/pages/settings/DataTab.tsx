@@ -26,7 +26,7 @@ import { open as openFolderDialog } from "@tauri-apps/plugin-dialog";
 import type { ClipboardStats } from "@/types";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { formatBytes } from "./shared";
 
 /* ─── Stats Mini Chart Components ─── */

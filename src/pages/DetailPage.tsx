@@ -17,7 +17,7 @@ import {
 import DOMPurify from "dompurify";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { getEntry, pasteEntry, updateEntryText } from "@/services/clipboardService";
 import { aiSummarize, updateAiSummary } from "@/services/aiService";

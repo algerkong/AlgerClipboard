@@ -16,7 +16,7 @@ import {
 } from "@/services/updateService";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { usePlatform } from "@/contexts/PlatformContext";
 import {
   Toggle,
@@ -40,6 +40,7 @@ export function GeneralTab() {
   const toggleShortcut = useSettingsStore((s) => s.toggleShortcut);
   const autoCheckUpdate = useSettingsStore((s) => s.autoCheckUpdate);
   const autoDownloadUpdate = useSettingsStore((s) => s.autoDownloadUpdate);
+  const systemNotificationsEnabled = useSettingsStore((s) => s.systemNotificationsEnabled);
   const setTheme = useSettingsStore((s) => s.setTheme);
   const setMaxHistory = useSettingsStore((s) => s.setMaxHistory);
   const setExpireDays = useSettingsStore((s) => s.setExpireDays);
@@ -51,6 +52,7 @@ export function GeneralTab() {
   const setToggleShortcut = useSettingsStore((s) => s.setToggleShortcut);
   const setAutoCheckUpdate = useSettingsStore((s) => s.setAutoCheckUpdate);
   const setAutoDownloadUpdate = useSettingsStore((s) => s.setAutoDownloadUpdate);
+  const setSystemNotificationsEnabled = useSettingsStore((s) => s.setSystemNotificationsEnabled);
   const buttonPosition = useSettingsStore((s) => s.buttonPosition);
   const setButtonPosition = useSettingsStore((s) => s.setButtonPosition);
   const defaultBrowser = useSettingsStore((s) => s.defaultBrowser);
@@ -328,6 +330,24 @@ export function GeneralTab() {
             </p>
           </div>
           <Toggle value={autoStart} onChange={setAutoStart} />
+        </div>
+      </section>
+
+      {/* System notifications */}
+      <section>
+        <div className="flex items-center justify-between">
+          <div>
+            <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
+              {t("settings.systemNotifications")}
+            </label>
+            <p className="mt-0.5 text-xs2 text-muted-foreground/70">
+              {t("settings.systemNotificationsDesc")}
+            </p>
+          </div>
+          <Toggle
+            value={systemNotificationsEnabled}
+            onChange={setSystemNotificationsEnabled}
+          />
         </div>
       </section>
 

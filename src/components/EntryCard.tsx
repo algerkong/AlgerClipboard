@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next";
 import { openImageViewer } from "@/services/imageViewerService";
 import { openDetailWindow } from "@/services/detailWindowService";
 import { ContextMenu, type ContextMenuItem } from "@/components/ContextMenu";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 // In-memory cache: relative_path -> data URL
 const _thumbCache = new Map<string, string>();

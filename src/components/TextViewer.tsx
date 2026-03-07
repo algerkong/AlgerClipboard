@@ -4,7 +4,7 @@ import DOMPurify from "dompurify";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { openUrl } from "@/services/settingsService";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 interface Props {
   text: string;

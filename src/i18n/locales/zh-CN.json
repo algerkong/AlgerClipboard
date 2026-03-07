@@ -138,6 +138,8 @@
     "autoCheckUpdateDesc": "启动时自动检查新版本",
     "autoDownloadUpdate": "自动下载更新",
     "autoDownloadUpdateDesc": "自动下载并安装更新",
+    "systemNotifications": "系统通知",
+    "systemNotificationsDesc": "复制、粘贴等操作改为使用系统通知提示",
     "checkUpdate": "检查更新",
     "checkingUpdate": "检查中...",
     "buttonPosition": "窗口按钮位置",
@@ -188,6 +190,11 @@
       "translatePromptVars": "可用变量: {from_lang} = 源语言, {to_lang} = 目标语言",
       "resetPrompt": "重置"
     }
+  },
+  "notifications": {
+    "successTitle": "AlgerClipboard",
+    "errorTitle": "AlgerClipboard",
+    "infoTitle": "AlgerClipboard"
   },
   "update": {
     "available": "发现新版本 {{version}}",

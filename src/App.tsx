@@ -2,7 +2,6 @@ import { useEffect, useCallback, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useTranslation } from "react-i18next";
-import { Toaster } from "sonner";
 import { TitleBar } from "@/components/TitleBar";
 import { ClipboardPanel } from "@/pages/ClipboardPanel";
 import { SettingsPage } from "@/pages/settings";
@@ -11,6 +10,7 @@ import { ImageViewerPage } from "@/components/ImageViewer";
 import { DetailPage } from "@/pages/DetailPage";
 import { TagManagerPage } from "@/pages/TagManager";
 import { openSettingsWindow } from "@/services/settingsWindowService";
+import { toast } from "@/lib/toast";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { useCapabilityStore } from "@/stores/capabilityStore";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -176,7 +176,6 @@ function TemplateManagerWindow() {
       <div className="flex-1 min-h-0">
         <TemplateManager onBack={handleClose} />
       </div>
-      <Toaster position="top-center" richColors duration={2000} toastOptions={{ style: { fontSize: "0.857rem", padding: "0.571rem 0.857rem" } }} />
     </div>
   );
 }
@@ -229,7 +228,6 @@ function SettingsWindow() {
       <div className="flex-1 min-h-0">
         <SettingsPage onBack={handleClose} initialTab={initialSettingsTab} />
       </div>
-      <Toaster position="top-center" richColors duration={2000} toastOptions={{ style: { fontSize: "0.857rem", padding: "0.571rem 0.857rem" } }} />
     </div>
   );
 }
@@ -272,7 +270,6 @@ function DetailWindow() {
       <div className="flex-1 min-h-0">
         <DetailPage />
       </div>
-      <Toaster position="top-center" richColors duration={2000} toastOptions={{ style: { fontSize: "0.857rem", padding: "0.571rem 0.857rem" } }} />
     </div>
   );
 }
@@ -325,13 +322,12 @@ function TagManagerWindow() {
       <div className="flex-1 min-h-0">
         <TagManagerPage />
       </div>
-      <Toaster position="top-center" richColors duration={2000} toastOptions={{ style: { fontSize: "0.857rem", padding: "0.571rem 0.857rem" } }} />
     </div>
   );
 }
 
 function MainApp() {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const shouldResetOnNextFocusRef = useRef(false);
   const fetchHistory = useClipboardStore((s) => s.fetchHistory);
   const addEntry = useClipboardStore((s) => s.addEntry);
@@ -430,6 +426,7 @@ function MainApp() {
   useEffect(() => {
     const unlisten = listen<ClipboardEntry>("clipboard-changed", (event) => {
       addEntry(event.payload);
+      toast.success(t("toast.copied"));
       // Trigger realtime sync after a short debounce
       setTimeout(() => realtimeSyncRef.current(), 500);
     });
@@ -437,7 +434,7 @@ function MainApp() {
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, [addEntry]);
+  }, [addEntry, t]);
 
   // Interval-based auto sync
   useEffect(() => {
@@ -534,7 +531,6 @@ function MainApp() {
       <div className="flex-1 min-h-0">
         <ClipboardPanel onOpenSettings={handleOpenSettings} />
       </div>
-      <Toaster position="top-center" richColors duration={2000} toastOptions={{ style: { fontSize: "0.857rem", padding: "0.571rem 0.857rem" } }} />
     </div>
   );
 }

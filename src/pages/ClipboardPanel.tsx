@@ -8,7 +8,7 @@ import { TemplateQuickPicker } from "@/components/TemplateQuickPicker";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { pasteEntry } from "@/services/clipboardService";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { usePlatform } from "@/contexts/PlatformContext";
 
 interface Props {

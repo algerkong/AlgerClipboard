@@ -3,7 +3,7 @@ import { FileText, Copy, Settings2 } from "lucide-react";
 import { useTemplateStore } from "@/stores/templateStore";
 import { openTemplateManager } from "@/services/templateWindowService";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 interface Props {
   onClose: () => void;

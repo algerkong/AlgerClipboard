@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, Pencil, Plus, Search, Tag, Trash2, X } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useTranslation } from "react-i18next";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { cn } from "@/lib/utils";

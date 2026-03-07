@@ -14,7 +14,7 @@ import {
 import { useSyncStore } from "@/stores/syncStore";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Toggle } from "./shared";
 
 /* ─── Sync Tab ─── */

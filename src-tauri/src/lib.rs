@@ -91,6 +91,7 @@ pub fn run() {
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_os::init())
@@ -360,6 +361,7 @@ pub fn run() {
             commands::clipboard_cmd::cleanup_cache_by_size,
             commands::clipboard_cmd::open_in_explorer,
             commands::clipboard_cmd::update_entry_text,
+            commands::notification_cmd::show_system_notification,
             commands::settings_cmd::get_settings,
             commands::settings_cmd::update_settings,
             commands::settings_cmd::update_toggle_shortcut,

@@ -16,8 +16,7 @@ import {
   extractTextFromImage,
 } from "@/services/clipboardService";
 import { translateText } from "@/services/translateService";
-import { toast } from "sonner";
-import { Toaster } from "sonner";
+import { toast } from "@/lib/toast";
 import type { OcrResult, OcrTextLine } from "@/types";
 
 const VIEWER_SIZE_KEY = "image-viewer-size";
@@ -285,8 +284,6 @@ export function ImageViewerPage() {
           <p className="text-xs2 text-red-400">{ocrError}</p>
         </div>
       )}
-
-      <Toaster position="top-center" richColors duration={2000} toastOptions={{ style: { fontSize: "0.857rem", padding: "0.571rem 0.857rem" } }} />
     </div>
   );
 }
