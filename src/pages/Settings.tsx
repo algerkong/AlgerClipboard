@@ -243,6 +243,8 @@ function GeneralTab() {
   const setAutoDownloadUpdate = useSettingsStore((s) => s.setAutoDownloadUpdate);
   const buttonPosition = useSettingsStore((s) => s.buttonPosition);
   const setButtonPosition = useSettingsStore((s) => s.setButtonPosition);
+  const defaultBrowser = useSettingsStore((s) => s.defaultBrowser);
+  const setDefaultBrowser = useSettingsStore((s) => s.setDefaultBrowser);
   const platform = usePlatform();
   const [isRecordingShortcut, setIsRecordingShortcut] = useState(false);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
@@ -517,6 +519,30 @@ function GeneralTab() {
           </div>
           <Toggle value={autoStart} onChange={setAutoStart} />
         </div>
+      </section>
+
+      {/* Default browser */}
+      <section>
+        <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
+          {t("settings.defaultBrowser")}
+        </label>
+        <select
+          value={defaultBrowser}
+          onChange={(e) => setDefaultBrowser(e.target.value)}
+          className="mt-2 w-full h-7 px-2 text-xs bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+        >
+          <option value="system">{t("settings.browserSystem")}</option>
+          <option value="chrome">{t("settings.browserChrome")}</option>
+          <option value="firefox">{t("settings.browserFirefox")}</option>
+          <option value="edge">{t("settings.browserEdge")}</option>
+          <option value="brave">{t("settings.browserBrave")}</option>
+          {platform === "macos" && (
+            <option value="safari">{t("settings.browserSafari")}</option>
+          )}
+        </select>
+        <p className="mt-1 text-xs2 text-muted-foreground/70">
+          {t("settings.defaultBrowserDesc")}
+        </p>
       </section>
 
       {/* Toggle shortcut */}

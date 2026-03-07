@@ -107,7 +107,15 @@
     "buttonPosition": "Window Button Position",
     "buttonPositionDesc": "Place window control buttons on the left or right side",
     "buttonPositionLeft": "Left",
-    "buttonPositionRight": "Right"
+    "buttonPositionRight": "Right",
+    "defaultBrowser": "Default Browser",
+    "defaultBrowserDesc": "Browser used to open URLs from clipboard entries",
+    "browserSystem": "System Default",
+    "browserChrome": "Google Chrome",
+    "browserFirefox": "Mozilla Firefox",
+    "browserEdge": "Microsoft Edge",
+    "browserBrave": "Brave",
+    "browserSafari": "Safari"
   },
   "update": {
     "available": "New version {{version}} available",
@@ -255,6 +263,7 @@
     "translate": "Translate",
     "addTag": "Add Tag",
     "tagPlaceholder": "Enter tag name...",
+    "openInBrowser": "Open in Browser",
     "delete": "Delete"
   },
   "toast": {
@@ -268,6 +277,7 @@
     "cleared": "History cleared",
     "clearFailed": "Clear failed",
     "syncSuccess": "Sync complete",
-    "syncFailed": "Sync failed"
+    "syncFailed": "Sync failed",
+    "openUrlFailed": "Failed to open URL"
   }
 }

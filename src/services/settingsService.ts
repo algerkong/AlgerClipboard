@@ -22,3 +22,7 @@ export async function getAutoStart(): Promise<boolean> {
 export async function updateToggleShortcut(shortcut: string): Promise<void> {
   return invoke("update_toggle_shortcut", { shortcut });
 }
+
+export async function openUrl(url: string): Promise<void> {
+  return invoke("open_url", { url });
+}

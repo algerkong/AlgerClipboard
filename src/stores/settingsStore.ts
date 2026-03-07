@@ -63,6 +63,7 @@ interface SettingsState {
   autoCheckUpdate: boolean;
   autoDownloadUpdate: boolean;
   buttonPosition: ButtonPosition;
+  defaultBrowser: string;
   isPinned: boolean; // non-persisted, controls auto-hide on blur
 
   loadSettings: () => Promise<void>;
@@ -78,6 +79,7 @@ interface SettingsState {
   setAutoCheckUpdate: (enabled: boolean) => Promise<void>;
   setAutoDownloadUpdate: (enabled: boolean) => Promise<void>;
   setButtonPosition: (position: ButtonPosition) => Promise<void>;
+  setDefaultBrowser: (browser: string) => Promise<void>;
   setIsPinned: (pinned: boolean) => void;
 }
 
@@ -94,6 +96,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   autoCheckUpdate: true,
   autoDownloadUpdate: false,
   buttonPosition: "right",
+  defaultBrowser: "system",
   isPinned: true,
 
   loadSettings: async () => {
@@ -112,6 +115,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         autoCheckUpdate,
         autoDownloadUpdate,
         buttonPosition,
+        defaultBrowser,
       ] = await Promise.all([
         getSetting("theme"),
         getSetting("max_history"),
@@ -126,6 +130,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         getSetting("auto_check_update"),
         getSetting("auto_download_update"),
         getSetting("button_position"),
+        getSetting("default_browser"),
       ]);
 
       // Migrate old font_size to ui_scale
@@ -156,6 +161,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         autoCheckUpdate: autoCheckUpdate !== "false",
         autoDownloadUpdate: autoDownloadUpdate === "true",
         buttonPosition: (buttonPosition as ButtonPosition) || "right",
+        defaultBrowser: defaultBrowser || "system",
       });
     } catch (err) {
       console.error("Failed to load settings:", err);
@@ -274,6 +280,15 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       await updateSetting("button_position", position);
     } catch (err) {
       console.error("Failed to save button_position:", err);
+    }
+  },
+
+  setDefaultBrowser: async (browser: string) => {
+    set({ defaultBrowser: browser });
+    try {
+      await updateSetting("default_browser", browser);
+    } catch (err) {
+      console.error("Failed to save default_browser:", err);
     }
   },
 

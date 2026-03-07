@@ -166,6 +166,100 @@ pub fn register_toggle_shortcut(app: &tauri::AppHandle, shortcut_str: &str) -> R
         .map_err(|e| format!("Failed to register shortcut '{}': {:?}", normalized, e))
 }
 
+// === Open URL in browser ===
+
+fn open_url_default(url: &str) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd")
+            .args(["/c", "start", "", url])
+            .spawn()
+            .map_err(|e| format!("Failed to open URL: {}", e))?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(url)
+            .spawn()
+            .map_err(|e| format!("Failed to open URL: {}", e))?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(url)
+            .spawn()
+            .map_err(|e| format!("Failed to open URL: {}", e))?;
+    }
+    Ok(())
+}
+
+fn open_url_with_browser(url: &str, browser: &str) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        let exe = match browser {
+            "chrome" => "chrome",
+            "firefox" => "firefox",
+            "edge" => "msedge",
+            "brave" => "brave",
+            other => other,
+        };
+        std::process::Command::new(exe)
+            .arg(url)
+            .spawn()
+            .map_err(|e| format!("Failed to open with {}: {}", browser, e))?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let app = match browser {
+            "chrome" => "Google Chrome",
+            "firefox" => "Firefox",
+            "edge" => "Microsoft Edge",
+            "brave" => "Brave Browser",
+            "safari" => "Safari",
+            other => other,
+        };
+        std::process::Command::new("open")
+            .args(["-a", app, url])
+            .spawn()
+            .map_err(|e| format!("Failed to open with {}: {}", browser, e))?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let cmd = match browser {
+            "chrome" => "google-chrome",
+            "firefox" => "firefox",
+            "edge" => "microsoft-edge",
+            "brave" => "brave-browser",
+            other => other,
+        };
+        std::process::Command::new(cmd)
+            .arg(url)
+            .spawn()
+            .map_err(|e| format!("Failed to open with {}: {}", browser, e))?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn open_url(db: State<'_, AppDatabase>, url: String) -> Result<(), String> {
+    // Basic URL validation to prevent command injection
+    if !url.starts_with("http://") && !url.starts_with("https://") && !url.starts_with("ftp://") {
+        return Err("Invalid URL scheme".to_string());
+    }
+
+    let browser = db.0.get_setting("default_browser")
+        .ok()
+        .flatten()
+        .unwrap_or_default();
+
+    let browser = browser.trim();
+    if browser.is_empty() || browser == "system" {
+        open_url_default(&url)
+    } else {
+        open_url_with_browser(&url, browser)
+    }
+}
+
 #[tauri::command]
 pub fn get_settings(db: State<'_, AppDatabase>, key: String) -> Result<Option<String>, String> {
     db.0.get_setting(&key)

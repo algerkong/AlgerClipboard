@@ -198,6 +198,7 @@ pub fn run() {
             commands::settings_cmd::get_settings,
             commands::settings_cmd::update_settings,
             commands::settings_cmd::update_toggle_shortcut,
+            commands::settings_cmd::open_url,
             commands::settings_cmd::set_auto_start,
             commands::settings_cmd::get_auto_start,
             commands::paste_cmd::paste_entry,

@@ -1,8 +1,9 @@
 import { memo, useCallback, useState, useEffect, useMemo, useRef } from "react";
-import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages, Pin, Eye, Copy, ClipboardPaste, Maximize2, Cloud, Upload, CloudAlert, ScanText, Code, Tag, X } from "lucide-react";
+import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages, Pin, Eye, Copy, ClipboardPaste, Maximize2, Cloud, Upload, CloudAlert, ScanText, Code, Tag, X, ExternalLink } from "lucide-react";
 import DOMPurify from "dompurify";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { pasteEntry, getThumbnailBase64 } from "@/services/clipboardService";
+import { openUrl } from "@/services/settingsService";
 import type { ClipboardEntry } from "@/types";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -109,6 +110,14 @@ function isNonChinese(text: string): boolean {
   return chineseChars / cleaned.length < 0.3;
 }
 
+const URL_REGEX = /https?:\/\/[^\s<>"{}|\\^`[\]]+/i;
+
+function extractFirstUrl(text: string | null): string | null {
+  if (!text) return null;
+  const match = text.match(URL_REGEX);
+  return match ? match[0] : null;
+}
+
 export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEntry }) {
   const { t } = useTranslation();
   const selectedId = useClipboardStore((s) => s.selectedId);
@@ -130,6 +139,8 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
   const isRichText = entry.content_type === "RichText" && !!entry.html_content;
   const isImage = entry.content_type === "Image";
   const isLongText = hasText && (entry.text_content?.length ?? 0) > 120;
+
+  const firstUrl = useMemo(() => extractFirstUrl(entry.text_content), [entry.text_content]);
 
   const sanitizedHtml = useMemo(() => {
     if (!isRichText || !entry.html_content) return "";
@@ -188,6 +199,15 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
           toast.success(t("toast.copied"));
         },
       });
+      if (firstUrl) {
+        items.push({
+          label: t("contextMenu.openInBrowser"),
+          icon: <ExternalLink className="w-3.5 h-3.5" />,
+          onClick: () => {
+            openUrl(firstUrl).catch(() => toast.error(t("toast.openUrlFailed")));
+          },
+        });
+      }
     }
 
     items.push({
@@ -372,6 +392,15 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
             title={t("imageViewer.extractText")}
           >
             <ScanText className="w-3 h-3" />
+          </button>
+        )}
+        {firstUrl && (
+          <button
+            onClick={(e) => { e.stopPropagation(); openUrl(firstUrl).catch(() => toast.error(t("toast.openUrlFailed"))); }}
+            className="p-1 rounded text-muted-foreground hover:text-blue-400 transition-colors"
+            title={t("contextMenu.openInBrowser")}
+          >
+            <ExternalLink className="w-3 h-3" />
           </button>
         )}
         {hasText && isLongText && (

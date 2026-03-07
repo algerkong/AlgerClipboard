@@ -107,7 +107,15 @@
     "buttonPosition": "窗口按钮位置",
     "buttonPositionDesc": "窗口控制按钮放在左侧或右侧",
     "buttonPositionLeft": "左侧",
-    "buttonPositionRight": "右侧"
+    "buttonPositionRight": "右侧",
+    "defaultBrowser": "默认浏览器",
+    "defaultBrowserDesc": "用于打开剪贴板中链接的浏览器",
+    "browserSystem": "系统默认",
+    "browserChrome": "Google Chrome",
+    "browserFirefox": "Mozilla Firefox",
+    "browserEdge": "Microsoft Edge",
+    "browserBrave": "Brave",
+    "browserSafari": "Safari"
   },
   "update": {
     "available": "发现新版本 {{version}}",
@@ -255,6 +263,7 @@
     "translate": "翻译",
     "addTag": "添加标签",
     "tagPlaceholder": "输入标签名...",
+    "openInBrowser": "在浏览器中打开",
     "delete": "删除"
   },
   "toast": {
@@ -268,6 +277,7 @@
     "cleared": "历史已清空",
     "clearFailed": "清空失败",
     "syncSuccess": "同步完成",
-    "syncFailed": "同步失败"
+    "syncFailed": "同步失败",
+    "openUrlFailed": "打开链接失败"
   }
 }
