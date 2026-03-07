@@ -245,7 +245,11 @@
     "saved": "已保存",
     "testConnection": "测试",
     "noEngines": "未配置翻译引擎",
-    "configureHint": "请在设置中配置 API 密钥"
+    "configureHint": "请在设置中配置 API 密钥",
+    "defaultAi": "未配置翻译引擎，当前默认使用 AI 翻译",
+    "configureTranslateOrAi": "请先配置翻译能力",
+    "configureTranslateOrAiHint": "当前未配置可用的翻译引擎，也没有可用的 AI。你可以前往设置配置翻译引擎或 AI。",
+    "openSettings": "去配置"
   },
   "template": {
     "title": "模板",
@@ -302,7 +306,10 @@
     "noSummary": "暂无摘要",
     "generateSummary": "生成摘要",
     "regenerateSummary": "重新生成",
-    "generating": "正在生成..."
+    "generating": "正在生成...",
+    "summaryConfigRequired": "请先配置 AI 功能",
+    "summaryConfigHint": "当前没有可用的 AI 配置，无法生成摘要。前往设置后完成配置即可使用。",
+    "openAiSettings": "去配置 AI"
   },
   "imageViewer": {
     "title": "图片预览",
@@ -348,6 +355,8 @@
     "syncFailed": "同步失败",
     "openUrlFailed": "打开链接失败",
     "summarized": "摘要生成成功",
-    "summarizeFailed": "摘要生成失败"
+    "summarizeFailed": "摘要生成失败",
+    "translateConfigRequired": "请先配置翻译引擎或 AI",
+    "summaryConfigRequired": "请先配置 AI 功能"
   }
 }

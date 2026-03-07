@@ -3,6 +3,7 @@ import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages, Pin, Eye, Cop
 
 import DOMPurify from "dompurify";
 import { useClipboardStore } from "@/stores/clipboardStore";
+import { useCapabilityStore } from "@/stores/capabilityStore";
 import { pasteEntry, getThumbnailBase64 } from "@/services/clipboardService";
 import { openUrl } from "@/services/settingsService";
 import type { ClipboardEntry } from "@/types";
@@ -142,6 +143,8 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
   const addTag = useClipboardStore((s) => s.addTag);
   const removeTag = useClipboardStore((s) => s.removeTag);
   const allTags = useClipboardStore((s) => s.allTags);
+  const canTranslate = useCapabilityStore((s) => s.can_translate);
+  const hasAi = useCapabilityStore((s) => s.has_ai);
   const isSelected = selectedId === entry.id;
   const [showUrlPicker, setShowUrlPicker] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
@@ -162,7 +165,9 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
       ALLOWED_ATTR: ["style", "href"],
     });
   }, [isRichText, entry.html_content]);
-  const showTranslateHint = hasText && entry.text_content ? isNonChinese(entry.text_content) : false;
+  const showTranslateHint = canTranslate && hasText && entry.text_content
+    ? isNonChinese(entry.text_content)
+    : false;
   const imageSrc = useImageSrc(entry);
 
   const handleClick = useCallback(() => selectEntry(entry.id), [entry.id, selectEntry]);
@@ -250,7 +255,7 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
       onClick: () => toggleFavorite(entry.id),
     });
 
-    if (hasText && entry.text_content) {
+    if (canTranslate && hasText && entry.text_content) {
       items.push({
         label: t("contextMenu.translate"),
         icon: <Languages className="w-3.5 h-3.5" />,
@@ -258,7 +263,7 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
       });
     }
 
-    if (hasText && entry.content_type !== "FilePaths") {
+    if (hasAi && hasText && entry.content_type !== "FilePaths") {
       items.push({
         label: entry.ai_summary ? t("contextMenu.resummarize") : t("contextMenu.aiSummarize"),
         icon: <Brain className="w-3.5 h-3.5" />,

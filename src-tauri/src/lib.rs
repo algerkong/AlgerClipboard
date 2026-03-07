@@ -4,8 +4,8 @@ mod commands;
 mod ocr;
 mod paste;
 mod storage;
-mod translate;
 mod sync;
+mod translate;
 
 use clipboard::monitor::ClipboardMonitor;
 use commands::clipboard_cmd::AppDatabase;
@@ -13,14 +13,14 @@ use commands::paste_cmd::{AppBlobStore, AppPasteTargetState, PasteTargetSnapshot
 use commands::settings_cmd::{
     register_toggle_shortcut, remember_current_foreground_window, DEFAULT_TOGGLE_SHORTCUT,
 };
+use std::sync::Arc;
 use storage::blob::BlobStore;
 use storage::database::Database;
-use std::sync::Arc;
+use tauri::menu::{Menu, MenuItem};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder};
 use tauri::Emitter;
 use tauri::Manager;
 use tauri::WebviewUrl;
-use tauri::tray::{TrayIconBuilder, MouseButton, MouseButtonState};
-use tauri::menu::{Menu, MenuItem};
 use tauri_plugin_autostart::MacosLauncher;
 
 #[cfg(target_os = "macos")]
@@ -33,7 +33,9 @@ fn get_device_id() -> String {
     format!("{}-{}", hostname, &uuid::Uuid::new_v4().to_string()[..8])
 }
 
-fn create_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<tauri::WebviewWindow<R>> {
+fn create_main_window<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+) -> tauri::Result<tauri::WebviewWindow<R>> {
     let mut builder = tauri::WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
         .title("AlgerClipboard")
         .inner_size(420.0, 480.0)
@@ -74,7 +76,10 @@ pub fn run() {
                 let _ = win.set_focus();
             }
         }))
-        .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec!["--minimized"])))
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            Some(vec!["--minimized"]),
+        ))
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
@@ -84,7 +89,10 @@ pub fn run() {
         .setup(|app| {
             let main_window = create_main_window(&app.handle())?;
 
-            let app_data_dir = app.path().app_data_dir().expect("Failed to get app data dir");
+            let app_data_dir = app
+                .path()
+                .app_data_dir()
+                .expect("Failed to get app data dir");
             std::fs::create_dir_all(&app_data_dir).expect("Failed to create app data dir");
 
             let db_path = app_data_dir.join("clipboard.db");
@@ -104,7 +112,8 @@ pub fn run() {
                 }
                 _ => app_data_dir.clone(),
             };
-            let blob_store = Arc::new(BlobStore::new(&blob_base).expect("Failed to init blob store"));
+            let blob_store =
+                Arc::new(BlobStore::new(&blob_base).expect("Failed to init blob store"));
             app.manage(AppBlobStore(blob_store.clone()));
             app.manage(AppPasteTargetState(std::sync::Mutex::new(
                 PasteTargetSnapshot::default(),
@@ -135,9 +144,21 @@ pub fn run() {
 
                     tauri::async_runtime::spawn(async move {
                         // Check if auto-summary is enabled
-                        let enabled = db.get_setting("ai_enabled").unwrap_or(None).map(|v| v == "true").unwrap_or(false);
-                        let auto_summary = db.get_setting("ai_auto_summary").unwrap_or(None).map(|v| v == "true").unwrap_or(false);
-                        let min_length = db.get_setting("ai_summary_min_length").unwrap_or(None).and_then(|v| v.parse::<usize>().ok()).unwrap_or(200);
+                        let enabled = db
+                            .get_setting("ai_enabled")
+                            .unwrap_or(None)
+                            .map(|v| v == "true")
+                            .unwrap_or(false);
+                        let auto_summary = db
+                            .get_setting("ai_auto_summary")
+                            .unwrap_or(None)
+                            .map(|v| v == "true")
+                            .unwrap_or(false);
+                        let min_length = db
+                            .get_setting("ai_summary_min_length")
+                            .unwrap_or(None)
+                            .and_then(|v| v.parse::<usize>().ok())
+                            .unwrap_or(200);
 
                         if !enabled || !auto_summary || text.len() < min_length {
                             return;
@@ -157,7 +178,8 @@ pub fn run() {
                         } else {
                             config.summary_language.clone()
                         };
-                        let system_prompt = config.summary_prompt
+                        let system_prompt = config
+                            .summary_prompt
                             .replace("{language}", &language_str)
                             .replace("{max_length}", &config.summary_max_length.to_string());
 
@@ -175,10 +197,13 @@ pub fn run() {
                         match engine.chat(&messages, &config.model).await {
                             Ok(resp) => {
                                 let _ = db.update_entry_summary(&entry_id, &resp.content);
-                                let _ = handle.emit("entry-summary-updated", serde_json::json!({
-                                    "id": entry_id,
-                                    "ai_summary": resp.content,
-                                }));
+                                let _ = handle.emit(
+                                    "entry-summary-updated",
+                                    serde_json::json!({
+                                        "id": entry_id,
+                                        "ai_summary": resp.content,
+                                    }),
+                                );
                             }
                             Err(e) => {
                                 log::warn!("Auto-summary failed: {}", e);
@@ -200,9 +225,15 @@ pub fn run() {
                     log::info!("Global shortcut registered: {}", shortcut_str);
                 }
                 Err(e) => {
-                    log::error!("Failed to register global shortcut '{}': {}", shortcut_str, e);
+                    log::error!(
+                        "Failed to register global shortcut '{}': {}",
+                        shortcut_str,
+                        e
+                    );
                     if shortcut_str != DEFAULT_TOGGLE_SHORTCUT {
-                        if let Err(default_err) = register_toggle_shortcut(app.handle(), DEFAULT_TOGGLE_SHORTCUT) {
+                        if let Err(default_err) =
+                            register_toggle_shortcut(app.handle(), DEFAULT_TOGGLE_SHORTCUT)
+                        {
                             log::error!(
                                 "Failed to fallback to default shortcut '{}': {}",
                                 DEFAULT_TOGGLE_SHORTCUT,
@@ -210,7 +241,10 @@ pub fn run() {
                             );
                         } else {
                             let _ = db.set_setting("toggle_shortcut", DEFAULT_TOGGLE_SHORTCUT);
-                            log::warn!("Fell back to default shortcut: {}", DEFAULT_TOGGLE_SHORTCUT);
+                            log::warn!(
+                                "Fell back to default shortcut: {}",
+                                DEFAULT_TOGGLE_SHORTCUT
+                            );
                         }
                     }
                 }
@@ -228,8 +262,8 @@ pub fn run() {
             }
             tray_builder
                 .menu(&menu)
-                .on_menu_event(move |app: &tauri::AppHandle, event| {
-                    match event.id.as_ref() {
+                .on_menu_event(
+                    move |app: &tauri::AppHandle, event| match event.id.as_ref() {
                         "quit" => app.exit(0),
                         "show" => {
                             remember_current_foreground_window(app);
@@ -238,8 +272,8 @@ pub fn run() {
                             let _ = tray_window.set_focus();
                         }
                         _ => {}
-                    }
-                })
+                    },
+                )
                 .on_tray_icon_event(|tray: &tauri::tray::TrayIcon, event| {
                     if let tauri::tray::TrayIconEvent::Click {
                         button: MouseButton::Left,
@@ -350,6 +384,7 @@ pub fn run() {
             commands::ai_cmd::ai_chat,
             commands::ai_cmd::ai_summarize,
             commands::ai_cmd::ai_translate,
+            commands::ai_cmd::get_feature_availability,
             commands::ai_cmd::classify_text,
             commands::ai_cmd::detect_code_language,
             commands::ai_cmd::update_ai_summary,

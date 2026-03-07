@@ -21,7 +21,9 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { getEntry, pasteEntry, updateEntryText } from "@/services/clipboardService";
 import { aiSummarize, updateAiSummary } from "@/services/aiService";
+import { openSettingsWindow } from "@/services/settingsWindowService";
 import { useTranslateStore } from "@/stores/translateStore";
+import { useCapabilityStore } from "@/stores/capabilityStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { openUrl } from "@/services/settingsService";
 import type { ClipboardEntry } from "@/types";
@@ -85,6 +87,10 @@ function HintIconButton({
 
 export function DetailPage() {
   const { t, i18n } = useTranslation();
+  const canTranslate = useCapabilityStore((s) => s.can_translate);
+  const hasTranslateEngine = useCapabilityStore((s) => s.has_translate_engine);
+  const hasAi = useCapabilityStore((s) => s.has_ai);
+  const translateUsesAiByDefault = useCapabilityStore((s) => s.translate_uses_ai_by_default);
   const theme = useSettingsStore((s) => s.theme);
   const locale = useSettingsStore((s) => s.locale);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
@@ -179,6 +185,11 @@ export function DetailPage() {
 
   const handleSummarize = useCallback(async () => {
     if (!entry?.text_content) return;
+    if (!hasAi) {
+      toast.error(t("toast.summaryConfigRequired"));
+      openSettingsWindow("ai");
+      return;
+    }
     setSummarizing(true);
     try {
       const summary = await aiSummarize(entry.text_content);
@@ -190,7 +201,7 @@ export function DetailPage() {
     } finally {
       setSummarizing(false);
     }
-  }, [entry, t]);
+  }, [entry, hasAi, t]);
 
   if (!entry) {
     return (
@@ -267,11 +278,22 @@ export function DetailPage() {
             onSave={handleSave}
           />
         )}
-        {tab === "translate" && <TranslateTab text={entry.text_content || ""} />}
+        {tab === "translate" && (
+          <TranslateTab
+            text={entry.text_content || ""}
+            canTranslate={canTranslate}
+            hasTranslateEngine={hasTranslateEngine}
+            hasAi={hasAi}
+            translateUsesAiByDefault={translateUsesAiByDefault}
+            onOpenSettings={() => openSettingsWindow("translate")}
+          />
+        )}
         {tab === "ai" && (
           <AiTab
             entry={entry}
             summarizing={summarizing}
+            hasAi={hasAi}
+            onOpenSettings={() => openSettingsWindow("ai")}
             onSummarize={handleSummarize}
           />
         )}
@@ -436,7 +458,50 @@ function ViewTab({
 
 /* ─── Translate Tab ─── */
 
-function TranslateTab({ text }: { text: string }) {
+function SettingsHintPanel({
+  title,
+  description,
+  buttonLabel,
+  onOpenSettings,
+}: {
+  title: string;
+  description: string;
+  buttonLabel: string;
+  onOpenSettings: () => void;
+}) {
+  return (
+    <div className="flex h-full items-center justify-center p-4">
+      <div className="w-full max-w-sm rounded-xl border border-border/50 bg-muted/10 px-5 py-6 text-center">
+        <div className="space-y-1.5">
+          <p className="text-sm2 font-medium text-foreground">{title}</p>
+          <p className="text-xs2 leading-relaxed text-muted-foreground">{description}</p>
+        </div>
+        <button
+          onClick={onOpenSettings}
+          className="mt-4 h-8 rounded-md bg-primary/15 px-3 text-xs2 font-medium text-primary transition-colors hover:bg-primary/25"
+        >
+          {buttonLabel}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function TranslateTab({
+  text,
+  canTranslate,
+  hasTranslateEngine,
+  hasAi,
+  translateUsesAiByDefault,
+  onOpenSettings,
+}: {
+  text: string;
+  canTranslate: boolean;
+  hasTranslateEngine: boolean;
+  hasAi: boolean;
+  translateUsesAiByDefault: boolean;
+  onOpenSettings: () => void;
+}) {
   const { t } = useTranslation();
   const result = useTranslateStore((s) => s.result);
   const loading = useTranslateStore((s) => s.loading);
@@ -454,11 +519,20 @@ function TranslateTab({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (!autoTranslated.current && text) {
+    if (!canTranslate || !text || autoTranslated.current) return;
+    autoTranslated.current = true;
+    translate(text);
+  }, [canTranslate, text, translate]);
+
+  useEffect(() => {
+    if (translateUsesAiByDefault && !useAi) {
       autoTranslated.current = true;
-      translate(text);
+      setUseAi(true);
     }
-  }, [text, translate]);
+    if (!hasAi && useAi) {
+      setUseAi(false);
+    }
+  }, [hasAi, setUseAi, translateUsesAiByDefault, useAi]);
 
   useEffect(() => {
     return () => clearResult();
@@ -492,6 +566,26 @@ function TranslateTab({ text }: { text: string }) {
       toast.error(t("translate.copyFailed"));
     }
   };
+
+  const handleTranslate = () => {
+    if (!canTranslate) {
+      toast.error(t("toast.translateConfigRequired"));
+      onOpenSettings();
+      return;
+    }
+    translate(text);
+  };
+
+  if (!canTranslate) {
+    return (
+      <SettingsHintPanel
+        title={t("translate.configureTranslateOrAi")}
+        description={t("translate.configureTranslateOrAiHint")}
+        buttonLabel={t("translate.openSettings")}
+        onOpenSettings={onOpenSettings}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -535,7 +629,7 @@ function TranslateTab({ text }: { text: string }) {
         </select>
 
         <button
-          onClick={() => translate(text)}
+          onClick={handleTranslate}
           disabled={loading}
           className={cn(
             "shrink-0 flex items-center gap-1 h-6 px-2 rounded text-xs2 font-medium transition-colors",
@@ -547,23 +641,30 @@ function TranslateTab({ text }: { text: string }) {
           <RotateCcw className={cn("w-2.5 h-2.5", loading && "animate-spin")} />
         </button>
 
-        <button
-          onClick={() => setUseAi(!useAi)}
-          className={cn(
-            "shrink-0 flex items-center gap-1 h-6 px-2 rounded text-xs2 font-medium transition-colors",
-            useAi
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
-          )}
-          title="AI"
-        >
-          <Brain className="w-2.5 h-2.5" />
-          AI
-        </button>
+        {hasTranslateEngine && hasAi && (
+          <button
+            onClick={() => setUseAi(!useAi)}
+            className={cn(
+              "shrink-0 flex items-center gap-1 h-6 px-2 rounded text-xs2 font-medium transition-colors",
+              useAi
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
+            )}
+            title="AI"
+          >
+            <Brain className="w-2.5 h-2.5" />
+            AI
+          </button>
+        )}
       </div>
 
       {/* Source text */}
       <div className="px-3 pt-2.5 pb-2 shrink-0">
+        {translateUsesAiByDefault && (
+          <span className="mb-2 inline-flex rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-2xs font-medium text-primary">
+            {t("translate.defaultAi")}
+          </span>
+        )}
         <p className="text-2xs text-muted-foreground/60 uppercase tracking-wider mb-1">
           {t("translate.sourceText")}
         </p>
@@ -646,13 +747,28 @@ function TranslateTab({ text }: { text: string }) {
 function AiTab({
   entry,
   summarizing,
+  hasAi,
+  onOpenSettings,
   onSummarize,
 }: {
   entry: ClipboardEntry;
   summarizing: boolean;
+  hasAi: boolean;
+  onOpenSettings: () => void;
   onSummarize: () => void;
 }) {
   const { t } = useTranslation();
+
+  if (!hasAi) {
+    return (
+      <SettingsHintPanel
+        title={t("detail.summaryConfigRequired")}
+        description={t("detail.summaryConfigHint")}
+        buttonLabel={t("detail.openAiSettings")}
+        onOpenSettings={onOpenSettings}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col h-full p-3 gap-3">

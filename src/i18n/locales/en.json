@@ -245,7 +245,11 @@
     "saved": "Saved",
     "testConnection": "Test",
     "noEngines": "No translation engines configured",
-    "configureHint": "Configure API keys in Settings"
+    "configureHint": "Configure API keys in Settings",
+    "defaultAi": "No translation engine configured, AI translation is being used by default",
+    "configureTranslateOrAi": "Configure translation first",
+    "configureTranslateOrAiHint": "No translation engine or usable AI is configured yet. Open Settings to configure translation or AI.",
+    "openSettings": "Open Settings"
   },
   "template": {
     "title": "Templates",
@@ -302,7 +306,10 @@
     "noSummary": "No summary yet",
     "generateSummary": "Generate Summary",
     "regenerateSummary": "Regenerate",
-    "generating": "Generating..."
+    "generating": "Generating...",
+    "summaryConfigRequired": "Configure AI first",
+    "summaryConfigHint": "No usable AI configuration is available right now. Open Settings to finish AI setup before generating summaries.",
+    "openAiSettings": "Configure AI"
   },
   "imageViewer": {
     "title": "Image Preview",
@@ -348,6 +355,8 @@
     "syncFailed": "Sync failed",
     "openUrlFailed": "Failed to open URL",
     "summarized": "Summary generated",
-    "summarizeFailed": "Summary generation failed"
+    "summarizeFailed": "Summary generation failed",
+    "translateConfigRequired": "Configure a translation engine or AI first",
+    "summaryConfigRequired": "Configure AI first"
   }
 }

@@ -9,8 +9,10 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { useTranslateStore } from "@/stores/translateStore";
+import { useCapabilityStore } from "@/stores/capabilityStore";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import { openSettingsWindow } from "@/services/settingsWindowService";
 import { toast } from "sonner";
 
 const LANGUAGES = [
@@ -32,6 +34,7 @@ interface Props {
 
 export function TranslateDialog({ text, onClose }: Props) {
   const { t } = useTranslation();
+  const canTranslate = useCapabilityStore((s) => s.can_translate);
   const result = useTranslateStore((s) => s.result);
   const loading = useTranslateStore((s) => s.loading);
   const error = useTranslateStore((s) => s.error);
@@ -47,17 +50,21 @@ export function TranslateDialog({ text, onClose }: Props) {
 
   // Auto-translate on open
   useEffect(() => {
-    if (!autoTranslated.current) {
-      autoTranslated.current = true;
-      translate(text);
-    }
-  }, [text, translate]);
+    if (!canTranslate || autoTranslated.current) return;
+    autoTranslated.current = true;
+    translate(text);
+  }, [canTranslate, text, translate]);
 
   useEffect(() => {
     return () => clearResult();
   }, [clearResult]);
 
   const handleTranslate = () => {
+    if (!canTranslate) {
+      toast.error(t("toast.translateConfigRequired"));
+      openSettingsWindow("translate");
+      return;
+    }
     translate(text);
   };
 
@@ -175,90 +182,108 @@ export function TranslateDialog({ text, onClose }: Props) {
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto flex flex-col min-h-0">
-          {/* Source text — compact, collapsible feel */}
-          <div className="px-3 pt-2.5 pb-2">
-            <p className="text-2xs text-muted-foreground/60 uppercase tracking-wider mb-1">
-              {t("translate.sourceText")}
-            </p>
-            <p className="text-sm2 text-muted-foreground bg-muted/10 rounded-md px-2.5 py-2 max-h-[100px] overflow-y-auto break-words leading-relaxed select-text">
-              {text.length > 500 ? text.substring(0, 500) + "\u2026" : text}
-            </p>
-          </div>
-
-          {/* Divider */}
-          <div className="mx-3 border-t border-border/20" />
-
-          {/* Result area */}
-          <div className="px-3 pt-2 pb-3 flex-1 min-h-0 flex flex-col">
-            {loading && (
-              <div className="flex items-center justify-center gap-1.5 py-8 text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-sm2">{t("translate.translating")}</span>
-              </div>
-            )}
-
-            {error && (
-              <div className="py-2">
-                <p className="text-xs2 text-red-400 bg-red-400/10 rounded-md px-2.5 py-2">
-                  {t("translate.error")}: {error}
+          {!canTranslate && (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+              <div className="space-y-1">
+                <p className="text-sm2 font-medium text-foreground">
+                  {t("translate.configureTranslateOrAi")}
+                </p>
+                <p className="text-xs2 text-muted-foreground">
+                  {t("translate.configureTranslateOrAiHint")}
                 </p>
               </div>
-            )}
+              <button
+                onClick={() => openSettingsWindow("translate")}
+                className="h-7 px-3 rounded-md bg-primary/15 text-primary text-xs2 font-medium hover:bg-primary/25 transition-colors"
+              >
+                {t("translate.openSettings")}
+              </button>
+            </div>
+          )}
 
-            {result && (
-              <div className="flex flex-col flex-1 min-h-0">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-2xs text-muted-foreground/60 uppercase tracking-wider">
-                    {t("translate.result")}
-                    {result.engine && (
-                      <span className="ml-1 normal-case tracking-normal text-primary/50">
-                        ({result.engine})
-                      </span>
-                    )}
-                  </p>
-                </div>
-                <div className="relative group/result flex-1 min-h-0">
-                  <p className="text-sm2 text-foreground bg-primary/5 border border-primary/10 rounded-md px-2.5 py-2 max-h-[180px] overflow-y-auto break-words leading-relaxed select-text">
-                    {result.translated}
-                  </p>
-                </div>
-
-                {/* Action buttons */}
-                <div className="flex items-center gap-1.5 mt-2">
-                  <button
-                    onClick={handleCopyResult}
-                    className={cn(
-                      "flex items-center gap-1 h-6 px-2.5 rounded text-xs2 font-medium transition-all",
-                      copied
-                        ? "bg-green-500/15 text-green-400"
-                        : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                    )}
-                  >
-                    {copied ? (
-                      <Check className="w-2.5 h-2.5" />
-                    ) : (
-                      <Copy className="w-2.5 h-2.5" />
-                    )}
-                    {copied ? t("translate.copied") : t("translate.copyResult")}
-                  </button>
-                  <button
-                    onClick={handleUseTranslation}
-                    className="flex items-center gap-1 h-6 px-2.5 rounded text-xs2 font-medium bg-primary/15 text-primary hover:bg-primary/25 transition-colors"
-                  >
-                    <ClipboardPaste className="w-2.5 h-2.5" />
-                    {t("translate.useTranslation")}
-                  </button>
-                </div>
+          {canTranslate && (
+            <>
+              <div className="px-3 pt-2.5 pb-2">
+                <p className="text-2xs text-muted-foreground/60 uppercase tracking-wider mb-1">
+                  {t("translate.sourceText")}
+                </p>
+                <p className="text-sm2 text-muted-foreground bg-muted/10 rounded-md px-2.5 py-2 max-h-[100px] overflow-y-auto break-words leading-relaxed select-text">
+                  {text.length > 500 ? text.substring(0, 500) + "\u2026" : text}
+                </p>
               </div>
-            )}
 
-            {/* Empty state — no result yet, not loading, no error */}
-            {!loading && !error && !result && (
-              <div className="flex items-center justify-center py-8 text-muted-foreground/40">
-                <span className="text-xs2">{t("translate.noResult")}</span>
+              <div className="mx-3 border-t border-border/20" />
+
+              <div className="px-3 pt-2 pb-3 flex-1 min-h-0 flex flex-col">
+                {loading && (
+                  <div className="flex items-center justify-center gap-1.5 py-8 text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm2">{t("translate.translating")}</span>
+                  </div>
+                )}
+
+                {error && (
+                  <div className="py-2">
+                    <p className="text-xs2 text-red-400 bg-red-400/10 rounded-md px-2.5 py-2">
+                      {t("translate.error")}: {error}
+                    </p>
+                  </div>
+                )}
+
+                {result && (
+                  <div className="flex flex-col flex-1 min-h-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-2xs text-muted-foreground/60 uppercase tracking-wider">
+                        {t("translate.result")}
+                        {result.engine && (
+                          <span className="ml-1 normal-case tracking-normal text-primary/50">
+                            ({result.engine})
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="relative group/result flex-1 min-h-0">
+                      <p className="text-sm2 text-foreground bg-primary/5 border border-primary/10 rounded-md px-2.5 py-2 max-h-[180px] overflow-y-auto break-words leading-relaxed select-text">
+                        {result.translated}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 mt-2">
+                      <button
+                        onClick={handleCopyResult}
+                        className={cn(
+                          "flex items-center gap-1 h-6 px-2.5 rounded text-xs2 font-medium transition-all",
+                          copied
+                            ? "bg-green-500/15 text-green-400"
+                            : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                        )}
+                      >
+                        {copied ? (
+                          <Check className="w-2.5 h-2.5" />
+                        ) : (
+                          <Copy className="w-2.5 h-2.5" />
+                        )}
+                        {copied ? t("translate.copied") : t("translate.copyResult")}
+                      </button>
+                      <button
+                        onClick={handleUseTranslation}
+                        className="flex items-center gap-1 h-6 px-2.5 rounded text-xs2 font-medium bg-primary/15 text-primary hover:bg-primary/25 transition-colors"
+                      >
+                        <ClipboardPaste className="w-2.5 h-2.5" />
+                        {t("translate.useTranslation")}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {!loading && !error && !result && (
+                  <div className="flex items-center justify-center py-8 text-muted-foreground/40">
+                    <span className="text-xs2">{t("translate.noResult")}</span>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
       </div>
     </div>

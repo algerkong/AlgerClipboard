@@ -1,9 +1,8 @@
 import { useState, useMemo } from "react";
-import { X, Copy, Languages, Code, Eye } from "lucide-react";
+import { X, Copy, Code, Eye } from "lucide-react";
 import DOMPurify from "dompurify";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
-import { TranslateDialog } from "@/components/TranslateDialog";
 import { openUrl } from "@/services/settingsService";
 import { toast } from "sonner";
 
@@ -33,30 +32,9 @@ function looksLikeCode(text: string): boolean {
   return matches >= 2;
 }
 
-/** Check if text is natural-language non-Chinese (skip URLs, paths, code, etc.) */
-function isNonChinese(text: string): boolean {
-  const trimmed = text.trim();
-  if (trimmed.length < 8) return false;
-  if (/^https?:\/\//i.test(trimmed)) return false;
-  if (/^[A-Z]:\\|^\/[\w.]/i.test(trimmed)) return false;
-  if (/\w+:\/\/\S+/.test(trimmed) && trimmed.split(/\s+/).length <= 3) return false;
-  if (/^\S+@\S+\.\S+$/.test(trimmed)) return false;
-  const specialChars = (trimmed.match(/[{}()\[\];=<>\/\\|&^%$#@!~`]/g) || []).length;
-  if (specialChars / trimmed.length > 0.15) return false;
-  if (/^\s*[{\[]/.test(trimmed) && /[}\]]\s*$/.test(trimmed)) return false;
-  const cleaned = trimmed.replace(/[\s\d\p{P}\p{S}]/gu, "");
-  if (cleaned.length < 4) return false;
-  const chineseChars = (cleaned.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g) || []).length;
-  const latinChars = (cleaned.match(/[a-zA-Z]/g) || []).length;
-  if (latinChars / cleaned.length < 0.5) return false;
-  return chineseChars / cleaned.length < 0.3;
-}
-
 export function TextViewer({ text, htmlContent, onClose }: Props) {
   const { t } = useTranslation();
   const isCode = looksLikeCode(text);
-  const showTranslateHint = isNonChinese(text);
-  const [showTranslate, setShowTranslate] = useState(false);
   const hasHtml = !!htmlContent;
   const [viewMode, setViewMode] = useState<"rendered" | "source">(hasHtml ? "rendered" : "source");
 
@@ -93,15 +71,6 @@ export function TextViewer({ text, htmlContent, onClose }: Props) {
               >
                 {viewMode === "rendered" ? <Code className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                 {viewMode === "rendered" ? t("viewer.viewSource") : t("viewer.viewRendered")}
-              </button>
-            )}
-            {showTranslateHint && (
-              <button
-                onClick={() => setShowTranslate(true)}
-                className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs2 font-medium text-blue-400 bg-blue-400/10 hover:bg-blue-400/20 transition-colors"
-              >
-                <Languages className="w-3 h-3" />
-                {t("viewer.translateHint")}
               </button>
             )}
             <button
@@ -152,13 +121,6 @@ export function TextViewer({ text, htmlContent, onClose }: Props) {
           )}
         </div>
       </div>
-
-      {showTranslate && (
-        <TranslateDialog
-          text={text}
-          onClose={() => setShowTranslate(false)}
-        />
-      )}
     </div>
   );
 }

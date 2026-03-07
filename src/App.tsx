@@ -11,6 +11,7 @@ import { ImageViewerPage } from "@/components/ImageViewer";
 import { DetailPage } from "@/pages/DetailPage";
 import { openSettingsWindow } from "@/services/settingsWindowService";
 import { useClipboardStore } from "@/stores/clipboardStore";
+import { useCapabilityStore } from "@/stores/capabilityStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { PlatformProvider } from "@/contexts/PlatformContext";
 import { useSyncStore } from "@/stores/syncStore";
@@ -59,6 +60,29 @@ function applyTheme(theme: "light" | "dark" | "system") {
 }
 
 function App() {
+  const loadAvailability = useCapabilityStore((s) => s.loadAvailability);
+
+  useEffect(() => {
+    void loadAvailability();
+
+    const handleFocus = () => {
+      void loadAvailability();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void loadAvailability();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [loadAvailability]);
+
   // If this is an image viewer window, render the standalone viewer
   if (isImageViewer) {
     return <ImageViewerPage />;

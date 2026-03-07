@@ -1,3 +1,4 @@
+use crate::commands::ai_cmd::{is_ai_config_ready, load_ai_config_pub, run_ai_translate};
 use crate::commands::clipboard_cmd::AppDatabase;
 use crate::translate::baidu::BaiduTranslator;
 use crate::translate::engine::{dispatch_translate, TranslateEngine, TranslateResult};
@@ -14,12 +15,27 @@ pub struct EngineConfig {
     pub enabled: bool,
 }
 
-fn load_engine_configs(db: &AppDatabase) -> Vec<EngineConfig> {
+pub fn load_engine_configs_from_db(db: &AppDatabase) -> Vec<EngineConfig> {
     let json_str = db.0.get_setting("translate_engines").unwrap_or(None);
     match json_str {
         Some(s) => serde_json::from_str(&s).unwrap_or_default(),
         None => Vec::new(),
     }
+}
+
+fn is_engine_config_usable(cfg: &EngineConfig) -> bool {
+    if !cfg.enabled || cfg.api_key.trim().is_empty() {
+        return false;
+    }
+
+    match cfg.engine.as_str() {
+        "baidu" | "youdao" => !cfg.api_secret.trim().is_empty(),
+        _ => true,
+    }
+}
+
+pub fn has_usable_translate_engine_configs(configs: &[EngineConfig]) -> bool {
+    configs.iter().any(is_engine_config_usable)
 }
 
 fn save_engine_configs(db: &AppDatabase, configs: &[EngineConfig]) -> Result<(), String> {
@@ -32,7 +48,7 @@ fn build_engines(configs: &[EngineConfig]) -> Vec<Box<dyn TranslateEngine>> {
     let mut engines: Vec<Box<dyn TranslateEngine>> = Vec::new();
 
     for cfg in configs {
-        if !cfg.enabled || cfg.api_key.is_empty() {
+        if !is_engine_config_usable(cfg) {
             continue;
         }
         match cfg.engine.as_str() {
@@ -69,7 +85,7 @@ fn build_engines_for_specific(
     let mut fallbacks: Vec<Box<dyn TranslateEngine>> = Vec::new();
 
     for cfg in configs {
-        if !cfg.enabled || cfg.api_key.is_empty() {
+        if !is_engine_config_usable(cfg) {
             continue;
         }
         let engine: Box<dyn TranslateEngine> = match cfg.engine.as_str() {
@@ -104,21 +120,33 @@ pub async fn translate_text(
     to: String,
     engine: Option<String>,
 ) -> Result<TranslateResult, String> {
-    let configs = load_engine_configs(&db);
+    let configs = load_engine_configs_from_db(&db);
 
     let engines = match engine {
         Some(ref name) => build_engines_for_specific(&configs, name),
         None => build_engines(&configs),
     };
 
+    if engines.is_empty() {
+        let ai_config = load_ai_config_pub(&db.0);
+        if is_ai_config_ready(&ai_config) {
+            let translated = run_ai_translate(&ai_config, &text, &from, &to).await?;
+            return Ok(TranslateResult {
+                text,
+                translated,
+                from_lang: from,
+                to_lang: to,
+                engine: "AI".to_string(),
+            });
+        }
+    }
+
     dispatch_translate(&engines, &text, &from, &to).await
 }
 
 #[tauri::command]
-pub fn get_translate_engines(
-    db: State<'_, AppDatabase>,
-) -> Result<Vec<EngineConfig>, String> {
-    Ok(load_engine_configs(&db))
+pub fn get_translate_engines(db: State<'_, AppDatabase>) -> Result<Vec<EngineConfig>, String> {
+    Ok(load_engine_configs_from_db(&db))
 }
 
 #[tauri::command]
@@ -129,7 +157,7 @@ pub fn configure_translate_engine(
     api_secret: String,
     enabled: bool,
 ) -> Result<(), String> {
-    let mut configs = load_engine_configs(&db);
+    let mut configs = load_engine_configs_from_db(&db);
 
     // Update existing or add new
     if let Some(cfg) = configs.iter_mut().find(|c| c.engine == engine) {
