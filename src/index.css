@@ -267,56 +267,106 @@ body {
   border-radius: 4px;
 }
 
-/* Rich text preview styles */
+/* Rich text rendering */
+.rich-text-content,
 .rich-text-preview {
   font-size: inherit;
   line-height: 1.5;
+  min-width: 0;
 }
+.rich-text-content *,
 .rich-text-preview * {
   margin: 0;
   padding: 0;
+  max-width: 100%;
 }
+.rich-text-content b,
+.rich-text-content strong,
 .rich-text-preview b,
 .rich-text-preview strong {
   font-weight: 600;
 }
+.rich-text-content i,
+.rich-text-content em,
 .rich-text-preview i,
 .rich-text-preview em {
   font-style: italic;
 }
+.rich-text-content u,
 .rich-text-preview u {
   text-decoration: underline;
 }
+.rich-text-content a,
 .rich-text-preview a {
   color: var(--primary);
   text-decoration: underline;
   cursor: pointer;
+  word-break: break-all;
 }
+.rich-text-content a:hover,
 .rich-text-preview a:hover {
   opacity: 0.8;
 }
+.rich-text-content ul,
+.rich-text-content ol,
 .rich-text-preview ul,
 .rich-text-preview ol {
   padding-left: 1.2em;
 }
+.rich-text-content blockquote,
 .rich-text-preview blockquote {
   border-left: 2px solid var(--border);
   padding-left: 0.5em;
   opacity: 0.8;
 }
+.rich-text-content code,
 .rich-text-preview code {
   background: var(--muted);
   padding: 0.1em 0.3em;
   border-radius: 3px;
   font-size: 0.9em;
 }
+.rich-text-content pre,
+.rich-text-preview pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.rich-text-content table,
 .rich-text-preview table {
   border-collapse: collapse;
+  width: auto;
 }
+.rich-text-content td,
+.rich-text-content th,
 .rich-text-preview td,
 .rich-text-preview th {
   border: 1px solid var(--border);
   padding: 0.2em 0.4em;
+}
+.rich-text-content img,
+.rich-text-preview img {
+  display: inline-block;
+  max-height: 7rem;
+  border-radius: 0.4rem;
+}
+.rich-text-content--preview {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.rich-text-content--preview table {
+  font-size: 0.92em;
+}
+.rich-text-content--detail-clean {
+  color: var(--foreground);
+}
+.rich-text-content--detail-clean [style*="background"],
+.rich-text-content--detail-clean [style*="background-color"] {
+  border-radius: 0.3rem;
+}
+.rich-text-content--detail-full {
+  overflow-wrap: anywhere;
 }
 
 /* ─── Context Menu (modern Fluent-style) ─── */

@@ -64,6 +64,7 @@
   "settings": {
     "title": "Settings",
     "tabGeneral": "General",
+    "tabRichText": "Rich Text",
     "tabSync": "Sync",
     "tabTranslate": "Translate",
     "tabData": "Data",
@@ -154,6 +155,82 @@
     "browserEdge": "Microsoft Edge",
     "browserBrave": "Brave",
     "browserSafari": "Safari",
+    "richText": {
+      "listTitle": "List Rich Text Preview",
+      "listDesc": "Control which rich text styles remain visible in the main list. Everything is off by default to keep the list clean.",
+      "enableListPreview": "Enable rich text preview in list",
+      "enableListPreviewDesc": "When disabled, the list shows plain text summaries instead of rendering source HTML.",
+      "detailTitle": "Detail Rendering",
+      "detailDesc": "Choose the default rendering mode for the detail page. You can still switch modes inside the detail view.",
+      "detailModes": {
+        "clean": {
+          "label": "Clean",
+          "desc": "Keeps structure and font size while removing backgrounds, text colors, and font families that pollute the UI."
+        },
+        "full": {
+          "label": "Full",
+          "desc": "Preserves as much of the original rich text styling as possible for closer visual fidelity."
+        }
+      },
+      "previewOptions": {
+        "preserveBold": {
+          "label": "Preserve bold",
+          "desc": "Show bold formatting from the source content."
+        },
+        "preserveItalic": {
+          "label": "Preserve italic",
+          "desc": "Show italic formatting from the source content."
+        },
+        "preserveDecoration": {
+          "label": "Preserve underline and strike",
+          "desc": "Keep underline, strikethrough, superscript, and subscript decoration."
+        },
+        "preserveLinks": {
+          "label": "Preserve links",
+          "desc": "Keep clickable links and link styling in the list."
+        },
+        "preserveLists": {
+          "label": "Preserve lists",
+          "desc": "Keep ordered and unordered list structure."
+        },
+        "preserveCode": {
+          "label": "Preserve code styling",
+          "desc": "Keep inline code and code block presentation."
+        },
+        "preserveBlockquotes": {
+          "label": "Preserve blockquotes",
+          "desc": "Keep blockquote structure and quote styling."
+        },
+        "preserveFontSize": {
+          "label": "Preserve font size",
+          "desc": "Keep source font sizes, with list-safe clamping applied."
+        },
+        "preserveTextColor": {
+          "label": "Preserve text color",
+          "desc": "Keep source text colors, which may reduce visual consistency."
+        },
+        "preserveBackground": {
+          "label": "Preserve background",
+          "desc": "Keep background colors and highlights, which can make the list noisy."
+        },
+        "preserveFontFamily": {
+          "label": "Preserve font family",
+          "desc": "Keep source fonts even if they do not match the app typography."
+        },
+        "preserveTables": {
+          "label": "Preserve tables",
+          "desc": "Show table structure in the list, even though wide content takes more room."
+        },
+        "preserveImages": {
+          "label": "Preserve embedded images",
+          "desc": "Show images embedded inside rich text entries, which can increase row height."
+        },
+        "preserveLayout": {
+          "label": "Preserve layout styles",
+          "desc": "Keep spacing, alignment, and sizing styles. This is the most likely option to break list consistency."
+        }
+      }
+    },
     "tabAi": "AI",
     "ai": {
       "enable": "Enable AI Features",

@@ -64,6 +64,7 @@
   "settings": {
     "title": "设置",
     "tabGeneral": "通用",
+    "tabRichText": "富文本",
     "tabSync": "同步",
     "tabTranslate": "翻译",
     "tabData": "数据",
@@ -154,6 +155,82 @@
     "browserEdge": "Microsoft Edge",
     "browserBrave": "Brave",
     "browserSafari": "Safari",
+    "richText": {
+      "listTitle": "列表富文本预览",
+      "listDesc": "控制主列表是否保留富文本样式。默认全部关闭，优先保证列表整洁和扫描效率。",
+      "enableListPreview": "启用列表富文本预览",
+      "enableListPreviewDesc": "关闭后列表只显示纯文本摘要，不渲染来源 HTML。",
+      "detailTitle": "详情页渲染",
+      "detailDesc": "设置详情页默认渲染模式。进入详情后仍可临时切换。",
+      "detailModes": {
+        "clean": {
+          "label": "清爽",
+          "desc": "保留结构和字号，移除背景、文字颜色、字体族等容易污染界面的样式。"
+        },
+        "full": {
+          "label": "完整",
+          "desc": "尽量保留原始富文本样式，用于查看接近原内容的排版效果。"
+        }
+      },
+      "previewOptions": {
+        "preserveBold": {
+          "label": "保留粗体",
+          "desc": "显示来源内容里的加粗效果。"
+        },
+        "preserveItalic": {
+          "label": "保留斜体",
+          "desc": "显示来源内容里的斜体效果。"
+        },
+        "preserveDecoration": {
+          "label": "保留下划线和删除线",
+          "desc": "显示下划线、删除线、上标和下标等修饰。"
+        },
+        "preserveLinks": {
+          "label": "保留链接",
+          "desc": "列表中保留可点击链接样式和跳转能力。"
+        },
+        "preserveLists": {
+          "label": "保留列表结构",
+          "desc": "显示有序列表和无序列表。"
+        },
+        "preserveCode": {
+          "label": "保留代码样式",
+          "desc": "显示行内代码和代码块样式。"
+        },
+        "preserveBlockquotes": {
+          "label": "保留引用样式",
+          "desc": "显示引用块和引用层级。"
+        },
+        "preserveFontSize": {
+          "label": "保留字号",
+          "desc": "沿用来源内容的字号，列表中会做范围限制。"
+        },
+        "preserveTextColor": {
+          "label": "保留文字颜色",
+          "desc": "显示来源内容的文字颜色，可能降低列表一致性。"
+        },
+        "preserveBackground": {
+          "label": "保留背景",
+          "desc": "显示背景色和高亮，可能让列表显得杂乱。"
+        },
+        "preserveFontFamily": {
+          "label": "保留字体",
+          "desc": "沿用来源内容的字体族，可能和应用字体不一致。"
+        },
+        "preserveTables": {
+          "label": "保留表格",
+          "desc": "在列表中展示表格结构，宽内容会更容易占空间。"
+        },
+        "preserveImages": {
+          "label": "保留内嵌图片",
+          "desc": "显示富文本里的内嵌图片，可能让条目变高。"
+        },
+        "preserveLayout": {
+          "label": "保留布局样式",
+          "desc": "保留边距、对齐和尺寸等布局样式，最容易破坏列表统一性。"
+        }
+      }
+    },
     "tabAi": "AI",
     "ai": {
       "enable": "启用 AI 功能",

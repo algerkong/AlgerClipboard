@@ -1,9 +1,9 @@
 import { memo, useCallback, useState, useEffect, useMemo, useRef } from "react";
 import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages, Pin, Eye, Copy, ClipboardPaste, Maximize2, Cloud, Upload, CloudAlert, ScanText, Code, Tag, X, ExternalLink, Brain } from "lucide-react";
 
-import DOMPurify from "dompurify";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { useCapabilityStore } from "@/stores/capabilityStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { pasteEntry, getThumbnailBase64 } from "@/services/clipboardService";
 import { openUrl } from "@/services/settingsService";
 import type { ClipboardEntry } from "@/types";
@@ -14,6 +14,7 @@ import { openDetailWindow } from "@/services/detailWindowService";
 import { ContextMenu, type ContextMenuItem } from "@/components/ContextMenu";
 import { SourceBadge } from "@/components/SourceBadge";
 import { toast } from "@/lib/toast";
+import { sanitizePreviewHtml } from "@/lib/richText";
 
 // In-memory cache: relative_path -> data URL
 const _thumbCache = new Map<string, string>();
@@ -153,6 +154,7 @@ export const EntryCard = memo(function EntryCard({
   const fetchAllTags = useClipboardStore((s) => s.fetchAllTags);
   const canTranslate = useCapabilityStore((s) => s.can_translate);
   const hasAi = useCapabilityStore((s) => s.has_ai);
+  const richTextPreview = useSettingsStore((s) => s.richTextPreview);
   const isSelected = selectedId === entry.id;
   const [showUrlPicker, setShowUrlPicker] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
@@ -169,11 +171,9 @@ export const EntryCard = memo(function EntryCard({
 
   const sanitizedHtml = useMemo(() => {
     if (!isRichText || !entry.html_content) return "";
-    return DOMPurify.sanitize(entry.html_content, {
-      ALLOWED_TAGS: ["b", "i", "u", "em", "strong", "s", "span", "br", "p", "ul", "ol", "li", "a", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "code", "pre", "sub", "sup", "table", "tr", "td", "th", "thead", "tbody"],
-      ALLOWED_ATTR: ["style", "href"],
-    });
-  }, [isRichText, entry.html_content]);
+    return sanitizePreviewHtml(entry.html_content, richTextPreview);
+  }, [entry.html_content, isRichText, richTextPreview]);
+  const showRichTextPreview = isRichText && richTextPreview.enabled && !!sanitizedHtml.trim();
   const showTranslateHint = canTranslate && hasText && entry.text_content
     ? isNonChinese(entry.text_content)
     : false;
@@ -367,9 +367,9 @@ export const EntryCard = memo(function EntryCard({
               draggable={false}
               onClick={(e) => { e.stopPropagation(); handleOpenImageViewer(); }}
             />
-          ) : isRichText ? (
+          ) : showRichTextPreview ? (
             <div
-              className="text-base2 leading-relaxed text-foreground line-clamp-2 break-all rich-text-preview"
+              className="rich-text-content rich-text-content--preview text-base2 leading-relaxed text-foreground break-all"
               dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
               onClick={(e) => {
                 const anchor = (e.target as HTMLElement).closest("a");

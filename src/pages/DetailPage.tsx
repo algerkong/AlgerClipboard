@@ -14,7 +14,6 @@ import {
   Code,
   Eye,
 } from "lucide-react";
-import DOMPurify from "dompurify";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useTranslation } from "react-i18next";
 import { toast } from "@/lib/toast";
@@ -28,6 +27,7 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { openUrl } from "@/services/settingsService";
 import { SourceBadge } from "@/components/SourceBadge";
 import type { ClipboardEntry } from "@/types";
+import { sanitizeDetailHtml, type RichTextDetailMode } from "@/lib/richText";
 
 const searchParams = new URLSearchParams(window.location.search);
 const entryId = searchParams.get("id") || "";
@@ -95,6 +95,7 @@ export function DetailPage() {
   const theme = useSettingsStore((s) => s.theme);
   const locale = useSettingsStore((s) => s.locale);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
+  const richTextDetailMode = useSettingsStore((s) => s.richTextDetailMode);
 
   const [entry, setEntry] = useState<ClipboardEntry | null>(null);
   const [tab, setTab] = useState<"view" | "translate" | "ai">(initialTab);
@@ -287,6 +288,7 @@ export function DetailPage() {
             isEditing={isEditing}
             editText={editText}
             saving={saving}
+            defaultRenderMode={richTextDetailMode}
             onEditTextChange={setEditText}
             onStartEdit={() => { setIsEditing(true); setEditText(entry.text_content || ""); }}
             onCancelEdit={() => { setIsEditing(false); setEditText(entry.text_content || ""); }}
@@ -324,6 +326,7 @@ function ViewTab({
   isEditing,
   editText,
   saving,
+  defaultRenderMode,
   onEditTextChange,
   onStartEdit,
   onCancelEdit,
@@ -333,6 +336,7 @@ function ViewTab({
   isEditing: boolean;
   editText: string;
   saving: boolean;
+  defaultRenderMode: RichTextDetailMode;
   onEditTextChange: (text: string) => void;
   onStartEdit: () => void;
   onCancelEdit: () => void;
@@ -342,12 +346,17 @@ function ViewTab({
   const hasText = entry.content_type === "PlainText" || entry.content_type === "RichText";
   const isRichText = entry.content_type === "RichText" && !!entry.html_content;
   const [viewMode, setViewMode] = useState<"rendered" | "source">(isRichText ? "rendered" : "source");
+  const [renderMode, setRenderMode] = useState<RichTextDetailMode>(defaultRenderMode);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const sanitizedHtml = useMemo(() => {
     if (!entry.html_content) return "";
-    return DOMPurify.sanitize(entry.html_content);
-  }, [entry.html_content]);
+    return sanitizeDetailHtml(entry.html_content, renderMode);
+  }, [entry.html_content, renderMode]);
+
+  useEffect(() => {
+    setRenderMode(defaultRenderMode);
+  }, [defaultRenderMode, entry.id]);
 
   useEffect(() => {
     if (isEditing && textareaRef.current) {
@@ -373,15 +382,35 @@ function ViewTab({
       {/* Toolbar */}
       {hasText && (
         <div className="flex items-center justify-between px-3 py-1 border-b border-border/20 shrink-0">
-          <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1">
             {isRichText && !isEditing && (
-              <button
-                onClick={() => setViewMode(viewMode === "rendered" ? "source" : "rendered")}
-                className="flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-medium text-purple-400 bg-purple-400/10 hover:bg-purple-400/20 transition-colors"
-              >
-                {viewMode === "rendered" ? <Code className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                {viewMode === "rendered" ? t("viewer.viewSource") : t("viewer.viewRendered")}
-              </button>
+              <>
+                <button
+                  onClick={() => setViewMode(viewMode === "rendered" ? "source" : "rendered")}
+                  className="flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-medium text-purple-400 bg-purple-400/10 hover:bg-purple-400/20 transition-colors"
+                >
+                  {viewMode === "rendered" ? <Code className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                  {viewMode === "rendered" ? t("viewer.viewSource") : t("viewer.viewRendered")}
+                </button>
+                {viewMode === "rendered" && (
+                  <div className="flex items-center gap-1 rounded-md border border-border/40 bg-muted/20 p-0.5">
+                    {(["clean", "full"] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        onClick={() => setRenderMode(mode)}
+                        className={cn(
+                          "rounded px-1.5 py-0.5 text-2xs font-medium transition-colors",
+                          renderMode === mode
+                            ? "bg-primary/15 text-primary"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {t(`settings.richText.detailModes.${mode}.label`)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
           <div className="flex items-center gap-1">
@@ -428,7 +457,12 @@ function ViewTab({
         ) : hasText ? (
           isRichText && viewMode === "rendered" ? (
             <div
-              className="text-sm2 leading-relaxed text-foreground rich-text-preview"
+              className={cn(
+                "rich-text-content text-sm2 leading-relaxed text-foreground",
+                renderMode === "full"
+                  ? "rich-text-content--detail-full"
+                  : "rich-text-content--detail-clean",
+              )}
               dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
               onClick={(e) => {
                 const anchor = (e.target as HTMLElement).closest("a");

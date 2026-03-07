@@ -7,6 +7,14 @@ import {
   updateToggleShortcut,
 } from "@/services/settingsService";
 import { listen } from "@tauri-apps/api/event";
+import {
+  DEFAULT_RICH_TEXT_DETAIL_MODE,
+  DEFAULT_RICH_TEXT_PREVIEW_OPTIONS,
+  parseRichTextPreviewOptions,
+  serializeRichTextPreviewOptions,
+  type RichTextDetailMode,
+  type RichTextPreviewOptions,
+} from "@/lib/richText";
 
 type Theme = "light" | "dark" | "system";
 export type UIScale = "xs" | "sm" | "md" | "lg" | "xl";
@@ -116,6 +124,8 @@ interface SettingsState {
   systemNotificationsEnabled: boolean;
   buttonPosition: ButtonPosition;
   defaultBrowser: string;
+  richTextPreview: RichTextPreviewOptions;
+  richTextDetailMode: RichTextDetailMode;
   isPinned: boolean; // non-persisted, controls auto-hide on blur
 
   loadSettings: () => Promise<void>;
@@ -133,6 +143,12 @@ interface SettingsState {
   setSystemNotificationsEnabled: (enabled: boolean) => Promise<void>;
   setButtonPosition: (position: ButtonPosition) => Promise<void>;
   setDefaultBrowser: (browser: string) => Promise<void>;
+  setRichTextPreviewEnabled: (enabled: boolean) => Promise<void>;
+  setRichTextPreviewOption: (
+    key: Exclude<keyof RichTextPreviewOptions, "enabled">,
+    enabled: boolean,
+  ) => Promise<void>;
+  setRichTextDetailMode: (mode: RichTextDetailMode) => Promise<void>;
   setIsPinned: (pinned: boolean) => void;
 }
 
@@ -151,6 +167,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   systemNotificationsEnabled: true,
   buttonPosition: "right",
   defaultBrowser: "system",
+  richTextPreview: DEFAULT_RICH_TEXT_PREVIEW_OPTIONS,
+  richTextDetailMode: DEFAULT_RICH_TEXT_DETAIL_MODE,
   isPinned: true,
 
   loadSettings: async () => {
@@ -171,6 +189,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         systemNotificationsEnabled,
         buttonPosition,
         defaultBrowser,
+        richTextPreview,
+        richTextDetailMode,
       ] = await Promise.all([
         getSetting("theme"),
         getSetting("max_history"),
@@ -187,6 +207,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         getSetting("system_notifications_enabled"),
         getSetting("button_position"),
         getSetting("default_browser"),
+        getSetting("rich_text_preview_options"),
+        getSetting("rich_text_detail_mode"),
       ]);
 
       // Migrate old font_size to ui_scale
@@ -200,6 +222,9 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       }
 
       const ff = (fontFamily as FontFamily) || "system";
+      const parsedRichTextPreview = parseRichTextPreviewOptions(richTextPreview);
+      const resolvedDetailMode =
+        richTextDetailMode === "full" ? "full" : DEFAULT_RICH_TEXT_DETAIL_MODE;
 
       applyUIScale(scale);
       applyFontFamily(ff);
@@ -219,6 +244,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         systemNotificationsEnabled: systemNotificationsEnabled !== "false",
         buttonPosition: (buttonPosition as ButtonPosition) || "right",
         defaultBrowser: defaultBrowser || "system",
+        richTextPreview: parsedRichTextPreview,
+        richTextDetailMode: resolvedDetailMode,
       });
     } catch (err) {
       console.error("Failed to load settings:", err);
@@ -355,6 +382,47 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       await updateSetting("default_browser", browser);
     } catch (err) {
       console.error("Failed to save default_browser:", err);
+    }
+  },
+
+  setRichTextPreviewEnabled: async (enabled: boolean) => {
+    const nextOptions = {
+      ...useSettingsStore.getState().richTextPreview,
+      enabled,
+    };
+    set({ richTextPreview: nextOptions });
+    try {
+      await updateSetting(
+        "rich_text_preview_options",
+        serializeRichTextPreviewOptions(nextOptions),
+      );
+    } catch (err) {
+      console.error("Failed to save rich_text_preview_options:", err);
+    }
+  },
+
+  setRichTextPreviewOption: async (key, enabled) => {
+    const nextOptions = {
+      ...useSettingsStore.getState().richTextPreview,
+      [key]: enabled,
+    };
+    set({ richTextPreview: nextOptions });
+    try {
+      await updateSetting(
+        "rich_text_preview_options",
+        serializeRichTextPreviewOptions(nextOptions),
+      );
+    } catch (err) {
+      console.error("Failed to save rich_text_preview_options:", err);
+    }
+  },
+
+  setRichTextDetailMode: async (mode) => {
+    set({ richTextDetailMode: mode });
+    try {
+      await updateSetting("rich_text_detail_mode", mode);
+    } catch (err) {
+      console.error("Failed to save rich_text_detail_mode:", err);
     }
   },
 
