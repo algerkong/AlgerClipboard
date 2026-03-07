@@ -1,7 +1,7 @@
-pub mod webdav;
 pub mod google_drive;
-pub mod onedrive;
 pub mod oauth;
+pub mod onedrive;
+pub mod webdav;
 
 use async_trait::async_trait;
 

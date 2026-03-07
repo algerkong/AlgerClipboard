@@ -32,9 +32,15 @@ impl GoogleDriveAdapter {
         }
     }
 
-    pub async fn exchange_code(client_id: &str, client_secret: &str, code: &str, redirect_uri: &str) -> Result<GoogleTokens, String> {
+    pub async fn exchange_code(
+        client_id: &str,
+        client_secret: &str,
+        code: &str,
+        redirect_uri: &str,
+    ) -> Result<GoogleTokens, String> {
         let client = Client::new();
-        let resp = client.post("https://oauth2.googleapis.com/token")
+        let resp = client
+            .post("https://oauth2.googleapis.com/token")
             .form(&[
                 ("code", code),
                 ("client_id", client_id),
@@ -46,13 +52,16 @@ impl GoogleDriveAdapter {
             .await
             .map_err(|e| format!("Token exchange failed: {}", e))?;
 
-        let body: serde_json::Value = resp.json().await
+        let body: serde_json::Value = resp
+            .json()
+            .await
             .map_err(|e| format!("Parse error: {}", e))?;
 
         Ok(GoogleTokens {
             access_token: body["access_token"].as_str().unwrap_or("").to_string(),
             refresh_token: body["refresh_token"].as_str().unwrap_or("").to_string(),
-            expires_at: chrono::Utc::now().timestamp() + body["expires_in"].as_i64().unwrap_or(3600),
+            expires_at: chrono::Utc::now().timestamp()
+                + body["expires_in"].as_i64().unwrap_or(3600),
         })
     }
 
@@ -64,7 +73,9 @@ impl GoogleDriveAdapter {
         let refresh_token = tokens.refresh_token.clone();
         drop(tokens);
 
-        let resp = self.client.post("https://oauth2.googleapis.com/token")
+        let resp = self
+            .client
+            .post("https://oauth2.googleapis.com/token")
             .form(&[
                 ("refresh_token", refresh_token.as_str()),
                 ("client_id", self.client_id.as_str()),
@@ -75,7 +86,9 @@ impl GoogleDriveAdapter {
             .await
             .map_err(|e| format!("Token refresh failed: {}", e))?;
 
-        let body: serde_json::Value = resp.json().await
+        let body: serde_json::Value = resp
+            .json()
+            .await
             .map_err(|e| format!("Parse error: {}", e))?;
 
         let new_access = body["access_token"].as_str().unwrap_or("").to_string();
@@ -134,14 +147,18 @@ impl GoogleDriveAdapter {
                 .await
                 .map_err(|e| format!("Search folder failed: {}", e))?;
 
-            let body: serde_json::Value = resp.json().await
+            let body: serde_json::Value = resp
+                .json()
+                .await
                 .map_err(|e| format!("Parse error: {}", e))?;
 
             let folder_id = if let Some(file) = body["files"].as_array().and_then(|a| a.first()) {
                 file["id"].as_str().unwrap_or("").to_string()
             } else {
                 // Create the folder
-                let resp = self.client.post("https://www.googleapis.com/drive/v3/files")
+                let resp = self
+                    .client
+                    .post("https://www.googleapis.com/drive/v3/files")
                     .bearer_auth(&token)
                     .json(&serde_json::json!({
                         "name": part,
@@ -152,12 +169,17 @@ impl GoogleDriveAdapter {
                     .await
                     .map_err(|e| format!("Create folder failed: {}", e))?;
 
-                let body: serde_json::Value = resp.json().await
+                let body: serde_json::Value = resp
+                    .json()
+                    .await
                     .map_err(|e| format!("Parse error: {}", e))?;
                 body["id"].as_str().unwrap_or("").to_string()
             };
 
-            self.folder_cache.lock().await.insert(built_path.clone(), folder_id.clone());
+            self.folder_cache
+                .lock()
+                .await
+                .insert(built_path.clone(), folder_id.clone());
             parent_id = folder_id;
         }
 
@@ -180,22 +202,37 @@ impl GoogleDriveAdapter {
     }
 
     /// Find a file by name within a specific parent folder.
-    async fn find_file_in_folder(&self, name: &str, parent_id: &str) -> Result<Option<String>, String> {
+    async fn find_file_in_folder(
+        &self,
+        name: &str,
+        parent_id: &str,
+    ) -> Result<Option<String>, String> {
         let token = self.ensure_token().await?;
-        let resp = self.client.get("https://www.googleapis.com/drive/v3/files")
+        let resp = self
+            .client
+            .get("https://www.googleapis.com/drive/v3/files")
             .bearer_auth(&token)
             .query(&[
-                ("q", &format!("name='{}' and '{}' in parents and trashed=false", name, parent_id)),
+                (
+                    "q",
+                    &format!(
+                        "name='{}' and '{}' in parents and trashed=false",
+                        name, parent_id
+                    ),
+                ),
                 ("fields", &"files(id)".to_string()),
             ])
             .send()
             .await
             .map_err(|e| format!("Search failed: {}", e))?;
 
-        let body: serde_json::Value = resp.json().await
+        let body: serde_json::Value = resp
+            .json()
+            .await
             .map_err(|e| format!("Parse error: {}", e))?;
 
-        Ok(body["files"].as_array()
+        Ok(body["files"]
+            .as_array()
             .and_then(|a| a.first())
             .and_then(|f| f["id"].as_str())
             .map(|s| s.to_string()))
@@ -206,7 +243,9 @@ impl GoogleDriveAdapter {
 impl CloudStorageAdapter for GoogleDriveAdapter {
     async fn test_connection(&self) -> Result<bool, String> {
         let token = self.ensure_token().await?;
-        let resp = self.client.get("https://www.googleapis.com/drive/v3/about")
+        let resp = self
+            .client
+            .get("https://www.googleapis.com/drive/v3/about")
             .bearer_auth(&token)
             .query(&[("fields", "user")])
             .send()
@@ -222,7 +261,12 @@ impl CloudStorageAdapter for GoogleDriveAdapter {
         // Check if file already exists in the correct folder
         if let Some(file_id) = self.find_file_in_folder(&file_name, &parent_id).await? {
             // Update existing file
-            let resp = self.client.patch(&format!("https://www.googleapis.com/upload/drive/v3/files/{}?uploadType=media", file_id))
+            let resp = self
+                .client
+                .patch(&format!(
+                    "https://www.googleapis.com/upload/drive/v3/files/{}?uploadType=media",
+                    file_id
+                ))
                 .bearer_auth(&token)
                 .header("Content-Type", "application/octet-stream")
                 .body(data.to_vec())
@@ -244,9 +288,14 @@ impl CloudStorageAdapter for GoogleDriveAdapter {
             full_body.extend_from_slice(data);
             full_body.extend_from_slice(format!("\r\n--{}--", boundary).as_bytes());
 
-            let resp = self.client.post("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart")
+            let resp = self
+                .client
+                .post("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart")
                 .bearer_auth(&token)
-                .header("Content-Type", format!("multipart/related; boundary={}", boundary))
+                .header(
+                    "Content-Type",
+                    format!("multipart/related; boundary={}", boundary),
+                )
                 .body(full_body)
                 .send()
                 .await
@@ -260,11 +309,18 @@ impl CloudStorageAdapter for GoogleDriveAdapter {
 
     async fn download(&self, remote_path: &str) -> Result<Vec<u8>, String> {
         let (parent_id, file_name) = self.resolve_parent_folder(remote_path).await?;
-        let file_id = self.find_file_in_folder(&file_name, &parent_id).await?
+        let file_id = self
+            .find_file_in_folder(&file_name, &parent_id)
+            .await?
             .ok_or_else(|| format!("File not found: {}", remote_path))?;
         let token = self.ensure_token().await?;
 
-        let resp = self.client.get(&format!("https://www.googleapis.com/drive/v3/files/{}?alt=media", file_id))
+        let resp = self
+            .client
+            .get(&format!(
+                "https://www.googleapis.com/drive/v3/files/{}?alt=media",
+                file_id
+            ))
             .bearer_auth(&token)
             .send()
             .await
@@ -274,7 +330,8 @@ impl CloudStorageAdapter for GoogleDriveAdapter {
             return Err(format!("Download failed: {}", resp.status()));
         }
 
-        resp.bytes().await
+        resp.bytes()
+            .await
             .map(|b| b.to_vec())
             .map_err(|e| format!("Read failed: {}", e))
     }
@@ -283,7 +340,11 @@ impl CloudStorageAdapter for GoogleDriveAdapter {
         let (parent_id, file_name) = self.resolve_parent_folder(remote_path).await?;
         if let Some(file_id) = self.find_file_in_folder(&file_name, &parent_id).await? {
             let token = self.ensure_token().await?;
-            self.client.delete(&format!("https://www.googleapis.com/drive/v3/files/{}", file_id))
+            self.client
+                .delete(&format!(
+                    "https://www.googleapis.com/drive/v3/files/{}",
+                    file_id
+                ))
                 .bearer_auth(&token)
                 .send()
                 .await

@@ -29,12 +29,10 @@ impl SyncManifest {
     }
 
     pub fn to_json(&self) -> Result<Vec<u8>, String> {
-        serde_json::to_vec_pretty(self)
-            .map_err(|e| format!("Serialize manifest failed: {}", e))
+        serde_json::to_vec_pretty(self).map_err(|e| format!("Serialize manifest failed: {}", e))
     }
 
     pub fn from_json(data: &[u8]) -> Result<Self, String> {
-        serde_json::from_slice(data)
-            .map_err(|e| format!("Deserialize manifest failed: {}", e))
+        serde_json::from_slice(data).map_err(|e| format!("Deserialize manifest failed: {}", e))
     }
 }

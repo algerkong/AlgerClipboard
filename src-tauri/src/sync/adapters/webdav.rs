@@ -27,7 +27,6 @@ impl WebDavAdapter {
             format!("{}/{}", self.base_url, path)
         }
     }
-
 }
 
 #[async_trait]
@@ -36,7 +35,8 @@ impl CloudStorageAdapter for WebDavAdapter {
         let method = reqwest::Method::from_bytes(b"PROPFIND")
             .map_err(|e| format!("Invalid method: {}", e))?;
 
-        let resp = self.client
+        let resp = self
+            .client
             .request(method, &self.base_url)
             .basic_auth(&self.username, Some(&self.password))
             .header("Depth", "0")
@@ -49,7 +49,8 @@ impl CloudStorageAdapter for WebDavAdapter {
 
     async fn upload(&self, remote_path: &str, data: &[u8]) -> Result<(), String> {
         let url = self.url(remote_path);
-        let resp = self.client
+        let resp = self
+            .client
             .put(&url)
             .basic_auth(&self.username, Some(&self.password))
             .header("Content-Type", "application/octet-stream")
@@ -58,7 +59,10 @@ impl CloudStorageAdapter for WebDavAdapter {
             .await
             .map_err(|e| format!("Upload failed: {}", e))?;
 
-        if resp.status().is_success() || resp.status().as_u16() == 201 || resp.status().as_u16() == 204 {
+        if resp.status().is_success()
+            || resp.status().as_u16() == 201
+            || resp.status().as_u16() == 204
+        {
             Ok(())
         } else {
             Err(format!("Upload failed with status: {}", resp.status()))
@@ -67,7 +71,8 @@ impl CloudStorageAdapter for WebDavAdapter {
 
     async fn download(&self, remote_path: &str) -> Result<Vec<u8>, String> {
         let url = self.url(remote_path);
-        let resp = self.client
+        let resp = self
+            .client
             .get(&url)
             .basic_auth(&self.username, Some(&self.password))
             .send()
@@ -86,14 +91,18 @@ impl CloudStorageAdapter for WebDavAdapter {
 
     async fn delete(&self, remote_path: &str) -> Result<(), String> {
         let url = self.url(remote_path);
-        let resp = self.client
+        let resp = self
+            .client
             .delete(&url)
             .basic_auth(&self.username, Some(&self.password))
             .send()
             .await
             .map_err(|e| format!("Delete failed: {}", e))?;
 
-        if resp.status().is_success() || resp.status().as_u16() == 204 || resp.status().as_u16() == 404 {
+        if resp.status().is_success()
+            || resp.status().as_u16() == 204
+            || resp.status().as_u16() == 404
+        {
             Ok(())
         } else {
             Err(format!("Delete failed with status: {}", resp.status()))
@@ -102,17 +111,21 @@ impl CloudStorageAdapter for WebDavAdapter {
 
     async fn mkdir(&self, remote_path: &str) -> Result<(), String> {
         let url = self.url(remote_path);
-        let method = reqwest::Method::from_bytes(b"MKCOL")
-            .map_err(|e| format!("Invalid method: {}", e))?;
+        let method =
+            reqwest::Method::from_bytes(b"MKCOL").map_err(|e| format!("Invalid method: {}", e))?;
 
-        let resp = self.client
+        let resp = self
+            .client
             .request(method, &url)
             .basic_auth(&self.username, Some(&self.password))
             .send()
             .await
             .map_err(|e| format!("Mkdir failed: {}", e))?;
 
-        if resp.status().is_success() || resp.status().as_u16() == 201 || resp.status().as_u16() == 405 {
+        if resp.status().is_success()
+            || resp.status().as_u16() == 201
+            || resp.status().as_u16() == 405
+        {
             // 405 means directory already exists on some WebDAV servers
             Ok(())
         } else {

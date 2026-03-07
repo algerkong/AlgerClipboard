@@ -44,8 +44,9 @@ pub fn update_sync_account(
     encryption_enabled: bool,
     enabled: bool,
 ) -> Result<(), String> {
-    let existing = db.0.get_sync_account(&id)?
-        .ok_or_else(|| "Account not found".to_string())?;
+    let existing =
+        db.0.get_sync_account(&id)?
+            .ok_or_else(|| "Account not found".to_string())?;
 
     let updated = SyncAccount {
         config,
@@ -60,27 +61,22 @@ pub fn update_sync_account(
 }
 
 #[tauri::command]
-pub fn delete_sync_account(
-    db: State<'_, AppDatabase>,
-    id: String,
-) -> Result<(), String> {
+pub fn delete_sync_account(db: State<'_, AppDatabase>, id: String) -> Result<(), String> {
     db.0.delete_sync_account(&id)
 }
 
 #[tauri::command]
-pub async fn test_sync_connection(
-    provider: String,
-    config: String,
-) -> Result<bool, String> {
-    let config_val: serde_json::Value = serde_json::from_str(&config)
-        .map_err(|e| format!("Invalid config JSON: {}", e))?;
+pub async fn test_sync_connection(provider: String, config: String) -> Result<bool, String> {
+    let config_val: serde_json::Value =
+        serde_json::from_str(&config).map_err(|e| format!("Invalid config JSON: {}", e))?;
 
     match provider.as_str() {
         "webdav" => {
             let url = config_val["url"].as_str().unwrap_or("");
             let username = config_val["username"].as_str().unwrap_or("");
             let password = config_val["password"].as_str().unwrap_or("");
-            let adapter = crate::sync::adapters::webdav::WebDavAdapter::new(url, username, password);
+            let adapter =
+                crate::sync::adapters::webdav::WebDavAdapter::new(url, username, password);
             adapter.test_connection().await
         }
         _ => Err(format!("OAuth providers require authorization first")),
@@ -96,11 +92,12 @@ pub async fn trigger_sync(
 ) -> Result<crate::sync::engine::SyncResult, String> {
     use tauri::Emitter;
 
-    let account = db.0.get_sync_account(&account_id)?
-        .ok_or_else(|| "Account not found".to_string())?;
+    let account =
+        db.0.get_sync_account(&account_id)?
+            .ok_or_else(|| "Account not found".to_string())?;
 
-    let config_val: serde_json::Value = serde_json::from_str(&account.config)
-        .map_err(|e| format!("Invalid config: {}", e))?;
+    let config_val: serde_json::Value =
+        serde_json::from_str(&account.config).map_err(|e| format!("Invalid config: {}", e))?;
 
     // Create adapter based on provider
     let adapter: Box<dyn CloudStorageAdapter> = match account.provider.as_str() {
@@ -108,45 +105,66 @@ pub async fn trigger_sync(
             let url = config_val["url"].as_str().unwrap_or("");
             let username = config_val["username"].as_str().unwrap_or("");
             let password = config_val["password"].as_str().unwrap_or("");
-            Box::new(crate::sync::adapters::webdav::WebDavAdapter::new(url, username, password))
+            Box::new(crate::sync::adapters::webdav::WebDavAdapter::new(
+                url, username, password,
+            ))
         }
         "google_drive" => {
             let tokens = serde_json::from_value(config_val["tokens"].clone())
                 .map_err(|e| format!("Invalid tokens: {}", e))?;
             let client_id = config_val["client_id"].as_str().unwrap_or("");
             let client_secret = config_val["client_secret"].as_str().unwrap_or("");
-            Box::new(crate::sync::adapters::google_drive::GoogleDriveAdapter::new(client_id, client_secret, tokens))
+            Box::new(
+                crate::sync::adapters::google_drive::GoogleDriveAdapter::new(
+                    client_id,
+                    client_secret,
+                    tokens,
+                ),
+            )
         }
         "onedrive" => {
             let tokens = serde_json::from_value(config_val["tokens"].clone())
                 .map_err(|e| format!("Invalid tokens: {}", e))?;
             let client_id = config_val["client_id"].as_str().unwrap_or("");
-            Box::new(crate::sync::adapters::onedrive::OneDriveAdapter::new(client_id, tokens))
+            Box::new(crate::sync::adapters::onedrive::OneDriveAdapter::new(
+                client_id, tokens,
+            ))
         }
         _ => return Err(format!("Unknown provider: {}", account.provider)),
     };
 
     // Optional encryption
     let encryption = if account.encryption_enabled {
-        let passphrase = db.0.get_setting("sync_passphrase")?
-            .ok_or_else(|| "Encryption enabled but no passphrase set".to_string())?;
-        let salt = db.0.get_setting("sync_salt")?
-            .map(|s| base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &s)
-                .unwrap_or_default())
-            .unwrap_or_else(|| {
-                let salt = crate::sync::encryption::SyncEncryption::generate_salt();
-                let encoded = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &salt);
-                let _ = db.0.set_setting("sync_salt", &encoded);
-                salt
-            });
-        Some(crate::sync::encryption::SyncEncryption::from_passphrase(&passphrase, &salt)?)
+        let passphrase =
+            db.0.get_setting("sync_passphrase")?
+                .ok_or_else(|| "Encryption enabled but no passphrase set".to_string())?;
+        let salt =
+            db.0.get_setting("sync_salt")?
+                .map(|s| {
+                    base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &s)
+                        .unwrap_or_default()
+                })
+                .unwrap_or_else(|| {
+                    let salt = crate::sync::encryption::SyncEncryption::generate_salt();
+                    let encoded =
+                        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &salt);
+                    let _ = db.0.set_setting("sync_salt", &encoded);
+                    salt
+                });
+        Some(crate::sync::encryption::SyncEncryption::from_passphrase(
+            &passphrase,
+            &salt,
+        )?)
     } else {
         None
     };
 
     let device_id = db.0.get_setting("device_id")?.unwrap_or_default();
 
-    let _ = app.emit("sync-status-changed", serde_json::json!({ "status": "syncing" }));
+    let _ = app.emit(
+        "sync-status-changed",
+        serde_json::json!({ "status": "syncing" }),
+    );
 
     let engine = crate::sync::engine::SyncEngine::new(
         db.0.clone(),
@@ -166,11 +184,12 @@ pub async fn trigger_sync(
             let _ = db.0.update_sync_account(&updated);
 
             // Settings sync if enabled
-            let settings_sync_enabled = db.0.get_setting("settings_sync_enabled")
-                .ok()
-                .flatten()
-                .map(|v| v == "true")
-                .unwrap_or(false);
+            let settings_sync_enabled =
+                db.0.get_setting("settings_sync_enabled")
+                    .ok()
+                    .flatten()
+                    .map(|v| v == "true")
+                    .unwrap_or(false);
 
             if settings_sync_enabled {
                 match engine.sync_settings().await {
@@ -187,58 +206,58 @@ pub async fn trigger_sync(
                 }
             }
 
-            let _ = app.emit("sync-status-changed", serde_json::json!({ "status": "synced" }));
+            let _ = app.emit(
+                "sync-status-changed",
+                serde_json::json!({ "status": "synced" }),
+            );
             Ok(sync_result)
         }
         Err(e) => {
-            let _ = app.emit("sync-status-changed", serde_json::json!({
-                "status": "error",
-                "message": e.clone()
-            }));
+            let _ = app.emit(
+                "sync-status-changed",
+                serde_json::json!({
+                    "status": "error",
+                    "message": e.clone()
+                }),
+            );
             Err(e)
         }
     }
 }
 
 #[tauri::command]
-pub fn set_settings_sync_enabled(
-    db: State<'_, AppDatabase>,
-    enabled: bool,
-) -> Result<(), String> {
-    db.0.set_setting("settings_sync_enabled", if enabled { "true" } else { "false" })
+pub fn set_settings_sync_enabled(db: State<'_, AppDatabase>, enabled: bool) -> Result<(), String> {
+    db.0.set_setting(
+        "settings_sync_enabled",
+        if enabled { "true" } else { "false" },
+    )
 }
 
 #[tauri::command]
-pub fn get_settings_sync_enabled(
-    db: State<'_, AppDatabase>,
-) -> Result<bool, String> {
-    Ok(db.0.get_setting("settings_sync_enabled")?
+pub fn get_settings_sync_enabled(db: State<'_, AppDatabase>) -> Result<bool, String> {
+    Ok(db
+        .0
+        .get_setting("settings_sync_enabled")?
         .map(|v| v == "true")
         .unwrap_or(false))
 }
 
 #[tauri::command]
-pub fn set_sync_max_file_size(
-    db: State<'_, AppDatabase>,
-    max_size_mb: i64,
-) -> Result<(), String> {
+pub fn set_sync_max_file_size(db: State<'_, AppDatabase>, max_size_mb: i64) -> Result<(), String> {
     db.0.set_setting("sync_max_file_size_mb", &max_size_mb.to_string())
 }
 
 #[tauri::command]
-pub fn get_sync_max_file_size(
-    db: State<'_, AppDatabase>,
-) -> Result<i64, String> {
-    Ok(db.0.get_setting("sync_max_file_size_mb")?
+pub fn get_sync_max_file_size(db: State<'_, AppDatabase>) -> Result<i64, String> {
+    Ok(db
+        .0
+        .get_setting("sync_max_file_size_mb")?
         .and_then(|v| v.parse::<i64>().ok())
         .unwrap_or(0))
 }
 
 #[tauri::command]
-pub fn set_sync_passphrase(
-    db: State<'_, AppDatabase>,
-    passphrase: String,
-) -> Result<(), String> {
+pub fn set_sync_passphrase(db: State<'_, AppDatabase>, passphrase: String) -> Result<(), String> {
     db.0.set_setting("sync_passphrase", &passphrase)
 }
 
@@ -280,8 +299,12 @@ pub async fn start_oauth_flow(
             let redirect_uri = format!("http://127.0.0.1:{}/callback", result.port);
 
             let tokens = crate::sync::adapters::google_drive::GoogleDriveAdapter::exchange_code(
-                &client_id, &secret, &result.code, &redirect_uri
-            ).await?;
+                &client_id,
+                &secret,
+                &result.code,
+                &redirect_uri,
+            )
+            .await?;
             serde_json::to_value(&tokens).map_err(|e| format!("Serialize: {}", e))
         }
         "onedrive" => {
@@ -293,8 +316,11 @@ pub async fn start_oauth_flow(
             let redirect_uri = format!("http://127.0.0.1:{}/callback", result.port);
 
             let tokens = crate::sync::adapters::onedrive::OneDriveAdapter::exchange_code(
-                &client_id, &result.code, &redirect_uri
-            ).await?;
+                &client_id,
+                &result.code,
+                &redirect_uri,
+            )
+            .await?;
             serde_json::to_value(&tokens).map_err(|e| format!("Serialize: {}", e))
         }
         _ => Err(format!("OAuth not supported for provider: {}", provider)),

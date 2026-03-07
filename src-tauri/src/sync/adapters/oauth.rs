@@ -35,13 +35,17 @@ fn open_browser(url: &str) -> Result<(), String> {
     }
     #[cfg(target_os = "macos")]
     {
-        std::process::Command::new("open").arg(url).spawn()
+        std::process::Command::new("open")
+            .arg(url)
+            .spawn()
             .map_err(|e| format!("Failed to open browser: {}", e))?;
         return Ok(());
     }
     #[cfg(target_os = "linux")]
     {
-        std::process::Command::new("xdg-open").arg(url).spawn()
+        std::process::Command::new("xdg-open")
+            .arg(url)
+            .spawn()
             .map_err(|e| format!("Failed to open browser: {}", e))?;
         return Ok(());
     }
@@ -50,21 +54,25 @@ fn open_browser(url: &str) -> Result<(), String> {
 }
 
 pub fn oauth_localhost_flow(auth_url: &str) -> Result<OAuthResult, String> {
-    let listener = TcpListener::bind("127.0.0.1:0")
-        .map_err(|e| format!("Failed to bind: {}", e))?;
-    let port = listener.local_addr()
-        .map_err(|e| format!("Failed to get addr: {}", e))?.port();
+    let listener =
+        TcpListener::bind("127.0.0.1:0").map_err(|e| format!("Failed to bind: {}", e))?;
+    let port = listener
+        .local_addr()
+        .map_err(|e| format!("Failed to get addr: {}", e))?
+        .port();
 
     let full_url = auth_url.replace("{REDIRECT_PORT}", &port.to_string());
 
     open_browser(&full_url)?;
 
     // Wait for callback
-    let (mut stream, _) = listener.accept()
+    let (mut stream, _) = listener
+        .accept()
         .map_err(|e| format!("Accept failed: {}", e))?;
 
     let mut buf = vec![0u8; 4096];
-    let n = stream.read(&mut buf)
+    let n = stream
+        .read(&mut buf)
         .map_err(|e| format!("Read failed: {}", e))?;
     let request = String::from_utf8_lossy(&buf[..n]).to_string();
 

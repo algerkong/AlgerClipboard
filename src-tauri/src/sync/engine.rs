@@ -1,9 +1,9 @@
-use crate::clipboard::entry::ClipboardEntry;
-use crate::storage::blob::BlobStore;
-use crate::storage::database::Database;
 use super::adapters::CloudStorageAdapter;
 use super::encryption::SyncEncryption;
 use super::manifest::{ManifestEntry, SyncManifest};
+use crate::clipboard::entry::ClipboardEntry;
+use crate::storage::blob::BlobStore;
+use crate::storage::database::Database;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -52,7 +52,13 @@ impl SyncEngine {
         device_id: String,
         encryption: Option<SyncEncryption>,
     ) -> Self {
-        Self { db, blob_store, adapter, device_id, encryption }
+        Self {
+            db,
+            blob_store,
+            adapter,
+            device_id,
+            encryption,
+        }
     }
 
     pub async fn sync(&self, last_sync_version: i64) -> Result<SyncResult, String> {
@@ -74,7 +80,9 @@ impl SyncEngine {
         let remote_manifest = self.load_remote_manifest().await?;
 
         // Get local changes since last sync
-        let local_changes = self.db.get_entries_since_version(last_sync_version)
+        let local_changes = self
+            .db
+            .get_entries_since_version(last_sync_version)
             .map_err(|e| format!("Failed to get local changes: {}", e))?;
 
         // Push local changes
@@ -84,7 +92,9 @@ impl SyncEngine {
                     result.pushed += 1;
                     let _ = self.db.increment_sync_version(&entry.id);
                     let _ = self.db.update_entry_sync_status(
-                        &entry.id, "synced", &chrono::Utc::now().to_rfc3339()
+                        &entry.id,
+                        "synced",
+                        &chrono::Utc::now().to_rfc3339(),
                     );
                 }
                 Err(e) => result.errors.push(format!("Push {}: {}", entry.id, e)),
@@ -107,7 +117,9 @@ impl SyncEngine {
                     {
                         // Conflict — mark local as conflict
                         let _ = self.db.update_entry_sync_status(
-                            entry_id, "conflict", &chrono::Utc::now().to_rfc3339()
+                            entry_id,
+                            "conflict",
+                            &chrono::Utc::now().to_rfc3339(),
                         );
                         result.conflicts += 1;
                     } else if local.content_hash != manifest_entry.content_hash {
@@ -137,13 +149,16 @@ impl SyncEngine {
         // Update remote manifest with our changes
         let mut updated_manifest = remote_manifest;
         for entry in &local_changes {
-            updated_manifest.entries.insert(entry.id.clone(), ManifestEntry {
-                content_hash: entry.content_hash.clone(),
-                version: entry.sync_version,
-                updated_at: entry.updated_at.clone(),
-                deleted: false,
-                has_blob: entry.blob_path.is_some(),
-            });
+            updated_manifest.entries.insert(
+                entry.id.clone(),
+                ManifestEntry {
+                    content_hash: entry.content_hash.clone(),
+                    version: entry.sync_version,
+                    updated_at: entry.updated_at.clone(),
+                    deleted: false,
+                    has_blob: entry.blob_path.is_some(),
+                },
+            );
         }
 
         // Propagate local deletions to remote manifest
@@ -153,13 +168,16 @@ impl SyncEngine {
                 manifest_entry.deleted = true;
             } else {
                 // Entry was synced before but missing from manifest — add as deleted
-                updated_manifest.entries.insert(id.clone(), ManifestEntry {
-                    content_hash: String::new(),
-                    version: 0,
-                    updated_at: chrono::Utc::now().to_rfc3339(),
-                    deleted: true,
-                    has_blob: false,
-                });
+                updated_manifest.entries.insert(
+                    id.clone(),
+                    ManifestEntry {
+                        content_hash: String::new(),
+                        version: 0,
+                        updated_at: chrono::Utc::now().to_rfc3339(),
+                        deleted: true,
+                        has_blob: false,
+                    },
+                );
             }
             // Clean up remote entry file
             let remote_path = format!("AlgerClipboard/entries/{}.json", id);
@@ -180,7 +198,9 @@ impl SyncEngine {
             Ok(data) => {
                 let json_data = if let Some(ref enc) = self.encryption {
                     // Try to parse as encrypted wrapper
-                    if let Ok(wrapper) = serde_json::from_slice::<super::encryption::EncryptedManifestWrapper>(&data) {
+                    if let Ok(wrapper) =
+                        serde_json::from_slice::<super::encryption::EncryptedManifestWrapper>(&data)
+                    {
                         if wrapper.encrypted {
                             enc.decrypt_from_storage(&wrapper)?
                         } else {
@@ -206,18 +226,19 @@ impl SyncEngine {
         let data = if let Some(ref enc) = self.encryption {
             let salt = SyncEncryption::generate_salt();
             let wrapper = enc.encrypt_for_storage(&json, &salt)?;
-            serde_json::to_vec_pretty(&wrapper)
-                .map_err(|e| format!("Serialize wrapper: {}", e))?
+            serde_json::to_vec_pretty(&wrapper).map_err(|e| format!("Serialize wrapper: {}", e))?
         } else {
             json
         };
-        self.adapter.upload("AlgerClipboard/manifest.json", &data).await
+        self.adapter
+            .upload("AlgerClipboard/manifest.json", &data)
+            .await
     }
 
     async fn push_entry(&self, entry: &ClipboardEntry) -> Result<(), String> {
         // Serialize entry metadata
-        let entry_json = serde_json::to_vec_pretty(entry)
-            .map_err(|e| format!("Serialize entry: {}", e))?;
+        let entry_json =
+            serde_json::to_vec_pretty(entry).map_err(|e| format!("Serialize entry: {}", e))?;
 
         let entry_data = if let Some(ref enc) = self.encryption {
             enc.encrypt(&entry_json)?.ciphertext
@@ -233,13 +254,16 @@ impl SyncEngine {
             let full_path = self.blob_store.get_blob_path(blob_path);
             if let Ok(blob_data) = std::fs::read(&full_path) {
                 // Check sync file size limit
-                let max_file_mb = self.db.get_setting("sync_max_file_size_mb")
+                let max_file_mb = self
+                    .db
+                    .get_setting("sync_max_file_size_mb")
                     .ok()
                     .flatten()
                     .and_then(|v| v.parse::<u64>().ok())
                     .unwrap_or(0);
 
-                let skip_blob = max_file_mb > 0 && blob_data.len() as u64 > max_file_mb * 1024 * 1024;
+                let skip_blob =
+                    max_file_mb > 0 && blob_data.len() as u64 > max_file_mb * 1024 * 1024;
 
                 if !skip_blob {
                     let blob_remote = format!("AlgerClipboard/blobs/{}.bin", entry.content_hash);
@@ -265,7 +289,10 @@ impl SyncEngine {
             match self.adapter.download("AlgerClipboard/settings.json").await {
                 Ok(data) => {
                     let json_data = if let Some(ref enc) = self.encryption {
-                        if let Ok(wrapper) = serde_json::from_slice::<super::encryption::EncryptedManifestWrapper>(&data) {
+                        if let Ok(wrapper) = serde_json::from_slice::<
+                            super::encryption::EncryptedManifestWrapper,
+                        >(&data)
+                        {
                             if wrapper.encrypted {
                                 enc.decrypt_from_storage(&wrapper)?
                             } else {
@@ -318,12 +345,13 @@ impl SyncEngine {
         let upload_data = if let Some(ref enc) = self.encryption {
             let salt = SyncEncryption::generate_salt();
             let wrapper = enc.encrypt_for_storage(&merged_json, &salt)?;
-            serde_json::to_vec_pretty(&wrapper)
-                .map_err(|e| format!("Serialize wrapper: {}", e))?
+            serde_json::to_vec_pretty(&wrapper).map_err(|e| format!("Serialize wrapper: {}", e))?
         } else {
             merged_json
         };
-        self.adapter.upload("AlgerClipboard/settings.json", &upload_data).await?;
+        self.adapter
+            .upload("AlgerClipboard/settings.json", &upload_data)
+            .await?;
 
         Ok(SettingsSyncResult { pushed, pulled })
     }
@@ -336,13 +364,14 @@ impl SyncEngine {
             enc.decrypt(&super::encryption::EncryptedPayload {
                 nonce: data[..12].to_vec(),
                 ciphertext: data[12..].to_vec(),
-            }).unwrap_or(data)
+            })
+            .unwrap_or(data)
         } else {
             data
         };
 
-        let entry: ClipboardEntry = serde_json::from_slice(&json_data)
-            .map_err(|e| format!("Deserialize entry: {}", e))?;
+        let entry: ClipboardEntry =
+            serde_json::from_slice(&json_data).map_err(|e| format!("Deserialize entry: {}", e))?;
 
         // Download blob if it has one
         if entry.blob_path.is_some() {
@@ -352,7 +381,8 @@ impl SyncEngine {
                     enc.decrypt(&super::encryption::EncryptedPayload {
                         nonce: blob_data[..12].to_vec(),
                         ciphertext: blob_data[12..].to_vec(),
-                    }).unwrap_or(blob_data)
+                    })
+                    .unwrap_or(blob_data)
                 } else {
                     blob_data
                 };
@@ -362,11 +392,12 @@ impl SyncEngine {
         }
 
         // Insert into local database
-        self.db.insert_entry(&entry)
+        self.db
+            .insert_entry(&entry)
             .map_err(|e| format!("Insert entry: {}", e))?;
-        let _ = self.db.update_entry_sync_status(
-            &entry.id, "synced", &chrono::Utc::now().to_rfc3339()
-        );
+        let _ =
+            self.db
+                .update_entry_sync_status(&entry.id, "synced", &chrono::Utc::now().to_rfc3339());
 
         Ok(())
     }
