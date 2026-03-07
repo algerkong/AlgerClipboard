@@ -20,6 +20,9 @@ import {
   Loader2,
   CloudOff,
   Pencil,
+  Brain,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import {
   useSettingsStore,
@@ -30,6 +33,7 @@ import {
 import { useTranslateStore } from "@/stores/translateStore";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { useSyncStore } from "@/stores/syncStore";
+import { useAiStore } from "@/stores/aiStore";
 import {
   exportData,
   importData,
@@ -57,7 +61,7 @@ import { toast } from "sonner";
 import { usePlatform } from "@/contexts/PlatformContext";
 
 type Theme = "light" | "dark" | "system";
-type SettingsTab = "general" | "sync" | "translate" | "data";
+type SettingsTab = "general" | "sync" | "translate" | "data" | "ai";
 
 interface Props {
   onBack: () => void;
@@ -103,6 +107,11 @@ const TABS: { key: SettingsTab; labelKey: string; icon: React.ReactNode }[] = [
     key: "data",
     labelKey: "settings.tabData",
     icon: <Database className="w-3 h-3" />,
+  },
+  {
+    key: "ai",
+    labelKey: "settings.tabAi",
+    icon: <Brain className="w-3 h-3" />,
   },
 ];
 
@@ -1664,6 +1673,229 @@ function DataTab() {
   );
 }
 
+/* ─── AI Tab ─── */
+function AiTab() {
+  const { t } = useTranslation();
+  const {
+    providers,
+    config,
+    isTesting,
+    testResult,
+    loadProviders,
+    loadConfig,
+    updateConfig,
+    testConnection,
+  } = useAiStore();
+  const [showApiKey, setShowApiKey] = useState(false);
+
+  useEffect(() => {
+    loadProviders();
+    loadConfig();
+  }, [loadProviders, loadConfig]);
+
+  const selectedProvider = providers.find((p) => p.id === config.provider);
+  const groupedProviders = {
+    international: providers.filter((p) => p.category === "international"),
+    domestic: providers.filter((p) => p.category === "domestic"),
+    local: providers.filter((p) => p.category === "local"),
+    custom: providers.filter((p) => p.category === "custom"),
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Enable AI */}
+      <div className="flex items-center justify-between">
+        <span className="text-sm2">{t("settings.ai.enable")}</span>
+        <button
+          onClick={() => updateConfig({ enabled: !config.enabled })}
+          className={cn(
+            "w-9 h-5 rounded-full transition-colors relative",
+            config.enabled ? "bg-primary" : "bg-muted"
+          )}
+        >
+          <span
+            className={cn(
+              "absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform",
+              config.enabled ? "left-[18px]" : "left-0.5"
+            )}
+          />
+        </button>
+      </div>
+
+      {/* Provider */}
+      <div className="space-y-1.5">
+        <label className="text-sm2 text-muted-foreground">
+          {t("settings.ai.provider")}
+        </label>
+        <select
+          value={config.provider}
+          onChange={(e) => {
+            const preset = providers.find((p) => p.id === e.target.value);
+            updateConfig({
+              provider: e.target.value,
+              model: preset?.models[0] || "",
+              base_url: preset?.base_url || "",
+            });
+          }}
+          className="w-full h-8 px-2 rounded-md border border-border bg-background text-sm2"
+        >
+          <option value="">{t("settings.ai.selectProvider")}</option>
+          {groupedProviders.international.length > 0 && (
+            <optgroup label={t("settings.ai.international")}>
+              {groupedProviders.international.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </optgroup>
+          )}
+          {groupedProviders.domestic.length > 0 && (
+            <optgroup label={t("settings.ai.domestic")}>
+              {groupedProviders.domestic.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </optgroup>
+          )}
+          {groupedProviders.local.length > 0 && (
+            <optgroup label={t("settings.ai.local")}>
+              {groupedProviders.local.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </optgroup>
+          )}
+          {groupedProviders.custom.length > 0 && (
+            <optgroup label={t("settings.ai.custom")}>
+              {groupedProviders.custom.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </optgroup>
+          )}
+        </select>
+      </div>
+
+      {/* API Key */}
+      <div className="space-y-1.5">
+        <label className="text-sm2 text-muted-foreground">
+          {t("settings.ai.apiKey")}
+        </label>
+        <div className="relative">
+          <input
+            type={showApiKey ? "text" : "password"}
+            value={config.api_key}
+            onChange={(e) => updateConfig({ api_key: e.target.value })}
+            placeholder={t("settings.ai.apiKeyPlaceholder")}
+            className="w-full h-8 px-2 pr-8 rounded-md border border-border bg-background text-sm2"
+          />
+          <button
+            onClick={() => setShowApiKey(!showApiKey)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            {showApiKey ? (
+              <EyeOff className="w-3.5 h-3.5" />
+            ) : (
+              <Eye className="w-3.5 h-3.5" />
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Model selector */}
+      {selectedProvider && selectedProvider.models.length > 0 && (
+        <div className="space-y-1.5">
+          <label className="text-sm2 text-muted-foreground">
+            {t("settings.ai.model")}
+          </label>
+          <select
+            value={config.model}
+            onChange={(e) => updateConfig({ model: e.target.value })}
+            className="w-full h-8 px-2 rounded-md border border-border bg-background text-sm2"
+          >
+            {selectedProvider.models.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Custom model input for custom/ollama providers */}
+      {(config.provider === "custom" || config.provider === "ollama") && (
+        <div className="space-y-1.5">
+          <label className="text-sm2 text-muted-foreground">
+            {t("settings.ai.modelName")}
+          </label>
+          <input
+            type="text"
+            value={config.model}
+            onChange={(e) => updateConfig({ model: e.target.value })}
+            placeholder="model-name"
+            className="w-full h-8 px-2 rounded-md border border-border bg-background text-sm2"
+          />
+        </div>
+      )}
+
+      {/* Base URL */}
+      {config.provider && (
+        <div className="space-y-1.5">
+          <label className="text-sm2 text-muted-foreground">
+            {t("settings.ai.baseUrl")}
+          </label>
+          <input
+            type="text"
+            value={config.base_url}
+            onChange={(e) => updateConfig({ base_url: e.target.value })}
+            placeholder={
+              selectedProvider?.base_url || "https://api.example.com/v1"
+            }
+            className="w-full h-8 px-2 rounded-md border border-border bg-background text-sm2"
+          />
+        </div>
+      )}
+
+      {/* Test Connection */}
+      <div className="space-y-2">
+        <button
+          onClick={() => testConnection()}
+          disabled={isTesting || !config.provider || !config.api_key}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm2 font-medium transition-colors",
+            "bg-primary text-primary-foreground hover:bg-primary/90",
+            "disabled:opacity-50 disabled:cursor-not-allowed"
+          )}
+        >
+          {isTesting ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Check className="w-3.5 h-3.5" />
+          )}
+          {t("settings.ai.testConnection")}
+        </button>
+        {testResult && (
+          <div
+            className={cn(
+              "text-sm2 p-2 rounded-md",
+              testResult.startsWith("Error")
+                ? "bg-destructive/10 text-destructive"
+                : "bg-green-500/10 text-green-500"
+            )}
+          >
+            {testResult.length > 100
+              ? testResult.substring(0, 100) + "..."
+              : testResult}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Settings Page ─── */
 export function SettingsPage({ onBack, initialTab }: Props) {
   const { t } = useTranslation();
@@ -1711,6 +1943,7 @@ export function SettingsPage({ onBack, initialTab }: Props) {
         {activeTab === "sync" && <SyncTab />}
         {activeTab === "translate" && <TranslateTab />}
         {activeTab === "data" && <DataTab />}
+        {activeTab === "ai" && <AiTab />}
       </div>
     </div>
   );

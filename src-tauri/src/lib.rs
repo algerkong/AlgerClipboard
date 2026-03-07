@@ -1,3 +1,4 @@
+mod ai;
 mod clipboard;
 mod commands;
 mod ocr;
@@ -231,6 +232,14 @@ pub fn run() {
             commands::sync_cmd::get_settings_sync_enabled,
             commands::sync_cmd::set_sync_max_file_size,
             commands::sync_cmd::get_sync_max_file_size,
+            commands::ai_cmd::get_ai_providers,
+            commands::ai_cmd::get_ai_config,
+            commands::ai_cmd::save_ai_config,
+            commands::ai_cmd::test_ai_connection,
+            commands::ai_cmd::ai_chat,
+            commands::ai_cmd::ai_summarize,
+            commands::ai_cmd::classify_text,
+            commands::ai_cmd::detect_code_language,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -115,7 +115,25 @@
     "browserFirefox": "Mozilla Firefox",
     "browserEdge": "Microsoft Edge",
     "browserBrave": "Brave",
-    "browserSafari": "Safari"
+    "browserSafari": "Safari",
+    "tabAi": "AI",
+    "ai": {
+      "enable": "Enable AI Features",
+      "provider": "AI Provider",
+      "selectProvider": "Select a provider...",
+      "international": "International",
+      "domestic": "Domestic (CN)",
+      "local": "Local",
+      "custom": "Custom",
+      "apiKey": "API Key",
+      "apiKeyPlaceholder": "Enter your API key",
+      "model": "Model",
+      "modelName": "Model Name",
+      "baseUrl": "API Base URL",
+      "testConnection": "Test Connection",
+      "testSuccess": "Connection successful!",
+      "testFailed": "Connection failed"
+    }
   },
   "update": {
     "available": "New version {{version}} available",

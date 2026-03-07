@@ -115,7 +115,25 @@
     "browserFirefox": "Mozilla Firefox",
     "browserEdge": "Microsoft Edge",
     "browserBrave": "Brave",
-    "browserSafari": "Safari"
+    "browserSafari": "Safari",
+    "tabAi": "AI",
+    "ai": {
+      "enable": "启用 AI 功能",
+      "provider": "AI 服务商",
+      "selectProvider": "选择服务商...",
+      "international": "国际",
+      "domestic": "国内",
+      "local": "本地",
+      "custom": "自定义",
+      "apiKey": "API Key",
+      "apiKeyPlaceholder": "请输入 API Key",
+      "model": "模型",
+      "modelName": "模型名称",
+      "baseUrl": "API 地址",
+      "testConnection": "测试连接",
+      "testSuccess": "连接成功！",
+      "testFailed": "连接失败"
+    }
   },
   "update": {
     "available": "发现新版本 {{version}}",
