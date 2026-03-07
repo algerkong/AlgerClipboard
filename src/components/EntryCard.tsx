@@ -133,7 +133,13 @@ function truncateUrl(url: string, max = 40): string {
   return url.substring(0, max - 1) + "\u2026";
 }
 
-export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEntry }) {
+export const EntryCard = memo(function EntryCard({
+  entry,
+  shortcutNumber = null,
+}: {
+  entry: ClipboardEntry;
+  shortcutNumber?: number | null;
+}) {
   const { t } = useTranslation();
   const selectedId = useClipboardStore((s) => s.selectedId);
   const selectEntry = useClipboardStore((s) => s.selectEntry);
@@ -143,6 +149,7 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
   const addTag = useClipboardStore((s) => s.addTag);
   const removeTag = useClipboardStore((s) => s.removeTag);
   const allTags = useClipboardStore((s) => s.allTags);
+  const fetchAllTags = useClipboardStore((s) => s.fetchAllTags);
   const canTranslate = useCapabilityStore((s) => s.can_translate);
   const hasAi = useCapabilityStore((s) => s.has_ai);
   const isSelected = selectedId === entry.id;
@@ -151,6 +158,7 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
   const [showTagInput, setShowTagInput] = useState(false);
   const [tagInputValue, setTagInputValue] = useState("");
   const tagInputRef = useRef<HTMLInputElement>(null);
+  const tagEditorRef = useRef<HTMLDivElement>(null);
   const hasText = entry.content_type === "PlainText" || entry.content_type === "RichText";
   const isRichText = entry.content_type === "RichText" && !!entry.html_content;
   const isImage = entry.content_type === "Image";
@@ -169,6 +177,14 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
     ? isNonChinese(entry.text_content)
     : false;
   const imageSrc = useImageSrc(entry);
+  const availableTags = useMemo(() => {
+    const query = tagInputValue.trim().toLowerCase();
+    return allTags.filter((tag) => {
+      if (entry.tags.includes(tag)) return false;
+      if (!query) return true;
+      return tag.toLowerCase().includes(query);
+    }).slice(0, 8);
+  }, [allTags, entry.tags, tagInputValue]);
 
   const handleClick = useCallback(() => selectEntry(entry.id), [entry.id, selectEntry]);
   const handleDoubleClick = useCallback(() => {
@@ -189,6 +205,37 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
     selectEntry(entry.id);
     setContextMenu({ x: e.clientX, y: e.clientY });
   }, [entry.id, selectEntry]);
+
+  const closeTagInput = useCallback(() => {
+    setShowTagInput(false);
+    setTagInputValue("");
+  }, []);
+
+  const submitTag = useCallback(async (rawTag: string) => {
+    const nextTag = rawTag.trim();
+    if (!nextTag || entry.tags.includes(nextTag)) {
+      return;
+    }
+
+    closeTagInput();
+    await addTag(entry.id, nextTag);
+  }, [addTag, closeTagInput, entry.id, entry.tags]);
+
+  useEffect(() => {
+    if (!showTagInput) return;
+
+    void fetchAllTags();
+    tagInputRef.current?.focus();
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (tagEditorRef.current && !tagEditorRef.current.contains(event.target as Node)) {
+        closeTagInput();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [closeTagInput, fetchAllTags, showTagInput]);
 
   const getContextMenuItems = (): ContextMenuItem[] => {
     const items: ContextMenuItem[] = [];
@@ -274,10 +321,7 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
     items.push({
       label: t("contextMenu.addTag"),
       icon: <Tag className="w-3.5 h-3.5" />,
-      onClick: () => {
-        setShowTagInput(true);
-        setTimeout(() => tagInputRef.current?.focus(), 50);
-      },
+      onClick: () => setShowTagInput(true),
       divider: true,
     });
 
@@ -304,6 +348,12 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
           : "hover:bg-accent/30 border-l-2 border-l-transparent"
       )}
     >
+      {shortcutNumber !== null && (
+        <div className="absolute left-2 top-2 z-20 flex h-5 min-w-5 items-center justify-center rounded-md border border-primary/40 bg-background/95 px-1 text-xs font-semibold text-primary shadow-sm">
+          {shortcutNumber}
+        </div>
+      )}
+
       {/* Content */}
       <div className="flex items-start gap-2 min-w-0">
         <div className="mt-0.5 shrink-0">{getIcon(entry.content_type)}</div>
@@ -410,32 +460,64 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
           )}
           {/* Tag input */}
           {showTagInput && (
-            <div className="flex items-center gap-1 mt-1" onClick={(e) => e.stopPropagation()}>
-              <input
-                ref={tagInputRef}
-                type="text"
-                value={tagInputValue}
-                onChange={(e) => setTagInputValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && tagInputValue.trim()) {
-                    addTag(entry.id, tagInputValue.trim());
-                    setTagInputValue("");
-                    setShowTagInput(false);
-                  } else if (e.key === "Escape") {
-                    setShowTagInput(false);
-                    setTagInputValue("");
-                  }
-                }}
-                onBlur={() => { setShowTagInput(false); setTagInputValue(""); }}
-                placeholder={t("contextMenu.tagPlaceholder")}
-                className="h-5 w-24 px-1.5 text-2xs bg-muted/30 border border-border/50 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
-                list="tag-suggestions"
-              />
-              <datalist id="tag-suggestions">
-                {allTags.filter((t) => !entry.tags.includes(t)).map((t) => (
-                  <option key={t} value={t} />
-                ))}
-              </datalist>
+            <div
+              ref={tagEditorRef}
+              className="mt-1 rounded-lg border border-border/40 bg-muted/10 p-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-1">
+                <input
+                  ref={tagInputRef}
+                  type="text"
+                  value={tagInputValue}
+                  onChange={(e) => setTagInputValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && tagInputValue.trim()) {
+                      void submitTag(tagInputValue);
+                    } else if (e.key === "Escape") {
+                      closeTagInput();
+                    }
+                  }}
+                  placeholder={t("tags.addPlaceholder")}
+                  className="h-7 min-w-0 flex-1 rounded-md border border-border/50 bg-background/80 px-2 text-xs2 text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+                />
+                <button
+                  onClick={() => void submitTag(tagInputValue)}
+                  disabled={!tagInputValue.trim()}
+                  className="h-7 rounded-md bg-primary/15 px-2 text-xs2 font-medium text-primary transition-colors hover:bg-primary/25 disabled:opacity-40"
+                >
+                  {t("tags.add")}
+                </button>
+                <button
+                  onClick={closeTagInput}
+                  className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+
+              <div className="mt-2 space-y-1">
+                <p className="text-2xs text-muted-foreground">
+                  {t("tags.existing")}
+                </p>
+                {availableTags.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {availableTags.map((tag) => (
+                      <button
+                        key={tag}
+                        onClick={() => void submitTag(tag)}
+                        className="rounded-full border border-border/50 bg-background/80 px-2 py-1 text-2xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-2xs text-muted-foreground/70">
+                    {t("tags.noSuggestions")}
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </div>

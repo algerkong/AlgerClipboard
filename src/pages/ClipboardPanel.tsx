@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import { Settings, FileText, ClipboardList } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
@@ -9,6 +9,7 @@ import { useClipboardStore } from "@/stores/clipboardStore";
 import { pasteEntry } from "@/services/clipboardService";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { usePlatform } from "@/contexts/PlatformContext";
 
 interface Props {
   onOpenSettings: () => void;
@@ -16,23 +17,72 @@ interface Props {
 
 export function ClipboardPanel({ onOpenSettings }: Props) {
   const { t } = useTranslation();
+  const platform = usePlatform();
   const entries = useClipboardStore((s) => s.entries);
   const showFavoritesOnly = useClipboardStore((s) => s.showFavoritesOnly);
   const selectedId = useClipboardStore((s) => s.selectedId);
   const selectEntry = useClipboardStore((s) => s.selectEntry);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const [shortcutModifierPressed, setShortcutModifierPressed] = useState(false);
+  const [visibleRange, setVisibleRange] = useState({ startIndex: 0, endIndex: 0 });
+  const shortcutModifierKey = platform === "macos" ? "Meta" : "Control";
 
   const displayEntries = showFavoritesOnly
     ? entries.filter((e) => e.is_favorite)
     : entries;
+  const shortcutTargets = useMemo(() => {
+    if (!shortcutModifierPressed || displayEntries.length === 0) {
+      return new Map<number, string>();
+    }
+
+    const maxIndex = Math.min(visibleRange.endIndex, displayEntries.length - 1, visibleRange.startIndex + 8);
+    const mappings = new Map<number, string>();
+    for (let index = visibleRange.startIndex; index <= maxIndex; index++) {
+      mappings.set(index - visibleRange.startIndex + 1, displayEntries[index].id);
+    }
+    return mappings;
+  }, [displayEntries, shortcutModifierPressed, visibleRange.endIndex, visibleRange.startIndex]);
+
+  const shortcutNumbersByEntryId = useMemo(() => {
+    const mappings = new Map<string, number>();
+    shortcutTargets.forEach((entryId, shortcutNumber) => {
+      mappings.set(entryId, shortcutNumber);
+    });
+    return mappings;
+  }, [shortcutTargets]);
+
+  const isEditableTarget = (target: EventTarget | null) => {
+    const element = target as HTMLElement | null;
+    if (!element) return false;
+    return element.tagName === "INPUT" || element.tagName === "TEXTAREA" || element.isContentEditable;
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (displayEntries.length === 0) return;
-      // Don't interfere with typing in search
-      const target = e.target as HTMLElement;
-      if (target.tagName === "INPUT" && e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "Enter") return;
+      if (e.key === shortcutModifierKey) {
+        setShortcutModifierPressed(true);
+        return;
+      }
+
+      if ((platform === "macos" ? e.metaKey : e.ctrlKey) && /^[1-9]$/.test(e.key)) {
+        const shortcutNumber = Number(e.key);
+        const entryId = shortcutTargets.get(shortcutNumber);
+        if (!entryId) {
+          return;
+        }
+
+        e.preventDefault();
+        setShortcutModifierPressed(false);
+        pasteEntry(entryId)
+          .then(() => toast.success(t("toast.pasted")))
+          .catch(() => toast.error(t("toast.pasteFailed")));
+        return;
+      }
+
+      // Don't interfere with typing in editable fields
+      if (isEditableTarget(e.target) && e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "Enter") return;
 
       const idx = selectedId ? displayEntries.findIndex((x) => x.id === selectedId) : -1;
 
@@ -53,9 +103,26 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
           .catch(() => toast.error(t("toast.pasteFailed")));
       }
     };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === shortcutModifierKey) {
+        setShortcutModifierPressed(false);
+      }
+    };
+
+    const handleWindowBlur = () => {
+      setShortcutModifierPressed(false);
+    };
+
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [displayEntries, selectedId, selectEntry]);
+    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("blur", handleWindowBlur);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("blur", handleWindowBlur);
+    };
+  }, [displayEntries, platform, selectedId, selectEntry, shortcutModifierKey, shortcutTargets, t]);
 
   // Auto-select first entry and scroll to top
   useEffect(() => {
@@ -107,7 +174,15 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
           <Virtuoso
             ref={virtuosoRef}
             data={displayEntries}
-            itemContent={(_, entry) => <EntryCard entry={entry} />}
+            rangeChanged={(range) => {
+              setVisibleRange({ startIndex: range.startIndex, endIndex: range.endIndex });
+            }}
+            itemContent={(_, entry) => (
+              <EntryCard
+                entry={entry}
+                shortcutNumber={shortcutModifierPressed ? shortcutNumbersByEntryId.get(entry.id) ?? null : null}
+              />
+            )}
             overscan={100}
             className="h-full"
           />

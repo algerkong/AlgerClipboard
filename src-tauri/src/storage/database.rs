@@ -51,6 +51,12 @@ pub struct SyncAccount {
     pub updated_at: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TagSummary {
+    pub tag: String,
+    pub count: i64,
+}
+
 pub struct Database {
     conn: Mutex<Connection>,
 }
@@ -105,6 +111,11 @@ impl Database {
                 tag TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS tag_catalog (
+                name TEXT PRIMARY KEY,
+                created_at TEXT NOT NULL
+            );
+
             CREATE TABLE IF NOT EXISTS templates (
                 id TEXT PRIMARY KEY,
                 title TEXT NOT NULL,
@@ -156,6 +167,15 @@ impl Database {
         )
         .map_err(|e| format!("Failed to create sync_accounts table: {}", e))?;
 
+        conn.execute(
+            "INSERT OR IGNORE INTO tag_catalog (name, created_at)
+             SELECT DISTINCT tag, DATETIME('now')
+             FROM tags
+             WHERE TRIM(tag) <> ''",
+            [],
+        )
+        .map_err(|e| format!("Failed to migrate tag catalog: {}", e))?;
+
         Ok(())
     }
 
@@ -163,7 +183,7 @@ impl Database {
         let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
         conn.execute(
-            "INSERT OR REPLACE INTO entries (id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language, content_category, detected_language, deleted)
+            "INSERT OR REPLACE INTO entries (id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language, deleted)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, 0)",
             params![
                 entry.id,
@@ -191,6 +211,7 @@ impl Database {
 
         // Insert tags
         for tag in &entry.tags {
+            Self::ensure_tag_catalog_with_conn(&conn, tag)?;
             conn.execute(
                 "INSERT INTO tags (entry_id, tag) VALUES (?1, ?2)",
                 params![entry.id, tag],
@@ -234,6 +255,7 @@ impl Database {
         type_filter: Option<String>,
         keyword: Option<String>,
         tag_filter: Option<String>,
+        tagged_only: bool,
     ) -> Result<Vec<ClipboardEntry>, String> {
         let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
@@ -256,6 +278,10 @@ impl Database {
         if let Some(ref tag) = tag_filter {
             sql.push_str(" AND id IN (SELECT entry_id FROM tags WHERE tag = ?)");
             param_values.push(Box::new(tag.clone()));
+        }
+
+        if tagged_only {
+            sql.push_str(" AND id IN (SELECT DISTINCT entry_id FROM tags)");
         }
 
         sql.push_str(" ORDER BY is_pinned DESC, created_at DESC LIMIT ? OFFSET ?");
@@ -596,14 +622,39 @@ impl Database {
 
     // --- Tag Operations ---
 
+    fn ensure_tag_catalog_with_conn(conn: &Connection, tag: &str) -> Result<(), String> {
+        let normalized = tag.trim();
+        if normalized.is_empty() {
+            return Ok(());
+        }
+
+        conn.execute(
+            "INSERT OR IGNORE INTO tag_catalog (name, created_at) VALUES (?1, DATETIME('now'))",
+            params![normalized],
+        )
+        .map_err(|e| format!("Failed to ensure tag exists: {}", e))?;
+
+        Ok(())
+    }
+
+    pub fn create_tag(&self, tag: &str) -> Result<(), String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        Self::ensure_tag_catalog_with_conn(&conn, tag)
+    }
+
     pub fn add_tag(&self, entry_id: &str, tag: &str) -> Result<(), String> {
         let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        let normalized = tag.trim();
+
+        if normalized.is_empty() {
+            return Ok(());
+        }
 
         // Check if tag already exists for this entry
         let exists: bool = conn
             .query_row(
                 "SELECT COUNT(*) > 0 FROM tags WHERE entry_id = ?1 AND tag = ?2",
-                params![entry_id, tag],
+                params![entry_id, normalized],
                 |row| row.get(0),
             )
             .unwrap_or(false);
@@ -612,9 +663,11 @@ impl Database {
             return Ok(());
         }
 
+        Self::ensure_tag_catalog_with_conn(&conn, normalized)?;
+
         conn.execute(
             "INSERT INTO tags (entry_id, tag) VALUES (?1, ?2)",
-            params![entry_id, tag],
+            params![entry_id, normalized],
         )
         .map_err(|e| format!("Failed to add tag: {}", e))?;
 
@@ -637,7 +690,7 @@ impl Database {
         let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
         let mut stmt = conn
-            .prepare("SELECT DISTINCT tag FROM tags ORDER BY tag")
+            .prepare("SELECT name FROM tag_catalog ORDER BY LOWER(name), name")
             .map_err(|e| format!("Prepare error: {}", e))?;
 
         let tags = stmt
@@ -650,6 +703,79 @@ impl Database {
         }
 
         Ok(result)
+    }
+
+    pub fn get_tag_summaries(&self) -> Result<Vec<TagSummary>, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT tag_catalog.name, COUNT(DISTINCT tags.entry_id) AS count
+                 FROM tag_catalog
+                 LEFT JOIN tags ON tags.tag = tag_catalog.name
+                 GROUP BY tag_catalog.name
+                 ORDER BY LOWER(tag_catalog.name), tag_catalog.name",
+            )
+            .map_err(|e| format!("Prepare error: {}", e))?;
+
+        let rows = stmt
+            .query_map([], |row| {
+                Ok(TagSummary {
+                    tag: row.get(0)?,
+                    count: row.get(1)?,
+                })
+            })
+            .map_err(|e| format!("Query error: {}", e))?;
+
+        let mut result = Vec::new();
+        for row in rows {
+            result.push(row.map_err(|e| format!("Row error: {}", e))?);
+        }
+        Ok(result)
+    }
+
+    pub fn rename_tag(&self, old_tag: &str, new_tag: &str) -> Result<(), String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        let old_tag = old_tag.trim();
+        let new_tag = new_tag.trim();
+
+        if old_tag.is_empty() || new_tag.is_empty() || old_tag == new_tag {
+            return Ok(());
+        }
+
+        Self::ensure_tag_catalog_with_conn(&conn, new_tag)?;
+
+        conn.execute(
+            "DELETE FROM tags
+             WHERE tag = ?2
+               AND entry_id IN (SELECT entry_id FROM tags WHERE tag = ?1)",
+            params![old_tag, new_tag],
+        )
+        .map_err(|e| format!("Failed to merge duplicate tags: {}", e))?;
+
+        conn.execute(
+            "UPDATE tags SET tag = ?2 WHERE tag = ?1",
+            params![old_tag, new_tag],
+        )
+        .map_err(|e| format!("Failed to rename tag: {}", e))?;
+
+        conn.execute("DELETE FROM tag_catalog WHERE name = ?1", params![old_tag])
+            .map_err(|e| format!("Failed to remove old tag from catalog: {}", e))?;
+
+        Ok(())
+    }
+
+    pub fn delete_tag_everywhere(&self, tag: &str) -> Result<(), String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+        let normalized = tag.trim();
+
+        conn.execute("DELETE FROM tags WHERE tag = ?1", params![normalized])
+            .map_err(|e| format!("Failed to delete tag: {}", e))?;
+        conn.execute("DELETE FROM tag_catalog WHERE name = ?1", params![normalized])
+            .map_err(|e| format!("Failed to delete tag from catalog: {}", e))?;
+
+        Ok(())
     }
 
     // --- Template CRUD ---
@@ -1167,4 +1293,55 @@ pub fn compute_hash(data: &[u8]) -> String {
 
 fn now_iso() -> String {
     chrono::Utc::now().to_rfc3339()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{now_iso, Database};
+    use crate::clipboard::entry::{ClipboardEntry, ContentType, SyncStatus};
+    use std::{env, fs};
+    use uuid::Uuid;
+
+    #[test]
+    fn insert_entry_persists_category_and_language() {
+        let db_path = env::temp_dir().join(format!("alger-clipboard-test-{}.db", Uuid::new_v4()));
+        let db = Database::new(&db_path).expect("database should initialize");
+
+        let now = now_iso();
+        let entry = ClipboardEntry {
+            id: Uuid::new_v4().to_string(),
+            content_type: ContentType::PlainText,
+            text_content: Some("copied text".into()),
+            html_content: None,
+            blob_path: None,
+            thumbnail_path: None,
+            content_hash: "hash".into(),
+            source_app: Some("Finder".into()),
+            device_id: "test-device".into(),
+            is_favorite: false,
+            is_pinned: false,
+            tags: Vec::new(),
+            created_at: now.clone(),
+            updated_at: now,
+            synced_at: None,
+            sync_status: SyncStatus::Local,
+            sync_version: 0,
+            ai_summary: None,
+            content_category: Some("text".into()),
+            detected_language: Some("zh".into()),
+        };
+
+        db.insert_entry(&entry)
+            .expect("entry insert should succeed");
+
+        let stored = db
+            .get_entry(&entry.id)
+            .expect("entry should be queryable")
+            .expect("inserted entry should be returned");
+
+        assert_eq!(stored.content_category.as_deref(), Some("text"));
+        assert_eq!(stored.detected_language.as_deref(), Some("zh"));
+
+        let _ = fs::remove_file(&db_path);
+    }
 }

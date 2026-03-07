@@ -161,7 +161,13 @@ body,
   overflow: hidden;
   --app-font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  --app-font-size: 14px;
+  --app-font-size: 18px;
+  --app-title-font-size: 13px;
+  --app-tab-font-size: 15px;
+  --app-tab-icon-size: 14px;
+  --app-tab-px: 11px;
+  --app-tab-py: 7px;
+  --app-tab-gap: 6px;
   font-family: var(--app-font-family);
   font-size: var(--app-font-size);
 }
@@ -206,6 +212,15 @@ body {
 
 .animate-slide-in {
   animation: slideInRight 0.2s ease-out;
+}
+
+.tab-scroll-area {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tab-scroll-area::-webkit-scrollbar {
+  display: none;
 }
 
 /* macOS-style traffic light buttons */

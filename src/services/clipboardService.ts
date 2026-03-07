@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { ClipboardEntry, HistoryQuery, ClipboardStats, OcrResult } from "@/types";
+import type { ClipboardEntry, HistoryQuery, ClipboardStats, OcrResult, TagSummary } from "@/types";
 
 export async function getClipboardHistory(
   query: HistoryQuery = {}
@@ -10,6 +10,7 @@ export async function getClipboardHistory(
     typeFilter: query.type_filter ?? null,
     keyword: query.keyword ?? null,
     tagFilter: query.tag_filter ?? null,
+    taggedOnly: query.tagged_only ?? false,
   });
 }
 
@@ -54,6 +55,10 @@ export async function getEntryCount(): Promise<number> {
   return invoke("get_entry_count");
 }
 
+export async function createTag(tag: string): Promise<void> {
+  return invoke("create_tag", { tag });
+}
+
 export async function addTag(entryId: string, tag: string): Promise<void> {
   return invoke("add_tag", { entryId, tag });
 }
@@ -64,6 +69,18 @@ export async function removeTag(entryId: string, tag: string): Promise<void> {
 
 export async function getAllTags(): Promise<string[]> {
   return invoke("get_all_tags");
+}
+
+export async function getTagSummaries(): Promise<TagSummary[]> {
+  return invoke("get_tag_summaries");
+}
+
+export async function renameTag(oldTag: string, newTag: string): Promise<void> {
+  return invoke("rename_tag", { oldTag, newTag });
+}
+
+export async function deleteTagEverywhere(tag: string): Promise<void> {
+  return invoke("delete_tag_everywhere", { tag });
 }
 
 export async function getClipboardStats(): Promise<ClipboardStats> {

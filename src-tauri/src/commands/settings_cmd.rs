@@ -15,8 +15,8 @@ pub const DEFAULT_TOGGLE_SHORTCUT: &str = "CmdOrCtrl+Shift+V";
 fn get_input_position(_window: &tauri::WebviewWindow) -> Option<(i32, i32)> {
     use windows_sys::Win32::Foundation::POINT;
     use windows_sys::Win32::UI::WindowsAndMessaging::{
-        GetCursorPos, GetForegroundWindow, GetGUIThreadInfo,
-        GetWindowThreadProcessId, GUITHREADINFO,
+        GetCursorPos, GetForegroundWindow, GetGUIThreadInfo, GetWindowThreadProcessId,
+        GUITHREADINFO,
     };
 
     extern "system" {
@@ -39,7 +39,10 @@ fn get_input_position(_window: &tauri::WebviewWindow) -> Option<(i32, i32)> {
                         } else {
                             fg_hwnd
                         };
-                        let mut pt = POINT { x: rc.left, y: rc.bottom };
+                        let mut pt = POINT {
+                            x: rc.left,
+                            y: rc.bottom,
+                        };
                         if ClientToScreen(focus_hwnd, &mut pt) != 0 {
                             return Some((pt.x, pt.y));
                         }
@@ -50,7 +53,11 @@ fn get_input_position(_window: &tauri::WebviewWindow) -> Option<(i32, i32)> {
 
         // Fallback: mouse cursor position
         let mut pt = POINT { x: 0, y: 0 };
-        if GetCursorPos(&mut pt) != 0 { Some((pt.x, pt.y)) } else { None }
+        if GetCursorPos(&mut pt) != 0 {
+            Some((pt.x, pt.y))
+        } else {
+            None
+        }
     }
 }
 
@@ -67,7 +74,13 @@ fn get_input_position(window: &tauri::WebviewWindow) -> Option<(i32, i32)> {
 
 /// Windows: use native work-area API (excludes taskbar).
 #[cfg(target_os = "windows")]
-fn clamp_to_screen(_window: &tauri::WebviewWindow, x: i32, y: i32, win_w: i32, win_h: i32) -> (i32, i32) {
+fn clamp_to_screen(
+    _window: &tauri::WebviewWindow,
+    x: i32,
+    y: i32,
+    win_w: i32,
+    win_h: i32,
+) -> (i32, i32) {
     use windows_sys::Win32::Foundation::POINT;
     use windows_sys::Win32::Graphics::Gdi::{
         GetMonitorInfoW, MonitorFromPoint, MONITORINFO, MONITOR_DEFAULTTONEAREST,
@@ -84,10 +97,18 @@ fn clamp_to_screen(_window: &tauri::WebviewWindow, x: i32, y: i32, win_w: i32, w
             let mut nx = x;
             let mut ny = y + 4;
 
-            if ny + win_h > work.bottom { ny = y - win_h - 4; }
-            if nx + win_w > work.right { nx = work.right - win_w; }
-            if nx < work.left { nx = work.left; }
-            if ny < work.top { ny = work.top; }
+            if ny + win_h > work.bottom {
+                ny = y - win_h - 4;
+            }
+            if nx + win_w > work.right {
+                nx = work.right - win_w;
+            }
+            if nx < work.left {
+                nx = work.left;
+            }
+            if ny < work.top {
+                ny = work.top;
+            }
 
             (nx, ny)
         } else {
@@ -98,7 +119,13 @@ fn clamp_to_screen(_window: &tauri::WebviewWindow, x: i32, y: i32, win_w: i32, w
 
 /// macOS / Linux: use Tauri's monitor API for screen bounds.
 #[cfg(not(target_os = "windows"))]
-fn clamp_to_screen(window: &tauri::WebviewWindow, x: i32, y: i32, win_w: i32, win_h: i32) -> (i32, i32) {
+fn clamp_to_screen(
+    window: &tauri::WebviewWindow,
+    x: i32,
+    y: i32,
+    win_w: i32,
+    win_h: i32,
+) -> (i32, i32) {
     if let Ok(monitors) = window.available_monitors() {
         for monitor in &monitors {
             let pos = monitor.position();
@@ -110,10 +137,18 @@ fn clamp_to_screen(window: &tauri::WebviewWindow, x: i32, y: i32, win_w: i32, wi
                 let mut nx = x;
                 let mut ny = y + 4;
 
-                if ny + win_h > my + mh { ny = y - win_h - 4; }
-                if nx + win_w > mx + mw { nx = mx + mw - win_w; }
-                if nx < mx { nx = mx; }
-                if ny < my { ny = my; }
+                if ny + win_h > my + mh {
+                    ny = y - win_h - 4;
+                }
+                if nx + win_w > mx + mw {
+                    nx = mx + mw - win_w;
+                }
+                if nx < mx {
+                    nx = mx;
+                }
+                if ny < my {
+                    ny = my;
+                }
 
                 return (nx, ny);
             }
@@ -127,9 +162,10 @@ fn clamp_to_screen(window: &tauri::WebviewWindow, x: i32, y: i32, win_w: i32, wi
 /// Position the window near the active text caret or mouse cursor.
 fn position_near_caret(window: &tauri::WebviewWindow) {
     if let Some((x, y)) = get_input_position(window) {
-        let win_size = window
-            .outer_size()
-            .unwrap_or(tauri::PhysicalSize { width: 420, height: 480 });
+        let win_size = window.outer_size().unwrap_or(tauri::PhysicalSize {
+            width: 420,
+            height: 480,
+        });
         let (fx, fy) = clamp_to_screen(window, x, y, win_size.width as i32, win_size.height as i32);
         let _ = window.set_position(tauri::PhysicalPosition::new(fx, fy));
     }
@@ -141,7 +177,11 @@ fn get_foreground_window_handle() -> Option<isize> {
 
     unsafe {
         let hwnd = GetForegroundWindow();
-        if hwnd.is_null() { None } else { Some(hwnd as isize) }
+        if hwnd.is_null() {
+            None
+        } else {
+            Some(hwnd as isize)
+        }
     }
 }
 
@@ -158,7 +198,11 @@ fn get_frontmost_bundle_id() -> Option<String> {
         return None;
     }
     let value = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if value.is_empty() { None } else { Some(value) }
+    if value.is_empty() {
+        None
+    } else {
+        Some(value)
+    }
 }
 
 #[cfg(target_os = "linux")]
@@ -171,7 +215,11 @@ fn get_active_window_id() -> Option<String> {
         return None;
     }
     let value = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if value.is_empty() { None } else { Some(value) }
+    if value.is_empty() {
+        None
+    } else {
+        Some(value)
+    }
 }
 
 pub fn remember_current_foreground_window(app: &tauri::AppHandle) {
@@ -307,10 +355,11 @@ pub fn open_url(db: State<'_, AppDatabase>, url: String) -> Result<(), String> {
         return Err("Invalid URL scheme".to_string());
     }
 
-    let browser = db.0.get_setting("default_browser")
-        .ok()
-        .flatten()
-        .unwrap_or_default();
+    let browser =
+        db.0.get_setting("default_browser")
+            .ok()
+            .flatten()
+            .unwrap_or_default();
 
     let browser = browser.trim();
     if browser.is_empty() || browser == "system" {
@@ -327,11 +376,14 @@ pub fn get_settings(db: State<'_, AppDatabase>, key: String) -> Result<Option<St
 
 #[tauri::command]
 pub fn update_settings(
+    app: tauri::AppHandle,
     db: State<'_, AppDatabase>,
     key: String,
     value: String,
 ) -> Result<(), String> {
-    db.0.set_setting(&key, &value)
+    db.0.set_setting(&key, &value)?;
+    let _ = app.emit("settings-changed", serde_json::json!({}));
+    Ok(())
 }
 
 #[tauri::command]
@@ -342,7 +394,9 @@ pub fn update_toggle_shortcut(
 ) -> Result<(), String> {
     let normalized = shortcut.trim();
     register_toggle_shortcut(&app, normalized)?;
-    db.0.set_setting("toggle_shortcut", normalized)
+    db.0.set_setting("toggle_shortcut", normalized)?;
+    let _ = app.emit("settings-changed", serde_json::json!({}));
+    Ok(())
 }
 
 #[tauri::command]

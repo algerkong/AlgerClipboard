@@ -130,7 +130,10 @@ function TitleText({
   const { t } = useTranslation();
   return (
     <div data-tauri-drag-region className="flex items-center gap-1.5">
-      <span data-tauri-drag-region className="text-sm2 font-medium text-muted-foreground tracking-wide uppercase">
+      <span
+        data-tauri-drag-region
+        className="font-medium text-muted-foreground tracking-wide uppercase text-[length:var(--app-title-font-size)]"
+      >
         {title ?? t("titleBar.clipboard")}
       </span>
       {showSyncIndicator ? <SyncIndicator /> : null}

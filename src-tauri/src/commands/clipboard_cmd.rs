@@ -1,12 +1,21 @@
 use crate::clipboard::entry::ClipboardEntry;
 use crate::commands::paste_cmd::AppBlobStore;
 use crate::storage::blob::{BlobStore, CacheInfo, MigrationResult};
-use crate::storage::database::{Database, ClipboardStats};
+use crate::storage::database::{ClipboardStats, Database, TagSummary};
 use base64::Engine;
 use std::sync::Arc;
-use tauri::State;
+use tauri::{AppHandle, Emitter, State};
 
 pub struct AppDatabase(pub Arc<Database>);
+
+#[derive(Clone, serde::Serialize)]
+struct TagChangePayload {
+    action: &'static str,
+    entry_id: Option<String>,
+    tag: Option<String>,
+    old_tag: Option<String>,
+    new_tag: Option<String>,
+}
 
 #[tauri::command]
 pub fn get_clipboard_history(
@@ -16,41 +25,37 @@ pub fn get_clipboard_history(
     type_filter: Option<String>,
     keyword: Option<String>,
     tag_filter: Option<String>,
+    tagged_only: Option<bool>,
 ) -> Result<Vec<ClipboardEntry>, String> {
     let limit = limit.unwrap_or(50);
     let offset = offset.unwrap_or(0);
-    db.0.get_history(limit, offset, type_filter, keyword, tag_filter)
+    db.0.get_history(
+        limit,
+        offset,
+        type_filter,
+        keyword,
+        tag_filter,
+        tagged_only.unwrap_or(false),
+    )
 }
 
 #[tauri::command]
-pub fn get_entry(
-    db: State<'_, AppDatabase>,
-    id: String,
-) -> Result<Option<ClipboardEntry>, String> {
+pub fn get_entry(db: State<'_, AppDatabase>, id: String) -> Result<Option<ClipboardEntry>, String> {
     db.0.get_entry(&id)
 }
 
 #[tauri::command]
-pub fn delete_entries(
-    db: State<'_, AppDatabase>,
-    ids: Vec<String>,
-) -> Result<(), String> {
+pub fn delete_entries(db: State<'_, AppDatabase>, ids: Vec<String>) -> Result<(), String> {
     db.0.delete_entries(&ids)
 }
 
 #[tauri::command]
-pub fn toggle_favorite(
-    db: State<'_, AppDatabase>,
-    id: String,
-) -> Result<bool, String> {
+pub fn toggle_favorite(db: State<'_, AppDatabase>, id: String) -> Result<bool, String> {
     db.0.toggle_favorite(&id)
 }
 
 #[tauri::command]
-pub fn toggle_pin(
-    db: State<'_, AppDatabase>,
-    id: String,
-) -> Result<bool, String> {
+pub fn toggle_pin(db: State<'_, AppDatabase>, id: String) -> Result<bool, String> {
     db.0.toggle_pin(&id)
 }
 
@@ -63,9 +68,7 @@ pub fn clear_history(
 }
 
 #[tauri::command]
-pub fn export_data(
-    db: State<'_, AppDatabase>,
-) -> Result<String, String> {
+pub fn export_data(db: State<'_, AppDatabase>) -> Result<String, String> {
     let entries = db.0.export_all_entries()?;
     let templates = db.0.get_templates(None)?;
 
@@ -87,10 +90,7 @@ pub fn export_data(
 }
 
 #[tauri::command]
-pub fn import_data(
-    db: State<'_, AppDatabase>,
-    json_data: String,
-) -> Result<usize, String> {
+pub fn import_data(db: State<'_, AppDatabase>, json_data: String) -> Result<usize, String> {
     #[derive(serde::Deserialize)]
     struct ImportData {
         entries: Vec<ClipboardEntry>,
@@ -103,42 +103,122 @@ pub fn import_data(
 }
 
 #[tauri::command]
-pub fn get_entry_count(
-    db: State<'_, AppDatabase>,
-) -> Result<i64, String> {
+pub fn get_entry_count(db: State<'_, AppDatabase>) -> Result<i64, String> {
     db.0.get_entry_count()
 }
 
 #[tauri::command]
-pub fn get_clipboard_stats(
-    db: State<'_, AppDatabase>,
-) -> Result<ClipboardStats, String> {
+pub fn get_clipboard_stats(db: State<'_, AppDatabase>) -> Result<ClipboardStats, String> {
     db.0.get_clipboard_stats()
 }
 
 #[tauri::command]
+pub fn create_tag(app: AppHandle, db: State<'_, AppDatabase>, tag: String) -> Result<(), String> {
+    db.0.create_tag(&tag)?;
+    let _ = app.emit(
+        "tags-changed",
+        TagChangePayload {
+            action: "create",
+            entry_id: None,
+            tag: Some(tag),
+            old_tag: None,
+            new_tag: None,
+        },
+    );
+    Ok(())
+}
+
+#[tauri::command]
 pub fn add_tag(
+    app: AppHandle,
     db: State<'_, AppDatabase>,
     entry_id: String,
     tag: String,
 ) -> Result<(), String> {
-    db.0.add_tag(&entry_id, &tag)
+    db.0.add_tag(&entry_id, &tag)?;
+    let _ = app.emit(
+        "tags-changed",
+        TagChangePayload {
+            action: "add",
+            entry_id: Some(entry_id),
+            tag: Some(tag),
+            old_tag: None,
+            new_tag: None,
+        },
+    );
+    Ok(())
 }
 
 #[tauri::command]
 pub fn remove_tag(
+    app: AppHandle,
     db: State<'_, AppDatabase>,
     entry_id: String,
     tag: String,
 ) -> Result<(), String> {
-    db.0.remove_tag(&entry_id, &tag)
+    db.0.remove_tag(&entry_id, &tag)?;
+    let _ = app.emit(
+        "tags-changed",
+        TagChangePayload {
+            action: "remove",
+            entry_id: Some(entry_id),
+            tag: Some(tag),
+            old_tag: None,
+            new_tag: None,
+        },
+    );
+    Ok(())
 }
 
 #[tauri::command]
-pub fn get_all_tags(
-    db: State<'_, AppDatabase>,
-) -> Result<Vec<String>, String> {
+pub fn get_all_tags(db: State<'_, AppDatabase>) -> Result<Vec<String>, String> {
     db.0.get_all_tags()
+}
+
+#[tauri::command]
+pub fn get_tag_summaries(db: State<'_, AppDatabase>) -> Result<Vec<TagSummary>, String> {
+    db.0.get_tag_summaries()
+}
+
+#[tauri::command]
+pub fn rename_tag(
+    app: AppHandle,
+    db: State<'_, AppDatabase>,
+    old_tag: String,
+    new_tag: String,
+) -> Result<(), String> {
+    db.0.rename_tag(&old_tag, &new_tag)?;
+    let _ = app.emit(
+        "tags-changed",
+        TagChangePayload {
+            action: "rename",
+            entry_id: None,
+            tag: None,
+            old_tag: Some(old_tag),
+            new_tag: Some(new_tag),
+        },
+    );
+    Ok(())
+}
+
+#[tauri::command]
+pub fn delete_tag_everywhere(
+    app: AppHandle,
+    db: State<'_, AppDatabase>,
+    tag: String,
+) -> Result<(), String> {
+    db.0.delete_tag_everywhere(&tag)?;
+    let _ = app.emit(
+        "tags-changed",
+        TagChangePayload {
+            action: "delete",
+            entry_id: None,
+            tag: Some(tag),
+            old_tag: None,
+            new_tag: None,
+        },
+    );
+    Ok(())
 }
 
 #[tauri::command]
@@ -147,8 +227,7 @@ pub fn get_thumbnail_base64(
     relative_path: String,
 ) -> Result<String, String> {
     let full_path = blob_store.0.get_blob_path(&relative_path);
-    let data = std::fs::read(&full_path)
-        .map_err(|e| format!("Failed to read image: {}", e))?;
+    let data = std::fs::read(&full_path).map_err(|e| format!("Failed to read image: {}", e))?;
     let b64 = base64::engine::general_purpose::STANDARD.encode(&data);
     Ok(format!("data:image/png;base64,{}", b64))
 }
@@ -166,9 +245,7 @@ pub async fn extract_text_from_image(
 }
 
 #[tauri::command]
-pub fn get_cache_info(
-    blob_store: State<'_, AppBlobStore>,
-) -> Result<CacheInfo, String> {
+pub fn get_cache_info(blob_store: State<'_, AppBlobStore>) -> Result<CacheInfo, String> {
     blob_store.0.get_cache_info()
 }
 
@@ -187,17 +264,12 @@ pub fn cleanup_cache(
 }
 
 #[tauri::command]
-pub fn set_cache_dir(
-    db: State<'_, AppDatabase>,
-    new_path: String,
-) -> Result<(), String> {
+pub fn set_cache_dir(db: State<'_, AppDatabase>, new_path: String) -> Result<(), String> {
     // Verify the path is writable
     let path = std::path::Path::new(&new_path);
-    std::fs::create_dir_all(path)
-        .map_err(|e| format!("Cannot create directory: {}", e))?;
+    std::fs::create_dir_all(path).map_err(|e| format!("Cannot create directory: {}", e))?;
     let test_file = path.join(".write_test");
-    std::fs::write(&test_file, b"test")
-        .map_err(|e| format!("Path is not writable: {}", e))?;
+    std::fs::write(&test_file, b"test").map_err(|e| format!("Path is not writable: {}", e))?;
     let _ = std::fs::remove_file(&test_file);
 
     db.0.set_setting("cache_dir", &new_path)
@@ -212,8 +284,7 @@ pub fn migrate_cache(
     let old_base = blob_store.0.base_dir().to_path_buf();
     let new_base = std::path::Path::new(&new_path);
 
-    std::fs::create_dir_all(new_base)
-        .map_err(|e| format!("Cannot create directory: {}", e))?;
+    std::fs::create_dir_all(new_base).map_err(|e| format!("Cannot create directory: {}", e))?;
 
     let result = BlobStore::migrate(&old_base, new_base)?;
     db.0.set_setting("cache_dir", &new_path)?;
@@ -221,18 +292,15 @@ pub fn migrate_cache(
 }
 
 #[tauri::command]
-pub fn set_cache_max_size(
-    db: State<'_, AppDatabase>,
-    max_size_mb: i64,
-) -> Result<(), String> {
+pub fn set_cache_max_size(db: State<'_, AppDatabase>, max_size_mb: i64) -> Result<(), String> {
     db.0.set_setting("cache_max_size_mb", &max_size_mb.to_string())
 }
 
 #[tauri::command]
-pub fn get_cache_max_size(
-    db: State<'_, AppDatabase>,
-) -> Result<i64, String> {
-    Ok(db.0.get_setting("cache_max_size_mb")?
+pub fn get_cache_max_size(db: State<'_, AppDatabase>) -> Result<i64, String> {
+    Ok(db
+        .0
+        .get_setting("cache_max_size_mb")?
         .and_then(|v| v.parse::<i64>().ok())
         .unwrap_or(0))
 }
@@ -242,9 +310,10 @@ pub fn cleanup_cache_by_size(
     db: State<'_, AppDatabase>,
     blob_store: State<'_, AppBlobStore>,
 ) -> Result<u64, String> {
-    let max_mb = db.0.get_setting("cache_max_size_mb")?
-        .and_then(|v| v.parse::<i64>().ok())
-        .unwrap_or(0);
+    let max_mb =
+        db.0.get_setting("cache_max_size_mb")?
+            .and_then(|v| v.parse::<i64>().ok())
+            .unwrap_or(0);
     if max_mb <= 0 {
         return Ok(0);
     }

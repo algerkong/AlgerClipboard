@@ -30,6 +30,7 @@ export interface HistoryQuery {
   type_filter?: ContentType;
   keyword?: string;
   tag_filter?: string;
+  tagged_only?: boolean;
 }
 
 export interface TranslateResult {
@@ -88,6 +89,11 @@ export interface ClipboardStats {
   pinned: number;
   type_counts: TypeCount[];
   daily_trend: DailyCount[];
+}
+
+export interface TagSummary {
+  tag: string;
+  count: number;
 }
 
 export interface OcrTextLine {

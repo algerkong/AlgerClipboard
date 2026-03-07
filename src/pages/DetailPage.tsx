@@ -101,6 +101,16 @@ export function DetailPage() {
   const [editText, setEditText] = useState("");
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const tabStyle = {
+    gap: "var(--app-tab-gap)",
+    paddingInline: "var(--app-tab-px)",
+    paddingBlock: "var(--app-tab-py)",
+    fontSize: "var(--app-tab-font-size)",
+  } as const;
+  const tabIconStyle = {
+    width: "var(--app-tab-icon-size)",
+    height: "var(--app-tab-icon-size)",
+  } as const;
 
   // AI state
   const [summarizing, setSummarizing] = useState(false);
@@ -216,24 +226,27 @@ export function DetailPage() {
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden">
       <div className="flex items-center gap-3 px-3 border-b border-border/30 shrink-0">
-        <div className="flex items-center gap-0 shrink-0">
-          {(["view", "translate", "ai"] as const).map((t2) => (
-            <button
-              key={t2}
-              onClick={() => setTab(t2)}
-              className={cn(
-                "flex items-center gap-1 px-3 py-1.5 text-xs2 font-medium transition-colors border-b-2",
-                tab === t2
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {t2 === "view" && <Eye className="w-3 h-3" />}
-              {t2 === "translate" && <Languages className="w-3 h-3" />}
-              {t2 === "ai" && <Brain className="w-3 h-3" />}
-              {t(`detail.tab${t2.charAt(0).toUpperCase() + t2.slice(1)}`)}
-            </button>
-          ))}
+        <div className="tab-scroll-area min-w-0 flex-1 overflow-x-auto">
+          <div className="flex w-max items-center gap-0">
+            {(["view", "translate", "ai"] as const).map((t2) => (
+              <button
+                key={t2}
+                onClick={() => setTab(t2)}
+                style={tabStyle}
+                className={cn(
+                  "flex shrink-0 items-center whitespace-nowrap border-b-2 font-medium transition-colors leading-none",
+                  tab === t2
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {t2 === "view" && <Eye style={tabIconStyle} />}
+                {t2 === "translate" && <Languages style={tabIconStyle} />}
+                {t2 === "ai" && <Brain style={tabIconStyle} />}
+                {t(`detail.tab${t2.charAt(0).toUpperCase() + t2.slice(1)}`)}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="min-w-0 flex-1">
           {entry.source_app && (

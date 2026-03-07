@@ -9,6 +9,7 @@ import { SettingsPage } from "@/pages/settings";
 import { TemplateManager } from "@/pages/TemplateManager";
 import { ImageViewerPage } from "@/components/ImageViewer";
 import { DetailPage } from "@/pages/DetailPage";
+import { TagManagerPage } from "@/pages/TagManager";
 import { openSettingsWindow } from "@/services/settingsWindowService";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { useCapabilityStore } from "@/stores/capabilityStore";
@@ -38,6 +39,7 @@ const isImageViewer = searchParams.get("window") === "image-viewer";
 const isTemplateManager = searchParams.get("window") === "template-manager";
 const isSettings = searchParams.get("window") === "settings";
 const isDetail = searchParams.get("window") === "detail";
+const isTagManager = searchParams.get("window") === "tag-manager";
 const initialSettingsTab = searchParams.get("tab") || undefined;
 
 function applyTheme(theme: "light" | "dark" | "system") {
@@ -102,6 +104,14 @@ function App() {
     return (
       <PlatformProvider>
         <DetailWindow />
+      </PlatformProvider>
+    );
+  }
+
+  if (isTagManager) {
+    return (
+      <PlatformProvider>
+        <TagManagerWindow />
       </PlatformProvider>
     );
   }
@@ -261,6 +271,59 @@ function DetailWindow() {
       <TitleBar onClose={handleClose} title={t("detail.title")} showSyncIndicator={false} />
       <div className="flex-1 min-h-0">
         <DetailPage />
+      </div>
+      <Toaster position="top-center" richColors duration={2000} toastOptions={{ style: { fontSize: "0.857rem", padding: "0.571rem 0.857rem" } }} />
+    </div>
+  );
+}
+
+function TagManagerWindow() {
+  const { i18n, t } = useTranslation();
+  const theme = useSettingsStore((s) => s.theme);
+  const locale = useSettingsStore((s) => s.locale);
+  const loadSettings = useSettingsStore((s) => s.loadSettings);
+
+  useEffect(() => {
+    document.documentElement.classList.add("dark");
+  }, []);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  useEffect(() => {
+    if (locale && i18n.language !== locale) {
+      i18n.changeLanguage(locale);
+    }
+  }, [locale, i18n]);
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+
+  useEffect(() => {
+    void getCurrentWebviewWindow().setTitle(t("tags.title"));
+  }, [t, locale]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        getCurrentWebviewWindow().close();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const handleClose = useCallback(() => {
+    getCurrentWebviewWindow().close();
+  }, []);
+
+  return (
+    <div className="flex flex-col h-screen overflow-hidden">
+      <TitleBar onClose={handleClose} title={t("tags.title")} showSyncIndicator={false} />
+      <div className="flex-1 min-h-0">
+        <TagManagerPage />
       </div>
       <Toaster position="top-center" richColors duration={2000} toastOptions={{ style: { fontSize: "0.857rem", padding: "0.571rem 0.857rem" } }} />
     </div>

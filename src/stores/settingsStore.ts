@@ -13,12 +13,57 @@ export type UIScale = "xs" | "sm" | "md" | "lg" | "xl";
 export type FontFamily = "system" | "microsoft-yahei" | "noto-sans" | "mono";
 export type ButtonPosition = "left" | "right";
 
-const UI_SCALE_MAP: Record<UIScale, string> = {
-  xs: "12px",
-  sm: "13px",
-  md: "14px",
-  lg: "15px",
-  xl: "16px",
+const UI_SCALE_MAP: Record<
+  UIScale,
+  {
+    fontSize: string;
+    tabFontSize: string;
+    tabIconSize: string;
+    tabPaddingX: string;
+    tabPaddingY: string;
+    tabGap: string;
+  }
+> = {
+  xs: {
+    fontSize: "12px",
+    tabFontSize: "11px",
+    tabIconSize: "11px",
+    tabPaddingX: "7px",
+    tabPaddingY: "4px",
+    tabGap: "4px",
+  },
+  sm: {
+    fontSize: "14px",
+    tabFontSize: "12px",
+    tabIconSize: "12px",
+    tabPaddingX: "8px",
+    tabPaddingY: "5px",
+    tabGap: "4px",
+  },
+  md: {
+    fontSize: "16px",
+    tabFontSize: "13px",
+    tabIconSize: "13px",
+    tabPaddingX: "10px",
+    tabPaddingY: "6px",
+    tabGap: "5px",
+  },
+  lg: {
+    fontSize: "18px",
+    tabFontSize: "15px",
+    tabIconSize: "14px",
+    tabPaddingX: "11px",
+    tabPaddingY: "7px",
+    tabGap: "6px",
+  },
+  xl: {
+    fontSize: "20px",
+    tabFontSize: "17px",
+    tabIconSize: "16px",
+    tabPaddingX: "13px",
+    tabPaddingY: "8px",
+    tabGap: "6px",
+  },
 };
 
 const FONT_FAMILY_MAP: Record<FontFamily, string> = {
@@ -30,10 +75,16 @@ const FONT_FAMILY_MAP: Record<FontFamily, string> = {
 };
 
 function applyUIScale(scale: UIScale) {
+  const tokens = UI_SCALE_MAP[scale];
   document.documentElement.style.setProperty(
     "--app-font-size",
-    UI_SCALE_MAP[scale],
+    tokens.fontSize,
   );
+  document.documentElement.style.setProperty("--app-tab-font-size", tokens.tabFontSize);
+  document.documentElement.style.setProperty("--app-tab-icon-size", tokens.tabIconSize);
+  document.documentElement.style.setProperty("--app-tab-px", tokens.tabPaddingX);
+  document.documentElement.style.setProperty("--app-tab-py", tokens.tabPaddingY);
+  document.documentElement.style.setProperty("--app-tab-gap", tokens.tabGap);
 }
 
 function applyFontFamily(family: FontFamily) {
@@ -90,7 +141,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   autoStart: false,
   pasteAndClose: true,
   locale: "zh-CN",
-  uiScale: "md",
+  uiScale: "lg",
   fontFamily: "system",
   toggleShortcut: "CmdOrCtrl+Shift+V",
   autoCheckUpdate: true,
@@ -134,7 +185,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       ]);
 
       // Migrate old font_size to ui_scale
-      let scale: UIScale = "md";
+      let scale: UIScale = "lg";
       if (uiScale && uiScale in UI_SCALE_MAP) {
         scale = uiScale as UIScale;
       } else if (oldFontSize && oldFontSize in FONT_SIZE_MIGRATION) {

@@ -68,6 +68,14 @@ pub fn run() {
     env_logger::init();
 
     tauri::Builder::default()
+        .on_window_event(|window, event| {
+            if window.label() == "main" {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
+        })
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             if let Some(win) = app.get_webview_window("main") {
                 remember_current_foreground_window(app);
@@ -334,9 +342,13 @@ pub fn run() {
             commands::clipboard_cmd::import_data,
             commands::clipboard_cmd::get_entry_count,
             commands::clipboard_cmd::get_clipboard_stats,
+            commands::clipboard_cmd::create_tag,
             commands::clipboard_cmd::add_tag,
             commands::clipboard_cmd::remove_tag,
             commands::clipboard_cmd::get_all_tags,
+            commands::clipboard_cmd::get_tag_summaries,
+            commands::clipboard_cmd::rename_tag,
+            commands::clipboard_cmd::delete_tag_everywhere,
             commands::clipboard_cmd::get_thumbnail_base64,
             commands::clipboard_cmd::extract_text_from_image,
             commands::clipboard_cmd::get_cache_info,
