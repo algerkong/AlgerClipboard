@@ -11,6 +11,289 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
+#[derive(Debug, Clone, Default)]
+struct ClipboardSource {
+    app_name: Option<String>,
+    label: Option<String>,
+    url: Option<String>,
+}
+
+impl ClipboardSource {
+    fn display_name(&self) -> Option<String> {
+        self.label.clone().or_else(|| self.app_name.clone())
+    }
+}
+
+fn normalize_app_name(name: &str) -> Option<String> {
+    let trimmed = name.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    let normalized = match trimmed.to_ascii_lowercase().as_str() {
+        "code.exe" | "code" => "VS Code",
+        "chrome.exe" | "chrome" | "google chrome" => "Google Chrome",
+        "google-chrome" | "google-chrome-stable" => "Google Chrome",
+        "msedge.exe" | "msedge" | "microsoft edge" => "Microsoft Edge",
+        "microsoft-edge" => "Microsoft Edge",
+        "brave.exe" | "brave browser" => "Brave",
+        "brave-browser" => "Brave",
+        "firefox.exe" | "firefox" => "Firefox",
+        "chromium" => "Chromium",
+        "safari" => "Safari",
+        "arc" => "Arc",
+        "finder" => "Finder",
+        "explorer.exe" | "explorer" => "File Explorer",
+        "wezterm-gui.exe" | "wezterm-gui" | "wezterm" => "WezTerm",
+        "iterm2" => "iTerm",
+        "terminal" => "Terminal",
+        _ => trimmed,
+    };
+
+    Some(normalized.to_string())
+}
+
+fn is_browser_app(app_name: &str) -> bool {
+    matches!(
+        app_name,
+        "Safari" | "Google Chrome" | "Chromium" | "Microsoft Edge" | "Brave" | "Firefox" | "Arc"
+    )
+}
+
+fn normalize_window_title(title: &str, app_name: Option<&str>) -> Option<String> {
+    let trimmed = title.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    let mut candidates = Vec::new();
+    if let Some(app_name) = app_name {
+        candidates.push(app_name.to_string());
+    }
+    candidates.extend([
+        "Google Chrome".to_string(),
+        "Chromium".to_string(),
+        "Microsoft Edge".to_string(),
+        "Brave".to_string(),
+        "Firefox".to_string(),
+        "Safari".to_string(),
+        "Arc".to_string(),
+    ]);
+
+    for candidate in candidates {
+        for separator in [" - ", " — ", " | ", " · "] {
+            let suffix = format!("{separator}{candidate}");
+            if let Some(value) = trimmed.strip_suffix(&suffix) {
+                let normalized = value.trim();
+                if !normalized.is_empty() {
+                    return Some(normalized.to_string());
+                }
+            }
+        }
+    }
+
+    Some(trimmed.to_string())
+}
+
+fn run_command(program: &str, args: &[&str]) -> Option<String> {
+    let output = std::process::Command::new(program).args(args).output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+
+    let value = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if value.is_empty() {
+        None
+    } else {
+        Some(value)
+    }
+}
+
+fn extract_url_from_text(text: &str) -> Option<String> {
+    let trimmed = text.trim();
+    let parsed = reqwest::Url::parse(trimmed).ok()?;
+    match parsed.scheme() {
+        "http" | "https" => Some(parsed.into()),
+        _ => None,
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn get_frontmost_macos_app_name() -> Option<String> {
+    run_command(
+        "osascript",
+        &[
+            "-l",
+            "JavaScript",
+            "-e",
+            "ObjC.import('AppKit'); const app = $.NSWorkspace.sharedWorkspace.frontmostApplication; app ? ObjC.unwrap(app.localizedName) : '';",
+        ],
+    )
+    .and_then(|name| normalize_app_name(&name))
+}
+
+#[cfg(target_os = "macos")]
+fn get_macos_browser_source(app_name: &str) -> (Option<String>, Option<String>) {
+    let script = match app_name {
+        "Safari" => r#"tell application "Safari"
+if (count of windows) > 0 then
+    set tabTitle to name of current tab of front window
+    set tabUrl to URL of current tab of front window
+    return tabTitle & linefeed & tabUrl
+end if
+end tell"#,
+        "Google Chrome" => r#"tell application "Google Chrome"
+if (count of windows) > 0 then
+    set tabTitle to title of active tab of front window
+    set tabUrl to URL of active tab of front window
+    return tabTitle & linefeed & tabUrl
+end if
+end tell"#,
+        "Chromium" => r#"tell application "Chromium"
+if (count of windows) > 0 then
+    set tabTitle to title of active tab of front window
+    set tabUrl to URL of active tab of front window
+    return tabTitle & linefeed & tabUrl
+end if
+end tell"#,
+        "Microsoft Edge" => r#"tell application "Microsoft Edge"
+if (count of windows) > 0 then
+    set tabTitle to title of active tab of front window
+    set tabUrl to URL of active tab of front window
+    return tabTitle & linefeed & tabUrl
+end if
+end tell"#,
+        "Brave" => r#"tell application "Brave Browser"
+if (count of windows) > 0 then
+    set tabTitle to title of active tab of front window
+    set tabUrl to URL of active tab of front window
+    return tabTitle & linefeed & tabUrl
+end if
+end tell"#,
+        "Arc" => r#"tell application "Arc"
+if (count of windows) > 0 then
+    set tabTitle to title of active tab of front window
+    set tabUrl to URL of active tab of front window
+    return tabTitle & linefeed & tabUrl
+end if
+end tell"#,
+        _ => return (None, None),
+    };
+
+    let Some(output) = run_command("osascript", &["-e", script]) else {
+        return (None, None);
+    };
+    let mut lines = output.lines();
+    let title = lines
+        .next()
+        .and_then(|value| normalize_window_title(value, Some(app_name)));
+    let url = lines.next().and_then(extract_url_from_text);
+    (title, url)
+}
+
+#[cfg(target_os = "macos")]
+fn get_clipboard_source() -> ClipboardSource {
+    let app_name = get_frontmost_macos_app_name();
+    let (label, url) = app_name
+        .as_deref()
+        .filter(|name| is_browser_app(name))
+        .map(get_macos_browser_source)
+        .unwrap_or((None, None));
+
+    ClipboardSource { app_name, label, url }
+}
+
+#[cfg(target_os = "windows")]
+fn get_clipboard_source() -> ClipboardSource {
+    use std::path::Path;
+    use windows_sys::Win32::Foundation::{CloseHandle, HWND, MAX_PATH};
+    use windows_sys::Win32::System::Threading::{
+        OpenProcess, QueryFullProcessImageNameW, PROCESS_QUERY_LIMITED_INFORMATION,
+    };
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        GetForegroundWindow, GetWindowTextLengthW, GetWindowTextW, GetWindowThreadProcessId,
+    };
+
+    unsafe {
+        let hwnd = GetForegroundWindow();
+        if hwnd.is_null() {
+            return ClipboardSource::default();
+        }
+
+        let mut process_id = 0u32;
+        GetWindowThreadProcessId(hwnd as HWND, &mut process_id);
+        if process_id == 0 {
+            return ClipboardSource::default();
+        }
+
+        let process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, process_id);
+        if process.is_null() {
+            return ClipboardSource::default();
+        }
+
+        let mut buffer = vec![0u16; MAX_PATH as usize];
+        let mut len = buffer.len() as u32;
+        let ok = QueryFullProcessImageNameW(process, 0, buffer.as_mut_ptr(), &mut len);
+        CloseHandle(process);
+        if ok == 0 || len == 0 {
+            return ClipboardSource::default();
+        }
+
+        let exe_path = String::from_utf16_lossy(&buffer[..len as usize]);
+        let app_name = Path::new(&exe_path)
+            .file_name()
+            .and_then(|name| name.to_str())
+            .and_then(normalize_app_name);
+
+        let title_len = GetWindowTextLengthW(hwnd as HWND);
+        let window_title = if title_len > 0 {
+            let mut title = vec![0u16; title_len as usize + 1];
+            let written = GetWindowTextW(hwnd as HWND, title.as_mut_ptr(), title.len() as i32);
+            if written > 0 {
+                Some(String::from_utf16_lossy(&title[..written as usize]))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        let label = match (app_name.as_deref(), window_title.as_deref()) {
+            (Some(app), Some(title)) if is_browser_app(app) => normalize_window_title(title, Some(app)),
+            _ => None,
+        };
+
+        ClipboardSource {
+            app_name,
+            label,
+            url: get_clipboard_source_url(),
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn get_clipboard_source() -> ClipboardSource {
+    let window_id = run_command("xdotool", &["getactivewindow"]);
+    let Some(window_id) = window_id else {
+        return ClipboardSource::default();
+    };
+
+    let class_name = run_command("xdotool", &["getwindowclassname", &window_id]);
+    let window_title = run_command("xdotool", &["getwindowname", &window_id]);
+    let app_name = class_name.as_deref().and_then(normalize_app_name);
+
+    let label = match (app_name.as_deref(), window_title.as_deref()) {
+        (Some(app), Some(title)) if is_browser_app(app) => normalize_window_title(title, Some(app)),
+        _ => None,
+    };
+
+    ClipboardSource {
+        app_name,
+        label,
+        url: get_clipboard_source_url(),
+    }
+}
+
 #[cfg(target_os = "windows")]
 fn get_clipboard_png() -> Option<Vec<u8>> {
     use windows_sys::Win32::Foundation::{FALSE, HWND};
@@ -303,7 +586,7 @@ pub struct ClipboardMonitor {
 
 /// Read HTML content from Windows clipboard (CF_HTML format)
 #[cfg(target_os = "windows")]
-fn get_clipboard_html() -> Option<String> {
+fn get_windows_clipboard_cf_html() -> Option<String> {
     use windows_sys::Win32::Foundation::{FALSE, HWND};
     use windows_sys::Win32::System::DataExchange::{
         CloseClipboard, GetClipboardData, OpenClipboard, RegisterClipboardFormatW,
@@ -347,43 +630,7 @@ fn get_clipboard_html() -> Option<String> {
         GlobalUnlock(handle);
         CloseClipboard();
 
-        // CF_HTML format has a header with StartFragment/EndFragment markers
-        // Extract the actual HTML fragment
-        let start_marker = "StartFragment:";
-        let end_marker = "EndFragment:";
-
-        let start_offset = raw.find(start_marker).and_then(|pos| {
-            let after = &raw[pos + start_marker.len()..];
-            after
-                .trim_start()
-                .split_whitespace()
-                .next()?
-                .parse::<usize>()
-                .ok()
-        });
-
-        let end_offset = raw.find(end_marker).and_then(|pos| {
-            let after = &raw[pos + end_marker.len()..];
-            after
-                .trim_start()
-                .split_whitespace()
-                .next()?
-                .parse::<usize>()
-                .ok()
-        });
-
-        match (start_offset, end_offset) {
-            (Some(start), Some(end)) if start < end && end <= raw.len() => {
-                let fragment = &raw[start..end];
-                let trimmed = fragment.trim();
-                if trimmed.is_empty() {
-                    None
-                } else {
-                    Some(trimmed.to_string())
-                }
-            }
-            _ => None,
-        }
+        Some(raw)
     }
 }
 
@@ -441,6 +688,71 @@ fn get_clipboard_html() -> Option<String> {
             }
         }
     }
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn parse_cf_html_fragment(raw: &str) -> Option<String> {
+    let start_marker = "StartFragment:";
+    let end_marker = "EndFragment:";
+
+    let start_offset = raw.find(start_marker).and_then(|pos| {
+        let after = &raw[pos + start_marker.len()..];
+        after
+            .trim_start()
+            .split_whitespace()
+            .next()?
+            .parse::<usize>()
+            .ok()
+    });
+
+    let end_offset = raw.find(end_marker).and_then(|pos| {
+        let after = &raw[pos + end_marker.len()..];
+        after
+            .trim_start()
+            .split_whitespace()
+            .next()?
+            .parse::<usize>()
+            .ok()
+    });
+
+    match (start_offset, end_offset) {
+        (Some(start), Some(end)) if start < end && end <= raw.len() => {
+            let fragment = raw[start..end].trim();
+            if fragment.is_empty() {
+                None
+            } else {
+                Some(fragment.to_string())
+            }
+        }
+        _ => None,
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn parse_cf_html_source_url(raw: &str) -> Option<String> {
+    raw.lines()
+        .find_map(|line| line.strip_prefix("SourceURL:"))
+        .and_then(extract_url_from_text)
+}
+
+#[cfg(target_os = "windows")]
+fn get_clipboard_html() -> Option<String> {
+    get_windows_clipboard_cf_html().and_then(|raw| parse_cf_html_fragment(&raw))
+}
+
+#[cfg(target_os = "windows")]
+fn get_clipboard_source_url() -> Option<String> {
+    get_windows_clipboard_cf_html().and_then(|raw| parse_cf_html_source_url(&raw))
+}
+
+#[cfg(target_os = "macos")]
+fn get_clipboard_source_url() -> Option<String> {
+    None
+}
+
+#[cfg(target_os = "linux")]
+fn get_clipboard_source_url() -> Option<String> {
     None
 }
 
@@ -709,37 +1021,46 @@ impl ClipboardMonitor {
                         last_image_hash.clear();
                         last_text_hash.clear();
 
-                        match db.find_by_hash(&hash) {
-                            Ok(Some(existing)) => {
-                                let _ = db.update_entry_timestamp(&existing.id);
-                                if let Ok(Some(updated)) = db.get_entry(&existing.id) {
-                                    callback(updated);
+                            match db.find_by_hash(&hash) {
+                                Ok(Some(existing)) => {
+                                    let source = get_clipboard_source();
+                                    let source_label = source.display_name();
+                                    let _ = db.update_entry_timestamp(
+                                        &existing.id,
+                                        source_label.as_deref(),
+                                        source.url.as_deref(),
+                                    );
+                                    if let Ok(Some(updated)) = db.get_entry(&existing.id) {
+                                        callback(updated);
+                                    }
                                 }
-                            }
-                            Ok(None) => {
-                                let now = chrono::Utc::now().to_rfc3339();
-                                let entry = ClipboardEntry {
-                                    id: uuid::Uuid::new_v4().to_string(),
-                                    content_type: ContentType::FilePaths,
-                                    text_content: Some(joined),
-                                    html_content: None,
-                                    blob_path: None,
-                                    thumbnail_path: None,
-                                    content_hash: hash,
-                                    source_app: None,
-                                    device_id: device_id.clone(),
-                                    is_favorite: false,
-                                    is_pinned: false,
-                                    tags: Vec::new(),
-                                    created_at: now.clone(),
-                                    updated_at: now,
-                                    synced_at: None,
-                                    sync_status: SyncStatus::Local,
-                                    sync_version: 0,
-                                    ai_summary: None,
-                                    content_category: Some("FilePath".to_string()),
-                                    detected_language: None,
-                                };
+                                Ok(None) => {
+                                    let source = get_clipboard_source();
+                                    let source_label = source.display_name();
+                                    let now = chrono::Utc::now().to_rfc3339();
+                                    let entry = ClipboardEntry {
+                                        id: uuid::Uuid::new_v4().to_string(),
+                                        content_type: ContentType::FilePaths,
+                                        text_content: Some(joined),
+                                        html_content: None,
+                                        blob_path: None,
+                                        thumbnail_path: None,
+                                        content_hash: hash,
+                                        source_app: source_label.clone(),
+                                        source_url: source.url.clone(),
+                                        device_id: device_id.clone(),
+                                        is_favorite: false,
+                                        is_pinned: false,
+                                        tags: Vec::new(),
+                                        created_at: now.clone(),
+                                        updated_at: now,
+                                        synced_at: None,
+                                        sync_status: SyncStatus::Local,
+                                        sync_version: 0,
+                                        ai_summary: None,
+                                        content_category: Some("FilePath".to_string()),
+                                        detected_language: None,
+                                    };
 
                                 if let Err(e) = db.insert_entry(&entry) {
                                     log::error!("Failed to insert file paths entry: {}", e);
@@ -777,12 +1098,20 @@ impl ClipboardMonitor {
 
                             match db.find_by_hash(&hash) {
                                 Ok(Some(existing)) => {
-                                    let _ = db.update_entry_timestamp(&existing.id);
+                                    let source = get_clipboard_source();
+                                    let source_label = source.display_name();
+                                    let _ = db.update_entry_timestamp(
+                                        &existing.id,
+                                        source_label.as_deref(),
+                                        source.url.as_deref(),
+                                    );
                                     if let Ok(Some(updated)) = db.get_entry(&existing.id) {
                                         callback(updated);
                                     }
                                 }
                                 Ok(None) => {
+                                    let source = get_clipboard_source();
+                                    let source_label = source.display_name();
                                     let entry_id = uuid::Uuid::new_v4().to_string();
 
                                     let blob_path =
@@ -823,7 +1152,8 @@ impl ClipboardMonitor {
                                         blob_path: Some(blob_path),
                                         thumbnail_path,
                                         content_hash: hash,
-                                        source_app: None,
+                                        source_app: source_label.clone(),
+                                        source_url: source.url.clone(),
                                         device_id: device_id.clone(),
                                         is_favorite: false,
                                         is_pinned: false,
@@ -871,14 +1201,28 @@ impl ClipboardMonitor {
 
                                     match db.find_by_hash(&hash) {
                                         Ok(Some(existing)) => {
-                                            let _ = db.update_entry_timestamp(&existing.id);
+                                            let source = get_clipboard_source();
+                                            let source_label = source.display_name();
+                                            let source_url = source.url.clone().or_else(get_clipboard_source_url);
+                                            let _ = db.update_entry_timestamp(
+                                                &existing.id,
+                                                source_label.as_deref(),
+                                                source_url.as_deref(),
+                                            );
                                             if let Ok(Some(updated)) = db.get_entry(&existing.id) {
                                                 callback(updated);
                                             }
                                         }
                                         Ok(None) => {
+                                            let source = get_clipboard_source();
+                                            let source_label = source.display_name();
                                             // Check if HTML content is available
                                             let html_content = get_clipboard_html();
+                                            let source_url = source
+                                                .url
+                                                .clone()
+                                                .or_else(get_clipboard_source_url)
+                                                .or_else(|| extract_url_from_text(&text));
                                             let content_type = if html_content.is_some() {
                                                 ContentType::RichText
                                             } else {
@@ -910,7 +1254,8 @@ impl ClipboardMonitor {
                                                 blob_path: None,
                                                 thumbnail_path: None,
                                                 content_hash: hash,
-                                                source_app: None,
+                                                source_app: source_label.clone(),
+                                                source_url,
                                                 device_id: device_id.clone(),
                                                 is_favorite: false,
                                                 is_pinned: false,
@@ -945,5 +1290,30 @@ impl ClipboardMonitor {
                 thread::sleep(Duration::from_millis(500));
             }
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{normalize_app_name, normalize_window_title};
+
+    #[test]
+    fn normalize_common_app_names() {
+        assert_eq!(normalize_app_name("chrome.exe").as_deref(), Some("Google Chrome"));
+        assert_eq!(normalize_app_name("Brave Browser").as_deref(), Some("Brave"));
+        assert_eq!(normalize_app_name("google-chrome").as_deref(), Some("Google Chrome"));
+        assert_eq!(normalize_app_name("  ").as_deref(), None);
+    }
+
+    #[test]
+    fn normalize_browser_titles() {
+        assert_eq!(
+            normalize_window_title("ChatGPT - Google Chrome", Some("Google Chrome")),
+            Some("ChatGPT".to_string())
+        );
+        assert_eq!(
+            normalize_window_title("OpenAI API Docs | Microsoft Edge", Some("Microsoft Edge")),
+            Some("OpenAI API Docs".to_string())
+        );
     }
 }

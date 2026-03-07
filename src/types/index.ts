@@ -10,6 +10,7 @@ export interface ClipboardEntry {
   thumbnail_path: string | null;
   content_hash: string;
   source_app: string | null;
+  source_url: string | null;
   device_id: string;
   is_favorite: boolean;
   is_pinned: boolean;

@@ -26,6 +26,9 @@
       "icons/icon.ico"
     ],
     "createUpdaterArtifacts": true,
+    "macOS": {
+      "infoPlist": "Info.plist"
+    },
     "windows": {
       "nsis": {
         "installerIcon": "icons/icon.ico"

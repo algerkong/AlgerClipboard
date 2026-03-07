@@ -26,6 +26,7 @@ import { useTranslateStore } from "@/stores/translateStore";
 import { useCapabilityStore } from "@/stores/capabilityStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { openUrl } from "@/services/settingsService";
+import { SourceBadge } from "@/components/SourceBadge";
 import type { ClipboardEntry } from "@/types";
 
 const searchParams = new URLSearchParams(window.location.search);
@@ -248,12 +249,13 @@ export function DetailPage() {
             ))}
           </div>
         </div>
-        <div className="min-w-0 flex-1">
-          {entry.source_app && (
-            <span className="block truncate text-2xs text-muted-foreground/60">
-              {entry.source_app}
-            </span>
-          )}
+        <div className="min-w-0 max-w-[40%] flex-[0_1_10rem]">
+          <SourceBadge
+            sourceApp={entry.source_app}
+            sourceUrl={entry.source_url}
+            className="w-full"
+            textClassName="text-2xs"
+          />
         </div>
         {hasText && (
           <div className="flex items-center gap-1 shrink-0">

@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { openImageViewer } from "@/services/imageViewerService";
 import { openDetailWindow } from "@/services/detailWindowService";
 import { ContextMenu, type ContextMenuItem } from "@/components/ContextMenu";
+import { SourceBadge } from "@/components/SourceBadge";
 import { toast } from "@/lib/toast";
 
 // In-memory cache: relative_path -> data URL
@@ -412,7 +413,12 @@ export const EntryCard = memo(function EntryCard({
             {entry.source_app && (
               <>
                 <span>·</span>
-                <span className="truncate max-w-[80px]">{entry.source_app}</span>
+                <SourceBadge
+                  sourceApp={entry.source_app}
+                  sourceUrl={entry.source_url}
+                  className="max-w-[140px]"
+                  textClassName="text-xs2"
+                />
               </>
             )}
             {entry.sync_status !== "Local" && (
