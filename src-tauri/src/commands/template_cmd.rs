@@ -55,22 +55,15 @@ pub fn update_template(
 }
 
 #[tauri::command]
-pub fn delete_template(
-    db: State<'_, AppDatabase>,
-    id: String,
-) -> Result<(), String> {
+pub fn delete_template(db: State<'_, AppDatabase>, id: String) -> Result<(), String> {
     db.0.delete_template(&id)
 }
 
 #[tauri::command]
-pub fn apply_template(
-    db: State<'_, AppDatabase>,
-    id: String,
-) -> Result<String, String> {
-    let template = db
-        .0
-        .get_template(&id)?
-        .ok_or_else(|| "Template not found".to_string())?;
+pub fn apply_template(db: State<'_, AppDatabase>, id: String) -> Result<String, String> {
+    let template =
+        db.0.get_template(&id)?
+            .ok_or_else(|| "Template not found".to_string())?;
 
     Ok(apply_template_variables(&template.content))
 }
