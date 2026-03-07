@@ -233,18 +233,12 @@ body {
 .macos-btn-minimize {
   background-color: #FEBC2E;
 }
-.macos-btn-fullscreen {
-  background-color: #28C840;
-  opacity: 0.5;
-  cursor: default;
-}
 .macos-btn-close svg { color: #4d0000; }
 .macos-btn-minimize svg { color: #995700; }
 
 /* macOS buttons inactive when window loses focus */
 .window-blurred .macos-btn-close,
-.window-blurred .macos-btn-minimize,
-.window-blurred .macos-btn-fullscreen {
+.window-blurred .macos-btn-minimize {
   background-color: #CDCDCD;
 }
 .window-blurred .macos-btn svg {

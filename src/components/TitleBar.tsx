@@ -75,7 +75,6 @@ function MacTrafficLights({ onClose }: { onClose: () => void }) {
           <path d="M2 6h8" />
         </svg>
       </button>
-      <div className="macos-btn macos-btn-fullscreen" />
     </div>
   );
 }
