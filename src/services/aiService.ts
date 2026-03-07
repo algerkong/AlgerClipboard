@@ -65,6 +65,10 @@ export function aiSummarize(text: string): Promise<string> {
   return invoke("ai_summarize", { text });
 }
 
+export function updateAiSummary(id: string, summary: string): Promise<void> {
+  return invoke("update_ai_summary", { id, summary });
+}
+
 export function classifyText(text: string): Promise<string> {
   return invoke("classify_text", { text });
 }

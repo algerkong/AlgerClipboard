@@ -22,6 +22,55 @@ pub struct AiConfig {
     pub summary_language: String,
 }
 
+/// Public wrapper for loading AI config from a raw Database reference (used by auto-summary in lib.rs)
+pub fn load_ai_config_pub(db: &crate::storage::database::Database) -> AiConfig {
+    let provider = db.get_setting("ai_provider").unwrap_or(None).unwrap_or_default();
+    let api_key = db.get_setting("ai_api_key").unwrap_or(None).unwrap_or_default();
+    let model = db.get_setting("ai_model").unwrap_or(None).unwrap_or_default();
+    let base_url = db.get_setting("ai_base_url").unwrap_or(None).unwrap_or_default();
+    let enabled = db
+        .get_setting("ai_enabled")
+        .unwrap_or(None)
+        .map(|v| v == "true")
+        .unwrap_or(false);
+    let auto_summary = db
+        .get_setting("ai_auto_summary")
+        .unwrap_or(None)
+        .map(|v| v == "true")
+        .unwrap_or(false);
+    let summary_min_length = db
+        .get_setting("ai_summary_min_length")
+        .unwrap_or(None)
+        .and_then(|v| v.parse::<u32>().ok())
+        .unwrap_or(200);
+    let summary_max_length = db
+        .get_setting("ai_summary_max_length")
+        .unwrap_or(None)
+        .and_then(|v| v.parse::<u32>().ok())
+        .unwrap_or(100);
+    let summary_language = db
+        .get_setting("ai_summary_language")
+        .unwrap_or(None)
+        .unwrap_or_else(|| "same".to_string());
+
+    AiConfig {
+        provider,
+        api_key,
+        model,
+        base_url,
+        enabled,
+        auto_summary,
+        summary_min_length,
+        summary_max_length,
+        summary_language,
+    }
+}
+
+/// Public wrapper for building an AI engine from config (used by auto-summary in lib.rs)
+pub fn build_engine_pub(config: &AiConfig) -> Result<Box<dyn AiEngine>, String> {
+    build_engine(config)
+}
+
 fn load_ai_config(db: &AppDatabase) -> AiConfig {
     let provider = db.0.get_setting("ai_provider").unwrap_or(None).unwrap_or_default();
     let api_key = db.0.get_setting("ai_api_key").unwrap_or(None).unwrap_or_default();
@@ -205,4 +254,13 @@ pub fn classify_text(text: String) -> ContentCategory {
 #[tauri::command]
 pub fn detect_code_language(text: String) -> String {
     detect_language(&text).as_str().to_string()
+}
+
+#[tauri::command]
+pub fn update_ai_summary(
+    db: State<'_, AppDatabase>,
+    id: String,
+    summary: String,
+) -> Result<(), String> {
+    db.0.update_entry_summary(&id, &summary)
 }

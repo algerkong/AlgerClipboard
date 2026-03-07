@@ -739,6 +739,7 @@ impl ClipboardMonitor {
                                     synced_at: None,
                                     sync_status: SyncStatus::Local,
                                     sync_version: 0,
+                                    ai_summary: None,
                                 };
 
                                 if let Err(e) = db.insert_entry(&entry) {
@@ -833,6 +834,7 @@ impl ClipboardMonitor {
                                         synced_at: None,
                                         sync_status: SyncStatus::Local,
                                         sync_version: 0,
+                                        ai_summary: None,
                                     };
 
                                     if let Err(e) = db.insert_entry(&entry) {
@@ -901,6 +903,7 @@ impl ClipboardMonitor {
                                                 synced_at: None,
                                                 sync_status: SyncStatus::Local,
                                                 sync_version: 0,
+                                                ai_summary: None,
                                             };
 
                                             if let Err(e) = db.insert_entry(&entry) {

@@ -33,6 +33,7 @@ interface ClipboardState {
   addTag: (entryId: string, tag: string) => Promise<void>;
   removeTag: (entryId: string, tag: string) => Promise<void>;
   fetchAllTags: () => Promise<void>;
+  updateEntrySummary: (id: string, summary: string) => void;
   resetView: () => void;
 }
 
@@ -176,6 +177,14 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
     } catch (err) {
       console.error("Failed to fetch tags:", err);
     }
+  },
+
+  updateEntrySummary: (id: string, summary: string) => {
+    set((state) => ({
+      entries: state.entries.map((e) =>
+        e.id === id ? { ...e, ai_summary: summary } : e
+      ),
+    }));
   },
 
   resetView: () => {

@@ -257,6 +257,14 @@ function MainApp() {
     }
   }, [theme]);
 
+  // Listen for entry-summary-updated event from Rust backend (AI auto-summary)
+  useEffect(() => {
+    const unlisten = listen<{ id: string; ai_summary: string }>("entry-summary-updated", (event) => {
+      useClipboardStore.getState().updateEntrySummary(event.payload.id, event.payload.ai_summary);
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, []);
+
   // Listen for clipboard-changed event from Rust backend
   // Use ref to avoid re-subscribing the listener when accounts change
   const realtimeSyncRef = useRef<() => void>(() => {});

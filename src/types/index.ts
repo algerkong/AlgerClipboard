@@ -19,6 +19,7 @@ export interface ClipboardEntry {
   synced_at: string | null;
   sync_status: SyncStatus;
   sync_version: number;
+  ai_summary: string | null;
 }
 
 export interface HistoryQuery {

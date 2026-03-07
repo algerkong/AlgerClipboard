@@ -1,5 +1,5 @@
 import { memo, useCallback, useState, useEffect, useMemo, useRef } from "react";
-import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages, Pin, Eye, Copy, ClipboardPaste, Maximize2, Cloud, Upload, CloudAlert, ScanText, Code, Tag, X, ExternalLink } from "lucide-react";
+import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages, Pin, Eye, Copy, ClipboardPaste, Maximize2, Cloud, Upload, CloudAlert, ScanText, Code, Tag, X, ExternalLink, Brain } from "lucide-react";
 import DOMPurify from "dompurify";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { pasteEntry, getThumbnailBase64 } from "@/services/clipboardService";
@@ -12,6 +12,7 @@ import { TextViewer } from "@/components/TextViewer";
 import { openImageViewer } from "@/services/imageViewerService";
 import { ContextMenu, type ContextMenuItem } from "@/components/ContextMenu";
 import { toast } from "sonner";
+import { aiSummarize, updateAiSummary } from "@/services/aiService";
 
 // In-memory cache: relative_path -> data URL
 const _thumbCache = new Map<string, string>();
@@ -262,6 +263,24 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
       });
     }
 
+    if (hasText && entry.content_type !== "FilePaths") {
+      items.push({
+        label: entry.ai_summary ? t("contextMenu.resummarize") : t("contextMenu.aiSummarize"),
+        icon: <Brain className="w-3.5 h-3.5" />,
+        onClick: async () => {
+          try {
+            const text = entry.text_content!;
+            const summary = await aiSummarize(text);
+            await updateAiSummary(entry.id, summary);
+            useClipboardStore.getState().updateEntrySummary(entry.id, summary);
+            toast.success(t("toast.summarized"));
+          } catch {
+            toast.error(t("toast.summarizeFailed"));
+          }
+        },
+      });
+    }
+
     items.push({
       label: t("contextMenu.addTag"),
       icon: <Tag className="w-3.5 h-3.5" />,
@@ -326,6 +345,11 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
           ) : (
             <p className="text-base2 leading-relaxed text-foreground line-clamp-2 break-all">
               {getPreview(entry, t)}
+            </p>
+          )}
+          {entry.ai_summary && (
+            <p className="text-xs2 text-muted-foreground/80 mt-1 line-clamp-1 italic">
+              {entry.ai_summary}
             </p>
           )}
           <div className="flex items-center gap-1.5 mt-1 text-xs2 text-muted-foreground">

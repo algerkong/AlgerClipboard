@@ -87,8 +87,74 @@ pub fn run() {
 
             let monitor = ClipboardMonitor::new(device_id);
             let app_handle = app.handle().clone();
+            let db_for_ai = db.clone();
             monitor.start(db.clone(), blob_store, move |entry| {
                 let _ = app_handle.emit("clipboard-changed", &entry);
+
+                // Auto-summarize text entries if AI is configured
+                let has_text = entry.text_content.as_ref().map_or(false, |t| !t.is_empty());
+                if has_text && entry.ai_summary.is_none() {
+                    let db = db_for_ai.clone();
+                    let entry_id = entry.id.clone();
+                    let text = entry.text_content.clone().unwrap_or_default();
+                    let handle = app_handle.clone();
+
+                    tauri::async_runtime::spawn(async move {
+                        // Check if auto-summary is enabled
+                        let enabled = db.get_setting("ai_enabled").unwrap_or(None).map(|v| v == "true").unwrap_or(false);
+                        let auto_summary = db.get_setting("ai_auto_summary").unwrap_or(None).map(|v| v == "true").unwrap_or(false);
+                        let min_length = db.get_setting("ai_summary_min_length").unwrap_or(None).and_then(|v| v.parse::<usize>().ok()).unwrap_or(200);
+
+                        if !enabled || !auto_summary || text.len() < min_length {
+                            return;
+                        }
+
+                        let config = commands::ai_cmd::load_ai_config_pub(&db);
+                        let engine = match commands::ai_cmd::build_engine_pub(&config) {
+                            Ok(e) => e,
+                            Err(e) => {
+                                log::error!("Auto-summary engine error: {}", e);
+                                return;
+                            }
+                        };
+
+                        let system_prompt = if config.summary_language == "same" {
+                            format!(
+                                "Summarize the following text concisely in the same language as the original text. Keep the summary under {} characters:",
+                                config.summary_max_length
+                            )
+                        } else {
+                            format!(
+                                "Summarize the following text concisely in {}. Keep the summary under {} characters:",
+                                config.summary_language, config.summary_max_length
+                            )
+                        };
+
+                        let messages = vec![
+                            crate::ai::engine::ChatMessage {
+                                role: "system".to_string(),
+                                content: system_prompt,
+                            },
+                            crate::ai::engine::ChatMessage {
+                                role: "user".to_string(),
+                                content: text,
+                            },
+                        ];
+
+                        match engine.chat(&messages, &config.model).await {
+                            Ok(resp) => {
+                                let _ = db.update_entry_summary(&entry_id, &resp.content);
+                                let _ = handle.emit("entry-summary-updated", serde_json::json!({
+                                    "id": entry_id,
+                                    "ai_summary": resp.content,
+                                }));
+                            }
+                            Err(e) => {
+                                log::warn!("Auto-summary failed: {}", e);
+                            }
+                        }
+                    });
+                }
             });
 
             let shortcut_str = db
@@ -241,6 +307,7 @@ pub fn run() {
             commands::ai_cmd::ai_summarize,
             commands::ai_cmd::classify_text,
             commands::ai_cmd::detect_code_language,
+            commands::ai_cmd::update_ai_summary,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

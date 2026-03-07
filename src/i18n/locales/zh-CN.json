@@ -294,6 +294,8 @@
     "addTag": "添加标签",
     "tagPlaceholder": "输入标签名...",
     "openInBrowser": "在浏览器中打开",
+    "aiSummarize": "AI 摘要",
+    "resummarize": "重新摘要",
     "delete": "删除"
   },
   "toast": {
@@ -308,6 +310,8 @@
     "clearFailed": "清空失败",
     "syncSuccess": "同步完成",
     "syncFailed": "同步失败",
-    "openUrlFailed": "打开链接失败"
+    "openUrlFailed": "打开链接失败",
+    "summarized": "摘要生成成功",
+    "summarizeFailed": "摘要生成失败"
   }
 }

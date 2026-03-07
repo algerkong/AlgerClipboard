@@ -294,6 +294,8 @@
     "addTag": "Add Tag",
     "tagPlaceholder": "Enter tag name...",
     "openInBrowser": "Open in Browser",
+    "aiSummarize": "AI Summarize",
+    "resummarize": "Re-summarize",
     "delete": "Delete"
   },
   "toast": {
@@ -308,6 +310,8 @@
     "clearFailed": "Clear failed",
     "syncSuccess": "Sync complete",
     "syncFailed": "Sync failed",
-    "openUrlFailed": "Failed to open URL"
+    "openUrlFailed": "Failed to open URL",
+    "summarized": "Summary generated",
+    "summarizeFailed": "Summary generation failed"
   }
 }
