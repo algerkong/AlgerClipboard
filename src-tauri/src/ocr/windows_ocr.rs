@@ -5,8 +5,8 @@ use windows::Storage::Streams::{DataWriter, InMemoryRandomAccessStream};
 
 pub fn extract_text(image_path: &str) -> Result<OcrResult, String> {
     // Read file using standard Rust I/O to avoid WinRT path limitations
-    let file_bytes = std::fs::read(image_path)
-        .map_err(|e| format!("Failed to read image file: {}", e))?;
+    let file_bytes =
+        std::fs::read(image_path).map_err(|e| format!("Failed to read image file: {}", e))?;
 
     // Create an in-memory stream and write the file bytes into it
     let stream = InMemoryRandomAccessStream::new()
@@ -59,9 +59,9 @@ pub fn extract_text(image_path: &str) -> Result<OcrResult, String> {
     let engine = if let Ok(engine) = OcrEngine::TryCreateFromUserProfileLanguages() {
         engine
     } else {
-        let lang = windows::Globalization::Language::CreateLanguage(
-            &windows::core::HSTRING::from("en-US"),
-        )
+        let lang = windows::Globalization::Language::CreateLanguage(&windows::core::HSTRING::from(
+            "en-US",
+        ))
         .map_err(|e| format!("Failed to create language: {}", e))?;
         OcrEngine::TryCreateFromLanguage(&lang)
             .map_err(|e| format!("Failed to create OCR engine: {}", e))?
@@ -84,7 +84,8 @@ pub fn extract_text(image_path: &str) -> Result<OcrResult, String> {
     let mut lines = Vec::new();
 
     for i in 0..ocr_lines.Size().unwrap_or(0) {
-        let line = ocr_lines.GetAt(i)
+        let line = ocr_lines
+            .GetAt(i)
             .map_err(|e| format!("Failed to get line at {}: {}", i, e))?;
         let line_text = line
             .Text()
@@ -102,7 +103,8 @@ pub fn extract_text(image_path: &str) -> Result<OcrResult, String> {
         let mut max_y = 0.0_f64;
 
         for j in 0..words.Size().unwrap_or(0) {
-            let word = words.GetAt(j)
+            let word = words
+                .GetAt(j)
                 .map_err(|e| format!("Failed to get word: {}", e))?;
             let rect = word
                 .BoundingRect()

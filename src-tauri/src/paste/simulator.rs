@@ -20,9 +20,9 @@ pub fn paste_text(text: &str) -> Result<(), String> {
 /// Set clipboard to file list (CF_HDROP) and simulate Ctrl+V paste
 #[cfg(target_os = "windows")]
 pub fn paste_files(paths: &[&str]) -> Result<(), String> {
-    use windows_sys::Win32::Foundation::{HWND, FALSE};
+    use windows_sys::Win32::Foundation::{FALSE, HWND};
     use windows_sys::Win32::System::DataExchange::{
-        OpenClipboard, CloseClipboard, EmptyClipboard, SetClipboardData,
+        CloseClipboard, EmptyClipboard, OpenClipboard, SetClipboardData,
     };
     use windows_sys::Win32::System::Memory::{
         GlobalAlloc, GlobalLock, GlobalUnlock, GMEM_MOVEABLE, GMEM_ZEROINIT,
@@ -65,20 +65,12 @@ pub fn paste_files(paths: &[&str]) -> Result<(), String> {
         // Write DROPFILES header
         let buf = ptr as *mut u8;
         // pFiles = 20 (offset to file list)
-        std::ptr::copy_nonoverlapping(
-            &(dropfiles_size as u32) as *const u32 as *const u8,
-            buf,
-            4,
-        );
+        std::ptr::copy_nonoverlapping(&(dropfiles_size as u32) as *const u32 as *const u8, buf, 4);
         // pt.x = 0, pt.y = 0 (bytes 4-11) - already zeroed
         // fNC = 0 (bytes 12-15) - already zeroed
         // fWide = 1 (bytes 16-19)
         let f_wide: i32 = 1;
-        std::ptr::copy_nonoverlapping(
-            &f_wide as *const i32 as *const u8,
-            buf.add(16),
-            4,
-        );
+        std::ptr::copy_nonoverlapping(&f_wide as *const i32 as *const u8, buf.add(16), 4);
 
         // Write file paths after header
         std::ptr::copy_nonoverlapping(
@@ -156,7 +148,13 @@ pub fn paste_files(paths: &[&str]) -> Result<(), String> {
 
     // Try X11 first (xclip)
     let xclip_result = std::process::Command::new("xclip")
-        .args(["-selection", "clipboard", "-t", "x-special/gnome-copied-files", "-i"])
+        .args([
+            "-selection",
+            "clipboard",
+            "-t",
+            "x-special/gnome-copied-files",
+            "-i",
+        ])
         .stdin(std::process::Stdio::piped())
         .spawn()
         .and_then(|mut child| {
@@ -229,8 +227,8 @@ pub fn prepare_paste_target(target_hwnd: Option<isize>, source_hwnd: Option<isiz
         SendInput, INPUT, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, VK_MENU,
     };
     use windows_sys::Win32::UI::WindowsAndMessaging::{
-        GetForegroundWindow, GetWindowThreadProcessId,
-        IsWindow, SetForegroundWindow, ShowWindow, SW_SHOWNOACTIVATE,
+        GetForegroundWindow, GetWindowThreadProcessId, IsWindow, SetForegroundWindow, ShowWindow,
+        SW_SHOWNOACTIVATE,
     };
 
     let Some(target_hwnd) = target_hwnd else {
@@ -356,9 +354,8 @@ pub fn prepare_paste_target(target_window_id: Option<String>) {
 fn simulate_paste() -> Result<(), String> {
     use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
         GetAsyncKeyState, MapVirtualKeyW, SendInput, INPUT, INPUT_KEYBOARD, KEYBDINPUT,
-        KEYEVENTF_KEYUP, MAPVK_VK_TO_VSC, VK_CONTROL, VK_INSERT,
-        VK_LCONTROL, VK_LMENU, VK_LWIN, VK_MENU, VK_RCONTROL, VK_RMENU, VK_RWIN,
-        VK_SHIFT, VK_V,
+        KEYEVENTF_KEYUP, MAPVK_VK_TO_VSC, VK_CONTROL, VK_INSERT, VK_LCONTROL, VK_LMENU, VK_LWIN,
+        VK_MENU, VK_RCONTROL, VK_RMENU, VK_RWIN, VK_SHIFT, VK_V,
     };
     use windows_sys::Win32::UI::WindowsAndMessaging::{
         GetClassNameW, GetForegroundWindow, SendMessageW,
@@ -376,10 +373,17 @@ fn simulate_paste() -> Result<(), String> {
     fn release_all_modifiers() {
         unsafe {
             let modifiers: &[u16] = &[
-                VK_CONTROL, VK_LCONTROL, VK_RCONTROL,
-                VK_SHIFT, 0xA0 /* VK_LSHIFT */, 0xA1 /* VK_RSHIFT */,
-                VK_MENU, VK_LMENU, VK_RMENU,
-                VK_LWIN, VK_RWIN,
+                VK_CONTROL,
+                VK_LCONTROL,
+                VK_RCONTROL,
+                VK_SHIFT,
+                0xA0, /* VK_LSHIFT */
+                0xA1, /* VK_RSHIFT */
+                VK_MENU,
+                VK_LMENU,
+                VK_RMENU,
+                VK_LWIN,
+                VK_RWIN,
             ];
 
             let mut ups: Vec<INPUT> = Vec::new();
@@ -521,7 +525,11 @@ fn simulate_paste() -> Result<(), String> {
     release_all_modifiers();
 
     let (fg_hwnd, target_class) = get_foreground_info();
-    log::info!("Windows paste target class: {:?}, hwnd: {:?}", target_class, fg_hwnd);
+    log::info!(
+        "Windows paste target class: {:?}, hwnd: {:?}",
+        target_class,
+        fg_hwnd
+    );
 
     let method = match target_class.as_deref() {
         // PuTTY / mintty (Git Bash): Shift+Insert
@@ -597,7 +605,11 @@ fn simulate_paste() -> Result<(), String> {
             return None;
         }
         let value = String::from_utf8_lossy(&class.stdout).trim().to_lowercase();
-        if value.is_empty() { None } else { Some(value) }
+        if value.is_empty() {
+            None
+        } else {
+            Some(value)
+        }
     }
 
     fn pick_shortcut() -> Shortcut {
@@ -645,9 +657,9 @@ fn simulate_paste() -> Result<(), String> {
             Shortcut::CtrlShiftV => &[
                 "-M", "ctrl", "-M", "shift", "-P", "v", "-m", "shift", "-m", "ctrl", "-p", "v",
             ],
-            Shortcut::ShiftInsert => &[
-                "-M", "shift", "-P", "insert", "-m", "shift", "-p", "insert",
-            ],
+            Shortcut::ShiftInsert => {
+                &["-M", "shift", "-P", "insert", "-m", "shift", "-p", "insert"]
+            }
         };
         let output = std::process::Command::new("wtype")
             .args(args)

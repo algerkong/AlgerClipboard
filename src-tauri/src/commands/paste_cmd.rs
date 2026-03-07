@@ -30,7 +30,10 @@ impl AppPasteTargetState {
 
     #[cfg(target_os = "windows")]
     pub fn take_windows_hwnd(&self) -> Option<isize> {
-        self.0.lock().ok().and_then(|mut guard| guard.windows_hwnd.take())
+        self.0
+            .lock()
+            .ok()
+            .and_then(|mut guard| guard.windows_hwnd.take())
     }
 
     #[cfg(target_os = "macos")]
@@ -42,7 +45,10 @@ impl AppPasteTargetState {
 
     #[cfg(target_os = "macos")]
     pub fn take_macos_bundle_id(&self) -> Option<String> {
-        self.0.lock().ok().and_then(|mut guard| guard.mac_bundle_id.take())
+        self.0
+            .lock()
+            .ok()
+            .and_then(|mut guard| guard.mac_bundle_id.take())
     }
 
     #[cfg(target_os = "linux")]
@@ -54,7 +60,10 @@ impl AppPasteTargetState {
 
     #[cfg(target_os = "linux")]
     pub fn take_linux_window_id(&self) -> Option<String> {
-        self.0.lock().ok().and_then(|mut guard| guard.linux_window_id.take())
+        self.0
+            .lock()
+            .ok()
+            .and_then(|mut guard| guard.linux_window_id.take())
     }
 }
 
@@ -67,10 +76,9 @@ pub fn paste_entry(
     id: String,
     mode: Option<String>,
 ) -> Result<(), String> {
-    let entry = db
-        .0
-        .get_entry(&id)?
-        .ok_or_else(|| "Entry not found".to_string())?;
+    let entry =
+        db.0.get_entry(&id)?
+            .ok_or_else(|| "Entry not found".to_string())?;
 
     // CRITICAL: Transfer focus to target BEFORE hiding our window.
     // We must still be the foreground process for SetForegroundWindow to succeed.
