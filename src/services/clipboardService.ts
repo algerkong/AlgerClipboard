@@ -117,3 +117,7 @@ export async function cleanupCacheBySize(): Promise<number> {
 export async function openInExplorer(path: string): Promise<void> {
   return invoke("open_in_explorer", { path });
 }
+
+export async function updateEntryText(id: string, text: string): Promise<void> {
+  return invoke("update_entry_text", { id, text });
+}

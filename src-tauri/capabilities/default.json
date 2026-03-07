@@ -6,7 +6,8 @@
     "main",
     "image-viewer-*",
     "template-manager-*",
-    "settings-*"
+    "settings-*",
+    "detail-*"
   ],
   "permissions": [
     "core:default",

@@ -9,6 +9,9 @@ use crate::commands::clipboard_cmd::AppDatabase;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
+pub const DEFAULT_SUMMARY_PROMPT: &str = "Summarize the following text concisely in {language}. Keep the summary under {max_length} characters:";
+pub const DEFAULT_TRANSLATE_PROMPT: &str = "Translate the following text from {from_lang} to {to_lang}. Only output the translation, no explanations:";
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AiConfig {
     pub provider: String,
@@ -20,6 +23,8 @@ pub struct AiConfig {
     pub summary_min_length: u32,
     pub summary_max_length: u32,
     pub summary_language: String,
+    pub summary_prompt: String,
+    pub translate_prompt: String,
 }
 
 /// Public wrapper for loading AI config from a raw Database reference (used by auto-summary in lib.rs)
@@ -52,6 +57,14 @@ pub fn load_ai_config_pub(db: &crate::storage::database::Database) -> AiConfig {
         .get_setting("ai_summary_language")
         .unwrap_or(None)
         .unwrap_or_else(|| "same".to_string());
+    let summary_prompt = db
+        .get_setting("ai_summary_prompt")
+        .unwrap_or(None)
+        .unwrap_or_else(|| DEFAULT_SUMMARY_PROMPT.to_string());
+    let translate_prompt = db
+        .get_setting("ai_translate_prompt")
+        .unwrap_or(None)
+        .unwrap_or_else(|| DEFAULT_TRANSLATE_PROMPT.to_string());
 
     AiConfig {
         provider,
@@ -63,6 +76,8 @@ pub fn load_ai_config_pub(db: &crate::storage::database::Database) -> AiConfig {
         summary_min_length,
         summary_max_length,
         summary_language,
+        summary_prompt,
+        translate_prompt,
     }
 }
 
@@ -105,6 +120,16 @@ fn load_ai_config(db: &AppDatabase) -> AiConfig {
         .get_setting("ai_summary_language")
         .unwrap_or(None)
         .unwrap_or_else(|| "same".to_string());
+    let summary_prompt = db
+        .0
+        .get_setting("ai_summary_prompt")
+        .unwrap_or(None)
+        .unwrap_or_else(|| DEFAULT_SUMMARY_PROMPT.to_string());
+    let translate_prompt = db
+        .0
+        .get_setting("ai_translate_prompt")
+        .unwrap_or(None)
+        .unwrap_or_else(|| DEFAULT_TRANSLATE_PROMPT.to_string());
 
     AiConfig {
         provider,
@@ -116,6 +141,8 @@ fn load_ai_config(db: &AppDatabase) -> AiConfig {
         summary_min_length,
         summary_max_length,
         summary_language,
+        summary_prompt,
+        translate_prompt,
     }
 }
 
@@ -129,6 +156,8 @@ fn save_ai_config_to_db(db: &AppDatabase, config: &AiConfig) -> Result<(), Strin
     db.0.set_setting("ai_summary_min_length", &config.summary_min_length.to_string())?;
     db.0.set_setting("ai_summary_max_length", &config.summary_max_length.to_string())?;
     db.0.set_setting("ai_summary_language", &config.summary_language)?;
+    db.0.set_setting("ai_summary_prompt", &config.summary_prompt)?;
+    db.0.set_setting("ai_translate_prompt", &config.translate_prompt)?;
     Ok(())
 }
 
@@ -219,17 +248,47 @@ pub async fn ai_summarize(db: State<'_, AppDatabase>, text: String) -> Result<St
     }
     let engine = build_engine(&config)?;
 
-    let system_prompt = if config.summary_language == "same" {
-        format!(
-            "Summarize the following text concisely in the same language as the original text. Keep the summary under {} characters:",
-            config.summary_max_length
-        )
+    let language_str = if config.summary_language == "same" {
+        "the same language as the original text".to_string()
     } else {
-        format!(
-            "Summarize the following text concisely in {}. Keep the summary under {} characters:",
-            config.summary_language, config.summary_max_length
-        )
+        config.summary_language.clone()
     };
+    let system_prompt = config.summary_prompt
+        .replace("{language}", &language_str)
+        .replace("{max_length}", &config.summary_max_length.to_string());
+
+    let messages = vec![
+        ChatMessage {
+            role: "system".to_string(),
+            content: system_prompt,
+        },
+        ChatMessage {
+            role: "user".to_string(),
+            content: text,
+        },
+    ];
+
+    let resp = engine.chat(&messages, &config.model).await?;
+    Ok(resp.content)
+}
+
+#[tauri::command]
+pub async fn ai_translate(
+    db: State<'_, AppDatabase>,
+    text: String,
+    from_lang: String,
+    to_lang: String,
+) -> Result<String, String> {
+    let config = load_ai_config(&db);
+    if !config.enabled {
+        return Err("AI is not enabled".to_string());
+    }
+    let engine = build_engine(&config)?;
+
+    let from_display = if from_lang == "auto" { "auto-detected language" } else { &from_lang };
+    let system_prompt = config.translate_prompt
+        .replace("{from_lang}", from_display)
+        .replace("{to_lang}", &to_lang);
 
     let messages = vec![
         ChatMessage {

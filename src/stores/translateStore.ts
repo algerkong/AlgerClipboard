@@ -5,6 +5,7 @@ import {
   getTranslateEngines,
   configureTranslateEngine,
 } from "@/services/translateService";
+import { aiTranslate } from "@/services/aiService";
 
 interface TranslateState {
   result: TranslateResult | null;
@@ -12,11 +13,13 @@ interface TranslateState {
   error: string | null;
   fromLang: string;
   toLang: string;
+  useAi: boolean;
   engines: TranslateEngineConfig[];
 
   translate: (text: string, engine?: string) => Promise<void>;
   setFromLang: (lang: string) => void;
   setToLang: (lang: string) => void;
+  setUseAi: (v: boolean) => void;
   clearResult: () => void;
   loadEngines: () => Promise<void>;
   saveEngine: (
@@ -33,12 +36,21 @@ export const useTranslateStore = create<TranslateState>((set, get) => ({
   error: null,
   fromLang: "auto",
   toLang: "zh",
+  useAi: false,
   engines: [],
 
   translate: async (text: string, engine?: string) => {
     set({ loading: true, error: null, result: null });
     try {
-      const { fromLang, toLang } = get();
+      const { fromLang, toLang, useAi } = get();
+      if (useAi) {
+        const translated = await aiTranslate(text, fromLang, toLang);
+        set({
+          result: { text, translated, from_lang: fromLang, to_lang: toLang, engine: "AI" },
+          loading: false,
+        });
+        return;
+      }
       const result = await translateText(text, fromLang, toLang, engine);
       set({ result, loading: false });
     } catch (err) {
@@ -51,6 +63,7 @@ export const useTranslateStore = create<TranslateState>((set, get) => ({
 
   setFromLang: (lang: string) => set({ fromLang: lang }),
   setToLang: (lang: string) => set({ toLang: lang }),
+  setUseAi: (v: boolean) => set({ useAi: v }),
   clearResult: () => set({ result: null, error: null }),
 
   loadEngines: async () => {

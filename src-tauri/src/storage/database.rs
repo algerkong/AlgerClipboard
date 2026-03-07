@@ -364,6 +364,20 @@ impl Database {
         Ok(new_state)
     }
 
+    pub fn update_entry_text(&self, id: &str, text: &str) -> Result<(), String> {
+        let conn = self.conn.lock().map_err(|e| e.to_string())?;
+        // Recompute content_hash
+        let mut hasher = Sha256::new();
+        hasher.update(text.as_bytes());
+        let hash = format!("{:x}", hasher.finalize());
+        conn.execute(
+            "UPDATE entries SET text_content = ?1, content_hash = ?2, updated_at = datetime('now') WHERE id = ?3",
+            params![text, hash, id],
+        )
+        .map_err(|e| format!("Failed to update entry text: {}", e))?;
+        Ok(())
+    }
+
     pub fn update_entry_summary(&self, id: &str, summary: &str) -> Result<(), String> {
         let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
         conn.execute(

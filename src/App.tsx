@@ -8,6 +8,7 @@ import { ClipboardPanel } from "@/pages/ClipboardPanel";
 import { SettingsPage } from "@/pages/settings";
 import { TemplateManager } from "@/pages/TemplateManager";
 import { ImageViewerPage } from "@/components/ImageViewer";
+import { DetailPage } from "@/pages/DetailPage";
 import { openSettingsWindow } from "@/services/settingsWindowService";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -35,6 +36,7 @@ const searchParams = new URLSearchParams(window.location.search);
 const isImageViewer = searchParams.get("window") === "image-viewer";
 const isTemplateManager = searchParams.get("window") === "template-manager";
 const isSettings = searchParams.get("window") === "settings";
+const isDetail = searchParams.get("window") === "detail";
 const initialSettingsTab = searchParams.get("tab") || undefined;
 
 function applyTheme(theme: "light" | "dark" | "system") {
@@ -67,6 +69,15 @@ function App() {
     return (
       <PlatformProvider>
         <TemplateManagerWindow />
+      </PlatformProvider>
+    );
+  }
+
+  // If this is a detail window, render standalone detail page
+  if (isDetail) {
+    return (
+      <PlatformProvider>
+        <DetailPage />
       </PlatformProvider>
     );
   }

@@ -144,7 +144,13 @@
       "summaryLanguage": "Summary Language",
       "summaryLangSame": "Same as source",
       "summaryLangZh": "Chinese",
-      "summaryLangEn": "English"
+      "summaryLangEn": "English",
+      "prompts": "Prompt Settings",
+      "summaryPrompt": "Summary Prompt",
+      "summaryPromptVars": "Variables: {language} = summary language, {max_length} = max length",
+      "translatePrompt": "Translate Prompt",
+      "translatePromptVars": "Variables: {from_lang} = source language, {to_lang} = target language",
+      "resetPrompt": "Reset"
     }
   },
   "update": {
@@ -267,6 +273,29 @@
     "translateHint": "Translate",
     "viewSource": "Source",
     "viewRendered": "Rendered"
+  },
+  "detail": {
+    "title": "Detail",
+    "tabView": "View",
+    "tabTranslate": "Translate",
+    "tabAi": "AI",
+    "edit": "Edit",
+    "editing": "Editing",
+    "save": "Save",
+    "saved": "Saved",
+    "saveFailed": "Save failed",
+    "cancel": "Cancel",
+    "copy": "Copy",
+    "copied": "Copied",
+    "paste": "Paste",
+    "contentType": "Type",
+    "sourceApp": "Source",
+    "createdAt": "Created",
+    "summary": "AI Summary",
+    "noSummary": "No summary yet",
+    "generateSummary": "Generate Summary",
+    "regenerateSummary": "Regenerate",
+    "generating": "Generating..."
   },
   "imageViewer": {
     "title": "Image Preview",

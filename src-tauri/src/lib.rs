@@ -118,17 +118,14 @@ pub fn run() {
                             }
                         };
 
-                        let system_prompt = if config.summary_language == "same" {
-                            format!(
-                                "Summarize the following text concisely in the same language as the original text. Keep the summary under {} characters:",
-                                config.summary_max_length
-                            )
+                        let language_str = if config.summary_language == "same" {
+                            "the same language as the original text".to_string()
                         } else {
-                            format!(
-                                "Summarize the following text concisely in {}. Keep the summary under {} characters:",
-                                config.summary_language, config.summary_max_length
-                            )
+                            config.summary_language.clone()
                         };
+                        let system_prompt = config.summary_prompt
+                            .replace("{language}", &language_str)
+                            .replace("{max_length}", &config.summary_max_length.to_string());
 
                         let messages = vec![
                             crate::ai::engine::ChatMessage {
@@ -270,6 +267,7 @@ pub fn run() {
             commands::clipboard_cmd::get_cache_max_size,
             commands::clipboard_cmd::cleanup_cache_by_size,
             commands::clipboard_cmd::open_in_explorer,
+            commands::clipboard_cmd::update_entry_text,
             commands::settings_cmd::get_settings,
             commands::settings_cmd::update_settings,
             commands::settings_cmd::update_toggle_shortcut,
@@ -305,6 +303,7 @@ pub fn run() {
             commands::ai_cmd::test_ai_connection,
             commands::ai_cmd::ai_chat,
             commands::ai_cmd::ai_summarize,
+            commands::ai_cmd::ai_translate,
             commands::ai_cmd::classify_text,
             commands::ai_cmd::detect_code_language,
             commands::ai_cmd::update_ai_summary,

@@ -144,7 +144,13 @@
       "summaryLanguage": "摘要语言",
       "summaryLangSame": "与原文相同",
       "summaryLangZh": "中文",
-      "summaryLangEn": "English"
+      "summaryLangEn": "English",
+      "prompts": "提示词设置",
+      "summaryPrompt": "摘要提示词",
+      "summaryPromptVars": "可用变量: {language} = 摘要语言, {max_length} = 最大长度",
+      "translatePrompt": "翻译提示词",
+      "translatePromptVars": "可用变量: {from_lang} = 源语言, {to_lang} = 目标语言",
+      "resetPrompt": "重置"
     }
   },
   "update": {
@@ -267,6 +273,29 @@
     "translateHint": "翻译",
     "viewSource": "源码",
     "viewRendered": "渲染"
+  },
+  "detail": {
+    "title": "详情",
+    "tabView": "查看",
+    "tabTranslate": "翻译",
+    "tabAi": "AI",
+    "edit": "编辑",
+    "editing": "编辑中",
+    "save": "保存",
+    "saved": "已保存",
+    "saveFailed": "保存失败",
+    "cancel": "取消",
+    "copy": "复制",
+    "copied": "已复制",
+    "paste": "粘贴",
+    "contentType": "类型",
+    "sourceApp": "来源",
+    "createdAt": "创建时间",
+    "summary": "AI 摘要",
+    "noSummary": "暂无摘要",
+    "generateSummary": "生成摘要",
+    "regenerateSummary": "重新生成",
+    "generating": "正在生成..."
   },
   "imageViewer": {
     "title": "图片预览",

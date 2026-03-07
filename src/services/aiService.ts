@@ -24,6 +24,8 @@ export interface AiConfig {
   summary_min_length: number;
   summary_max_length: number;
   summary_language: string;
+  summary_prompt: string;
+  translate_prompt: string;
 }
 
 export interface ChatMessage {
@@ -67,6 +69,10 @@ export function aiSummarize(text: string): Promise<string> {
 
 export function updateAiSummary(id: string, summary: string): Promise<void> {
   return invoke("update_ai_summary", { id, summary });
+}
+
+export function aiTranslate(text: string, fromLang: string, toLang: string): Promise<string> {
+  return invoke("ai_translate", { text, fromLang, toLang });
 }
 
 export function classifyText(text: string): Promise<string> {

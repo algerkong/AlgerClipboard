@@ -1,5 +1,6 @@
 import { memo, useCallback, useState, useEffect, useMemo, useRef } from "react";
 import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages, Pin, Eye, Copy, ClipboardPaste, Maximize2, Cloud, Upload, CloudAlert, ScanText, Code, Tag, X, ExternalLink, Brain } from "lucide-react";
+
 import DOMPurify from "dompurify";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { pasteEntry, getThumbnailBase64 } from "@/services/clipboardService";
@@ -7,12 +8,10 @@ import { openUrl } from "@/services/settingsService";
 import type { ClipboardEntry } from "@/types";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
-import { TranslateDialog } from "@/components/TranslateDialog";
-import { TextViewer } from "@/components/TextViewer";
 import { openImageViewer } from "@/services/imageViewerService";
+import { openDetailWindow } from "@/services/detailWindowService";
 import { ContextMenu, type ContextMenuItem } from "@/components/ContextMenu";
 import { toast } from "sonner";
-import { aiSummarize, updateAiSummary } from "@/services/aiService";
 
 // In-memory cache: relative_path -> data URL
 const _thumbCache = new Map<string, string>();
@@ -144,8 +143,6 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
   const removeTag = useClipboardStore((s) => s.removeTag);
   const allTags = useClipboardStore((s) => s.allTags);
   const isSelected = selectedId === entry.id;
-  const [showTranslate, setShowTranslate] = useState(false);
-  const [showViewer, setShowViewer] = useState(false);
   const [showUrlPicker, setShowUrlPicker] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [showTagInput, setShowTagInput] = useState(false);
@@ -154,7 +151,7 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
   const hasText = entry.content_type === "PlainText" || entry.content_type === "RichText";
   const isRichText = entry.content_type === "RichText" && !!entry.html_content;
   const isImage = entry.content_type === "Image";
-  const isLongText = hasText && (entry.text_content?.length ?? 0) > 120;
+
 
   const urls = useMemo(() => extractUrls(entry.text_content), [entry.text_content]);
 
@@ -200,13 +197,11 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
     }
 
     if (hasText && entry.text_content) {
-      if (isLongText) {
-        items.push({
-          label: t("contextMenu.viewFull"),
-          icon: <Eye className="w-3.5 h-3.5" />,
-          onClick: () => setShowViewer(true),
-        });
-      }
+      items.push({
+        label: t("contextMenu.viewFull"),
+        icon: <Eye className="w-3.5 h-3.5" />,
+        onClick: () => openDetailWindow(entry.id, "view"),
+      });
       items.push({
         label: t("contextMenu.copy"),
         icon: <Copy className="w-3.5 h-3.5" />,
@@ -259,7 +254,7 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
       items.push({
         label: t("contextMenu.translate"),
         icon: <Languages className="w-3.5 h-3.5" />,
-        onClick: () => setShowTranslate(true),
+        onClick: () => openDetailWindow(entry.id, "translate"),
       });
     }
 
@@ -267,17 +262,7 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
       items.push({
         label: entry.ai_summary ? t("contextMenu.resummarize") : t("contextMenu.aiSummarize"),
         icon: <Brain className="w-3.5 h-3.5" />,
-        onClick: async () => {
-          try {
-            const text = entry.text_content!;
-            const summary = await aiSummarize(text);
-            await updateAiSummary(entry.id, summary);
-            useClipboardStore.getState().updateEntrySummary(entry.id, summary);
-            toast.success(t("toast.summarized"));
-          } catch {
-            toast.error(t("toast.summarizeFailed"));
-          }
-        },
+        onClick: () => openDetailWindow(entry.id, "ai"),
       });
     }
 
@@ -374,7 +359,7 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
             <span className="ml-auto flex items-center gap-1.5 shrink-0">
               {showTranslateHint && (
                 <button
-                  onClick={(e) => { e.stopPropagation(); setShowTranslate(true); }}
+                  onClick={(e) => { e.stopPropagation(); openDetailWindow(entry.id, "translate"); }}
                   className="flex items-center gap-0.5 text-blue-400/80 hover:text-blue-400 transition-colors"
                 >
                   <Languages className="w-2.5 h-2.5" />
@@ -466,22 +451,13 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
             <ExternalLink className="w-3 h-3" />
           </button>
         )}
-        {hasText && isLongText && (
+        {hasText && (
           <button
-            onClick={(e) => { e.stopPropagation(); setShowViewer(true); }}
+            onClick={(e) => { e.stopPropagation(); openDetailWindow(entry.id, "view"); }}
             className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
             title={t("contextMenu.viewFull")}
           >
             <Maximize2 className="w-3 h-3" />
-          </button>
-        )}
-        {hasText && (
-          <button
-            onClick={(e) => { e.stopPropagation(); setShowTranslate(true); }}
-            className="p-1 rounded text-muted-foreground hover:text-blue-400 transition-colors"
-            title={t("translate.translate")}
-          >
-            <Languages className="w-3 h-3" />
           </button>
         )}
         <button
@@ -518,23 +494,6 @@ export const EntryCard = memo(function EntryCard({ entry }: { entry: ClipboardEn
           y={contextMenu.y}
           items={getContextMenuItems()}
           onClose={() => setContextMenu(null)}
-        />
-      )}
-
-      {/* Text viewer */}
-      {showViewer && entry.text_content && (
-        <TextViewer
-          text={entry.text_content}
-          htmlContent={entry.html_content}
-          onClose={() => setShowViewer(false)}
-        />
-      )}
-
-      {/* Translate dialog */}
-      {showTranslate && entry.text_content && (
-        <TranslateDialog
-          text={entry.text_content}
-          onClose={() => setShowTranslate(false)}
         />
       )}
 

@@ -10,6 +10,9 @@ import {
   type ModelInfo,
 } from "@/services/aiService";
 
+export const DEFAULT_SUMMARY_PROMPT = "Summarize the following text concisely in {language}. Keep the summary under {max_length} characters:";
+export const DEFAULT_TRANSLATE_PROMPT = "Translate the following text from {from_lang} to {to_lang}. Only output the translation, no explanations:";
+
 interface AiState {
   providers: ProviderPreset[];
   config: AiConfig;
@@ -37,6 +40,8 @@ const DEFAULT_CONFIG: AiConfig = {
   summary_min_length: 200,
   summary_max_length: 100,
   summary_language: "same",
+  summary_prompt: DEFAULT_SUMMARY_PROMPT,
+  translate_prompt: DEFAULT_TRANSLATE_PROMPT,
 };
 
 export const useAiStore = create<AiState>((set, get) => ({

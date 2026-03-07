@@ -278,3 +278,12 @@ pub fn open_in_explorer(path: String) -> Result<(), String> {
     }
     Ok(())
 }
+
+#[tauri::command]
+pub fn update_entry_text(
+    db: State<'_, AppDatabase>,
+    id: String,
+    text: String,
+) -> Result<(), String> {
+    db.0.update_entry_text(&id, &text)
+}

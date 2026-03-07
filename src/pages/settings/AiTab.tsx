@@ -6,7 +6,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import { useAiStore } from "@/stores/aiStore";
+import { useAiStore, DEFAULT_SUMMARY_PROMPT, DEFAULT_TRANSLATE_PROMPT } from "@/stores/aiStore";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { Toggle } from "./shared";
@@ -328,6 +328,59 @@ export function AiTab() {
             <option value="zh-CN">{t("settings.ai.summaryLangZh")}</option>
             <option value="en">{t("settings.ai.summaryLangEn")}</option>
           </select>
+        </div>
+      </div>
+
+      {/* ─── Prompt Settings ─── */}
+      <div className="border-t border-border/30 pt-4 space-y-3">
+        <span className="text-sm2 font-medium">{t("settings.ai.prompts")}</span>
+
+        {/* Summary prompt */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label className="text-sm2 text-muted-foreground">
+              {t("settings.ai.summaryPrompt")}
+            </label>
+            <button
+              onClick={() => updateConfig({ summary_prompt: DEFAULT_SUMMARY_PROMPT })}
+              className="text-xs2 text-muted-foreground hover:text-primary transition-colors"
+            >
+              {t("settings.ai.resetPrompt")}
+            </button>
+          </div>
+          <p className="text-xs2 text-muted-foreground/70">
+            {t("settings.ai.summaryPromptVars")}
+          </p>
+          <textarea
+            value={config.summary_prompt}
+            onChange={(e) => updateConfig({ summary_prompt: e.target.value })}
+            rows={3}
+            className="w-full px-2 py-1.5 rounded-md border border-border bg-background text-sm2 resize-none focus:outline-none focus:ring-1 focus:ring-ring/30"
+          />
+        </div>
+
+        {/* Translate prompt */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label className="text-sm2 text-muted-foreground">
+              {t("settings.ai.translatePrompt")}
+            </label>
+            <button
+              onClick={() => updateConfig({ translate_prompt: DEFAULT_TRANSLATE_PROMPT })}
+              className="text-xs2 text-muted-foreground hover:text-primary transition-colors"
+            >
+              {t("settings.ai.resetPrompt")}
+            </button>
+          </div>
+          <p className="text-xs2 text-muted-foreground/70">
+            {t("settings.ai.translatePromptVars")}
+          </p>
+          <textarea
+            value={config.translate_prompt}
+            onChange={(e) => updateConfig({ translate_prompt: e.target.value })}
+            rows={3}
+            className="w-full px-2 py-1.5 rounded-md border border-border bg-background text-sm2 resize-none focus:outline-none focus:ring-1 focus:ring-ring/30"
+          />
         </div>
       </div>
     </div>
