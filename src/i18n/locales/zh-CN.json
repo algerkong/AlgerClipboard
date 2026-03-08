@@ -481,6 +481,22 @@
     "resummarize": "重新摘要",
     "delete": "删除"
   },
+  "askAi": {
+    "askAi": "\u95ee AI",
+    "presets": {
+      "translate": "\u7ffb\u8bd1",
+      "summarize": "\u603b\u7ed3",
+      "explain": "\u89e3\u91ca",
+      "rewrite": "\u6539\u5199",
+      "continue": "\u7eed\u5199",
+      "custom": "\u81ea\u5b9a\u4e49\u63d0\u793a"
+    },
+    "customPromptPlaceholder": "\u8f93\u5165\u4f60\u7684\u63d0\u793a...",
+    "send": "\u53d1\u9001",
+    "selectService": "\u9009\u62e9 AI \u670d\u52a1",
+    "sending": "\u6b63\u5728\u53d1\u9001...",
+    "noEnabledServices": "\u6ca1\u6709\u542f\u7528\u7684 AI \u670d\u52a1\u3002\u8bf7\u5728\u8bbe\u7f6e > \u95ee AI \u4e2d\u542f\u7528\u3002"
+  },
   "toast": {
     "copied": "已复制",
     "pasted": "已粘贴",
