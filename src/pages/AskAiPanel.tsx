@@ -29,7 +29,6 @@ export function AskAiPanel() {
     .filter(Boolean) as AiWebService[];
 
   const isSingleService = enabledServices.length === 1;
-  const tabBarHeight = isSingleService ? 0 : TAB_BAR_HEIGHT;
 
   // Load services and favicons on mount
   useEffect(() => {

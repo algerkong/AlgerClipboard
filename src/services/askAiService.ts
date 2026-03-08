@@ -55,7 +55,7 @@ export async function openAskAiPanel() {
  * Open (or focus) a WebView window for the given AI service.
  * @deprecated Use openAskAiPanel() instead. Kept for backward compat (settings page open button).
  */
-export async function openAiWebView(service: AiWebService) {
+export async function openAiWebView(_service: AiWebService) {
   // Redirect to the new ask-ai-panel
   await openAskAiPanel();
 }
