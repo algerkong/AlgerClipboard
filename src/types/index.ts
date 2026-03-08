@@ -11,6 +11,7 @@ export interface ClipboardEntry {
   content_hash: string;
   source_app: string | null;
   source_url: string | null;
+  source_icon: string | null;
   device_id: string;
   is_favorite: boolean;
   is_pinned: boolean;

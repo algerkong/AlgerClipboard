@@ -12,3 +12,4 @@ docs/plans/
 ~/.tauri/
 *.key
 *.key.pub
+.planning/

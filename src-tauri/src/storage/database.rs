@@ -91,6 +91,7 @@ impl Database {
                 content_hash TEXT NOT NULL,
                 source_app TEXT,
                 source_url TEXT,
+                source_icon TEXT,
                 device_id TEXT NOT NULL,
                 is_favorite INTEGER DEFAULT 0,
                 is_pinned INTEGER DEFAULT 0,
@@ -150,6 +151,7 @@ impl Database {
         let _ = conn.execute("ALTER TABLE entries ADD COLUMN content_category TEXT", []);
         let _ = conn.execute("ALTER TABLE entries ADD COLUMN detected_language TEXT", []);
         let _ = conn.execute("ALTER TABLE entries ADD COLUMN source_url TEXT", []);
+        let _ = conn.execute("ALTER TABLE entries ADD COLUMN source_icon TEXT", []);
 
         // Sync accounts table
         conn.execute_batch(
@@ -185,8 +187,8 @@ impl Database {
         let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
         conn.execute(
-            "INSERT OR REPLACE INTO entries (id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language, deleted)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, 0)",
+            "INSERT OR REPLACE INTO entries (id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, source_icon, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language, deleted)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, 0)",
             params![
                 entry.id,
                 entry.content_type.as_str(),
@@ -197,6 +199,7 @@ impl Database {
                 entry.content_hash,
                 entry.source_app,
                 entry.source_url,
+                entry.source_icon,
                 entry.device_id,
                 entry.is_favorite as i32,
                 entry.is_pinned as i32,
@@ -230,7 +233,7 @@ impl Database {
 
         let mut stmt = conn
             .prepare(
-                "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language
+                "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, source_icon, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language
                  FROM entries WHERE content_hash = ?1 AND deleted = 0 LIMIT 1",
             )
             .map_err(|e| format!("Prepare error: {}", e))?;
@@ -263,7 +266,7 @@ impl Database {
         let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
         let mut sql = String::from(
-            "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language
+            "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, source_icon, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language
              FROM entries WHERE deleted = 0",
         );
         let mut param_values: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
@@ -318,7 +321,7 @@ impl Database {
 
         let mut stmt = conn
             .prepare(
-                "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language
+                "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, source_icon, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language
                  FROM entries WHERE id = ?1 AND deleted = 0",
             )
             .map_err(|e| format!("Prepare error: {}", e))?;
@@ -428,6 +431,7 @@ impl Database {
         id: &str,
         source_app: Option<&str>,
         source_url: Option<&str>,
+        source_icon: Option<&str>,
     ) -> Result<(), String> {
         let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
         let now = now_iso();
@@ -437,9 +441,10 @@ impl Database {
              SET created_at = ?1,
                  updated_at = ?1,
                  source_app = COALESCE(?2, source_app),
-                 source_url = COALESCE(?3, source_url)
-             WHERE id = ?4",
-            params![now, source_app, source_url, id],
+                 source_url = COALESCE(?3, source_url),
+                 source_icon = COALESCE(?4, source_icon)
+             WHERE id = ?5",
+            params![now, source_app, source_url, source_icon, id],
         )
         .map_err(|e| format!("Failed to update timestamp: {}", e))?;
 
@@ -785,8 +790,11 @@ impl Database {
 
         conn.execute("DELETE FROM tags WHERE tag = ?1", params![normalized])
             .map_err(|e| format!("Failed to delete tag: {}", e))?;
-        conn.execute("DELETE FROM tag_catalog WHERE name = ?1", params![normalized])
-            .map_err(|e| format!("Failed to delete tag from catalog: {}", e))?;
+        conn.execute(
+            "DELETE FROM tag_catalog WHERE name = ?1",
+            params![normalized],
+        )
+        .map_err(|e| format!("Failed to delete tag from catalog: {}", e))?;
 
         Ok(())
     }
@@ -947,7 +955,7 @@ impl Database {
 
         let mut stmt = conn
             .prepare(
-                "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language
+                "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, source_icon, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language
                  FROM entries WHERE deleted = 0 ORDER BY created_at DESC",
             )
             .map_err(|e| format!("Prepare error: {}", e))?;
@@ -986,8 +994,8 @@ impl Database {
             }
 
             conn.execute(
-                "INSERT OR IGNORE INTO entries (id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, deleted)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, 0)",
+                "INSERT OR IGNORE INTO entries (id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, source_icon, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, deleted)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, 0)",
                 params![
                     entry.id,
                     entry.content_type.as_str(),
@@ -998,6 +1006,7 @@ impl Database {
                     entry.content_hash,
                     entry.source_app,
                     entry.source_url,
+                    entry.source_icon,
                     entry.device_id,
                     entry.is_favorite as i32,
                     entry.is_pinned as i32,
@@ -1190,7 +1199,7 @@ impl Database {
         //   - have a sync_version greater than the last synced version, OR
         //   - have never been synced (sync_status = 'Local')
         let mut stmt = conn.prepare(
-            "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language
+            "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, source_icon, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language
              FROM entries WHERE (sync_version > ?1 OR sync_status = 'local') AND deleted = 0 ORDER BY created_at ASC"
         ).map_err(|e| format!("Prepare error: {}", e))?;
 
@@ -1285,6 +1294,7 @@ fn row_to_entry_inner(row: &rusqlite::Row) -> ClipboardEntry {
         content_hash: row.get("content_hash").unwrap_or_default(),
         source_app: row.get("source_app").unwrap_or(None),
         source_url: row.get("source_url").unwrap_or(None),
+        source_icon: row.get("source_icon").unwrap_or(None),
         device_id: row.get("device_id").unwrap_or_default(),
         is_favorite: is_fav != 0,
         is_pinned: is_pin != 0,
@@ -1333,6 +1343,7 @@ mod tests {
             content_hash: "hash".into(),
             source_app: Some("Finder".into()),
             source_url: Some("https://example.com".into()),
+            source_icon: Some("data:image/png;base64,Zm9v".into()),
             device_id: "test-device".into(),
             is_favorite: false,
             is_pinned: false,
@@ -1358,6 +1369,10 @@ mod tests {
         assert_eq!(stored.content_category.as_deref(), Some("text"));
         assert_eq!(stored.detected_language.as_deref(), Some("zh"));
         assert_eq!(stored.source_url.as_deref(), Some("https://example.com"));
+        assert_eq!(
+            stored.source_icon.as_deref(),
+            Some("data:image/png;base64,Zm9v")
+        );
 
         let _ = fs::remove_file(&db_path);
     }

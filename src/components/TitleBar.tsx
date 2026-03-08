@@ -78,19 +78,19 @@ function WinLinuxButtons({ onClose }: { onClose: () => void }) {
     <div className="flex items-center gap-0.5">
       <button
         onClick={handleTogglePin}
-        className="flex items-center justify-center w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+        className="titlebar-icon-btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {isPinned ? <Pin className="w-3 h-3" /> : <PinOff className="w-3 h-3" />}
       </button>
       <button
         onClick={handleMinimize}
-        className="flex items-center justify-center w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+        className="titlebar-icon-btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <Minus className="w-3 h-3" />
       </button>
       <button
         onClick={onClose}
-        className="flex items-center justify-center w-6 h-6 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+        className="titlebar-icon-btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <X className="w-3 h-3" />
       </button>
@@ -113,7 +113,7 @@ function PinButton() {
   return (
     <button
       onClick={handleTogglePin}
-      className="flex items-center justify-center w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+      className="titlebar-icon-btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       {isPinned ? <Pin className="w-3 h-3" /> : <PinOff className="w-3 h-3" />}
     </button>
@@ -132,7 +132,7 @@ function TitleText({
     <div data-tauri-drag-region className="flex items-center gap-1.5">
       <span
         data-tauri-drag-region
-        className="font-medium text-muted-foreground tracking-wide uppercase text-[length:var(--app-title-font-size)]"
+        className="text-[length:var(--app-title-font-size)] font-semibold uppercase tracking-[0.2em] text-muted-foreground"
       >
         {title ?? t("titleBar.clipboard")}
       </span>
@@ -165,7 +165,7 @@ export function TitleBar({
   // macOS: native title bar / traffic lights, custom content only
   if (platform === "macos") {
     return (
-      <div data-tauri-drag-region className={`flex items-center justify-between h-8 bg-card/80 backdrop-blur-sm border-b border-border/50 select-none shrink-0 ${blurClass}`}>
+      <div data-tauri-drag-region className={`flex h-9 shrink-0 items-center justify-between border-b border-border/50 bg-card/70 px-2 backdrop-blur-md select-none ${blurClass}`}>
         <div className="w-[72px] shrink-0" />
         <TitleText title={title} showSyncIndicator={showSyncIndicator} />
         <div className="pr-2">
@@ -178,7 +178,7 @@ export function TitleBar({
   // Linux with buttons on left
   if (platform === "linux" && buttonPosition === "left") {
     return (
-      <div data-tauri-drag-region className="flex items-center justify-between h-8 px-1 bg-card/80 backdrop-blur-sm border-b border-border/50 select-none shrink-0">
+      <div data-tauri-drag-region className="flex h-9 shrink-0 items-center justify-between border-b border-border/50 bg-card/70 px-2 backdrop-blur-md select-none">
         <div className="pl-1">
           <WinLinuxButtons onClose={onClose} />
         </div>
@@ -192,7 +192,7 @@ export function TitleBar({
 
   // Windows / Linux (buttons right, default)
   return (
-    <div data-tauri-drag-region className="flex items-center justify-between h-8 px-3 bg-card/80 backdrop-blur-sm border-b border-border/50 select-none shrink-0">
+    <div data-tauri-drag-region className="flex h-9 shrink-0 items-center justify-between border-b border-border/50 bg-card/70 px-3 backdrop-blur-md select-none">
       <TitleText title={title} showSyncIndicator={showSyncIndicator} />
       <div className="-mr-1">
         <WinLinuxButtons onClose={onClose} />

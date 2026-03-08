@@ -68,6 +68,7 @@ pub struct ClipboardEntry {
     pub content_hash: String,
     pub source_app: Option<String>,
     pub source_url: Option<String>,
+    pub source_icon: Option<String>,
     pub device_id: String,
     pub is_favorite: bool,
     pub is_pinned: bool,

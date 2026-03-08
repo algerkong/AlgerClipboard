@@ -55,20 +55,22 @@ export function SearchBar() {
   }, []);
 
   return (
-    <div className="relative flex items-center flex-1">
-      <Search className="absolute left-2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
-        <input
-          ref={inputRef}
-          placeholder={t("searchBar.placeholder")}
-          value={inputValue}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          className="w-full h-7 pl-7 pr-7 text-xs bg-muted/50 border border-border/50 rounded-md text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-ring/30 focus:bg-muted"
-        />
-      {keyword && (
+    <div className="relative flex min-w-0 flex-1 items-center">
+      <Search className="pointer-events-none absolute left-3 h-4 w-4 text-muted-foreground" />
+      <input
+        ref={inputRef}
+        aria-label={t("searchBar.placeholder")}
+        placeholder={t("searchBar.placeholder")}
+        value={inputValue}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        className="w-full h-8 rounded-full border border-transparent bg-accent/40 py-1.5 pl-9 pr-9 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground/70 focus:bg-accent focus:border-primary/30"
+      />
+      {inputValue && (
         <button
           onClick={handleClear}
-          className="absolute right-1.5 p-0.5 rounded text-muted-foreground hover:text-foreground"
+          aria-label={t("tags.cancel")}
+          className="absolute right-2 flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:bg-accent/70 hover:text-foreground"
         >
           <X className="w-3 h-3" />
         </button>

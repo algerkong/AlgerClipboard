@@ -526,7 +526,7 @@ function MainApp() {
   }, []);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="app-shell flex h-screen flex-col overflow-hidden">
       <TitleBar onClose={hideMainWindow} />
       <div className="flex-1 min-h-0">
         <ClipboardPanel onOpenSettings={handleOpenSettings} />

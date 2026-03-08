@@ -5,9 +5,16 @@ use crate::storage::blob::BlobStore;
 use crate::storage::database::{compute_hash, Database};
 use base64::Engine;
 use image::DynamicImage;
+use std::collections::HashMap;
+#[cfg(target_os = "linux")]
+use std::fs;
 use std::io::Cursor;
+#[cfg(any(target_os = "linux", target_os = "windows"))]
+use std::path::Path;
+#[cfg(target_os = "linux")]
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
 use std::time::Duration;
 
@@ -16,6 +23,7 @@ struct ClipboardSource {
     app_name: Option<String>,
     label: Option<String>,
     url: Option<String>,
+    icon: Option<String>,
 }
 
 impl ClipboardSource {
@@ -96,7 +104,10 @@ fn normalize_window_title(title: &str, app_name: Option<&str>) -> Option<String>
 }
 
 fn run_command(program: &str, args: &[&str]) -> Option<String> {
-    let output = std::process::Command::new(program).args(args).output().ok()?;
+    let output = std::process::Command::new(program)
+        .args(args)
+        .output()
+        .ok()?;
     if !output.status.success() {
         return None;
     }
@@ -118,6 +129,61 @@ fn extract_url_from_text(text: &str) -> Option<String> {
     }
 }
 
+fn image_data_url(mime: &str, bytes: &[u8]) -> String {
+    let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
+    format!("data:{mime};base64,{encoded}")
+}
+
+fn png_data_url_from_base64(raw: &str, max_dim: u32) -> Option<String> {
+    let png_bytes = base64::engine::general_purpose::STANDARD
+        .decode(raw.trim())
+        .ok()?;
+    let image = image::load_from_memory(&png_bytes).ok()?;
+    let resized = image.thumbnail(max_dim, max_dim);
+    let png_bytes = encode_png(&resized).ok()?;
+    Some(image_data_url("image/png", &png_bytes))
+}
+
+fn cached_data_url(
+    cache: &'static Mutex<HashMap<String, String>>,
+    key: &str,
+    loader: impl FnOnce() -> Option<String>,
+) -> Option<String> {
+    if let Ok(cache) = cache.lock() {
+        if let Some(value) = cache.get(key) {
+            return Some(value.clone());
+        }
+    }
+
+    let value = loader()?;
+    if let Ok(mut cache) = cache.lock() {
+        cache.insert(key.to_string(), value.clone());
+    }
+    Some(value)
+}
+
+#[cfg(target_os = "macos")]
+fn macos_app_icon_cache() -> &'static Mutex<HashMap<String, String>> {
+    static CACHE: OnceLock<Mutex<HashMap<String, String>>> = OnceLock::new();
+    CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+#[cfg(target_os = "macos")]
+fn get_frontmost_macos_app_icon(app_name: &str) -> Option<String> {
+    cached_data_url(macos_app_icon_cache(), app_name, || {
+        let raw_icon = run_command(
+            "osascript",
+            &[
+                "-l",
+                "JavaScript",
+                "-e",
+                "ObjC.import('AppKit'); ObjC.import('Foundation'); const app = $.NSWorkspace.sharedWorkspace.frontmostApplication; if (!app) { '' } else { const path = ObjC.unwrap(app.bundleURL.path); const icon = $.NSWorkspace.sharedWorkspace.iconForFile(path); const tiff = icon.TIFFRepresentation; if (!tiff) { '' } else { const rep = $.NSBitmapImageRep.imageRepWithData(tiff); const png = rep.representationUsingTypeProperties($.NSBitmapImageFileTypePNG, $.NSDictionary.dictionary); png ? ObjC.unwrap(png.base64EncodedStringWithOptions(0)) : ''; } }",
+            ],
+        )?;
+        png_data_url_from_base64(&raw_icon, 32)
+    })
+}
+
 #[cfg(target_os = "macos")]
 fn get_frontmost_macos_app_name() -> Option<String> {
     run_command(
@@ -135,48 +201,60 @@ fn get_frontmost_macos_app_name() -> Option<String> {
 #[cfg(target_os = "macos")]
 fn get_macos_browser_source(app_name: &str) -> (Option<String>, Option<String>) {
     let script = match app_name {
-        "Safari" => r#"tell application "Safari"
+        "Safari" => {
+            r#"tell application "Safari"
 if (count of windows) > 0 then
     set tabTitle to name of current tab of front window
     set tabUrl to URL of current tab of front window
     return tabTitle & linefeed & tabUrl
 end if
-end tell"#,
-        "Google Chrome" => r#"tell application "Google Chrome"
+end tell"#
+        }
+        "Google Chrome" => {
+            r#"tell application "Google Chrome"
 if (count of windows) > 0 then
     set tabTitle to title of active tab of front window
     set tabUrl to URL of active tab of front window
     return tabTitle & linefeed & tabUrl
 end if
-end tell"#,
-        "Chromium" => r#"tell application "Chromium"
+end tell"#
+        }
+        "Chromium" => {
+            r#"tell application "Chromium"
 if (count of windows) > 0 then
     set tabTitle to title of active tab of front window
     set tabUrl to URL of active tab of front window
     return tabTitle & linefeed & tabUrl
 end if
-end tell"#,
-        "Microsoft Edge" => r#"tell application "Microsoft Edge"
+end tell"#
+        }
+        "Microsoft Edge" => {
+            r#"tell application "Microsoft Edge"
 if (count of windows) > 0 then
     set tabTitle to title of active tab of front window
     set tabUrl to URL of active tab of front window
     return tabTitle & linefeed & tabUrl
 end if
-end tell"#,
-        "Brave" => r#"tell application "Brave Browser"
+end tell"#
+        }
+        "Brave" => {
+            r#"tell application "Brave Browser"
 if (count of windows) > 0 then
     set tabTitle to title of active tab of front window
     set tabUrl to URL of active tab of front window
     return tabTitle & linefeed & tabUrl
 end if
-end tell"#,
-        "Arc" => r#"tell application "Arc"
+end tell"#
+        }
+        "Arc" => {
+            r#"tell application "Arc"
 if (count of windows) > 0 then
     set tabTitle to title of active tab of front window
     set tabUrl to URL of active tab of front window
     return tabTitle & linefeed & tabUrl
 end if
-end tell"#,
+end tell"#
+        }
         _ => return (None, None),
     };
 
@@ -194,18 +272,155 @@ end tell"#,
 #[cfg(target_os = "macos")]
 fn get_clipboard_source() -> ClipboardSource {
     let app_name = get_frontmost_macos_app_name();
+    let icon = app_name.as_deref().and_then(get_frontmost_macos_app_icon);
     let (label, url) = app_name
         .as_deref()
         .filter(|name| is_browser_app(name))
         .map(get_macos_browser_source)
         .unwrap_or((None, None));
 
-    ClipboardSource { app_name, label, url }
+    ClipboardSource {
+        app_name,
+        label,
+        url,
+        icon,
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn windows_app_icon_cache() -> &'static Mutex<HashMap<String, String>> {
+    static CACHE: OnceLock<Mutex<HashMap<String, String>>> = OnceLock::new();
+    CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+#[cfg(target_os = "windows")]
+fn get_windows_app_icon(exe_path: &str) -> Option<String> {
+    use image::RgbaImage;
+    use std::mem::{size_of, zeroed};
+    use windows_sys::Win32::Graphics::Gdi::{
+        CreateCompatibleDC, DeleteDC, DeleteObject, GetDIBits, GetObjectW, BITMAP, BITMAPINFO,
+        BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS, RGBQUAD,
+    };
+    use windows_sys::Win32::UI::Shell::{SHGetFileInfoW, SHFILEINFOW, SHGFI_ICON, SHGFI_LARGEICON};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{DestroyIcon, GetIconInfo, ICONINFO};
+
+    cached_data_url(windows_app_icon_cache(), exe_path, || unsafe {
+        let wide_path: Vec<u16> = exe_path.encode_utf16().chain(std::iter::once(0)).collect();
+        let mut info: SHFILEINFOW = zeroed();
+        let result = SHGetFileInfoW(
+            wide_path.as_ptr(),
+            0,
+            &mut info,
+            size_of::<SHFILEINFOW>() as u32,
+            SHGFI_ICON | SHGFI_LARGEICON,
+        );
+        if result == 0 || info.hIcon.is_null() {
+            return None;
+        }
+
+        let hicon = info.hIcon;
+        let mut icon_info: ICONINFO = zeroed();
+        if GetIconInfo(hicon, &mut icon_info) == 0 {
+            DestroyIcon(hicon);
+            return None;
+        }
+
+        let bitmap_handle = if !icon_info.hbmColor.is_null() {
+            icon_info.hbmColor
+        } else {
+            icon_info.hbmMask
+        };
+
+        let mut bitmap: BITMAP = zeroed();
+        if GetObjectW(
+            bitmap_handle as _,
+            size_of::<BITMAP>() as i32,
+            &mut bitmap as *mut _ as *mut _,
+        ) == 0
+        {
+            if !icon_info.hbmColor.is_null() {
+                DeleteObject(icon_info.hbmColor as _);
+            }
+            if !icon_info.hbmMask.is_null() {
+                DeleteObject(icon_info.hbmMask as _);
+            }
+            DestroyIcon(hicon);
+            return None;
+        }
+
+        let width = bitmap.bmWidth.max(1) as u32;
+        let height = bitmap.bmHeight.max(1) as u32;
+        let mut pixels = vec![0u8; (width * height * 4) as usize];
+        let mut bitmap_info = BITMAPINFO {
+            bmiHeader: BITMAPINFOHEADER {
+                biSize: size_of::<BITMAPINFOHEADER>() as u32,
+                biWidth: width as i32,
+                biHeight: -(height as i32),
+                biPlanes: 1,
+                biBitCount: 32,
+                biCompression: BI_RGB,
+                biSizeImage: 0,
+                biXPelsPerMeter: 0,
+                biYPelsPerMeter: 0,
+                biClrUsed: 0,
+                biClrImportant: 0,
+            },
+            bmiColors: [RGBQUAD {
+                rgbBlue: 0,
+                rgbGreen: 0,
+                rgbRed: 0,
+                rgbReserved: 0,
+            }],
+        };
+
+        let dc = CreateCompatibleDC(0);
+        if dc.is_null() {
+            if !icon_info.hbmColor.is_null() {
+                DeleteObject(icon_info.hbmColor as _);
+            }
+            if !icon_info.hbmMask.is_null() {
+                DeleteObject(icon_info.hbmMask as _);
+            }
+            DestroyIcon(hicon);
+            return None;
+        }
+
+        let rows = GetDIBits(
+            dc,
+            bitmap_handle,
+            0,
+            height,
+            pixels.as_mut_ptr() as *mut _,
+            &mut bitmap_info,
+            DIB_RGB_COLORS,
+        );
+
+        DeleteDC(dc);
+        if !icon_info.hbmColor.is_null() {
+            DeleteObject(icon_info.hbmColor as _);
+        }
+        if !icon_info.hbmMask.is_null() {
+            DeleteObject(icon_info.hbmMask as _);
+        }
+        DestroyIcon(hicon);
+
+        if rows == 0 {
+            return None;
+        }
+
+        for chunk in pixels.chunks_exact_mut(4) {
+            chunk.swap(0, 2);
+        }
+
+        let image = RgbaImage::from_raw(width, height, pixels)?;
+        let resized = DynamicImage::ImageRgba8(image).thumbnail(32, 32);
+        let png_bytes = encode_png(&resized).ok()?;
+        Some(image_data_url("image/png", &png_bytes))
+    })
 }
 
 #[cfg(target_os = "windows")]
 fn get_clipboard_source() -> ClipboardSource {
-    use std::path::Path;
     use windows_sys::Win32::Foundation::{CloseHandle, HWND, MAX_PATH};
     use windows_sys::Win32::System::Threading::{
         OpenProcess, QueryFullProcessImageNameW, PROCESS_QUERY_LIMITED_INFORMATION,
@@ -240,6 +455,7 @@ fn get_clipboard_source() -> ClipboardSource {
         }
 
         let exe_path = String::from_utf16_lossy(&buffer[..len as usize]);
+        let icon = get_windows_app_icon(&exe_path);
         let app_name = Path::new(&exe_path)
             .file_name()
             .and_then(|name| name.to_str())
@@ -259,7 +475,9 @@ fn get_clipboard_source() -> ClipboardSource {
         };
 
         let label = match (app_name.as_deref(), window_title.as_deref()) {
-            (Some(app), Some(title)) if is_browser_app(app) => normalize_window_title(title, Some(app)),
+            (Some(app), Some(title)) if is_browser_app(app) => {
+                normalize_window_title(title, Some(app))
+            }
             _ => None,
         };
 
@@ -267,8 +485,329 @@ fn get_clipboard_source() -> ClipboardSource {
             app_name,
             label,
             url: get_clipboard_source_url(),
+            icon,
         }
     }
+}
+
+#[cfg(target_os = "linux")]
+#[derive(Clone, Debug)]
+struct LinuxDesktopEntry {
+    desktop_id: String,
+    name: Option<String>,
+    icon: Option<String>,
+    startup_wm_class: Option<String>,
+    exec: Option<String>,
+}
+
+#[cfg(target_os = "linux")]
+fn linux_app_icon_cache() -> &'static Mutex<HashMap<String, String>> {
+    static CACHE: OnceLock<Mutex<HashMap<String, String>>> = OnceLock::new();
+    CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+#[cfg(target_os = "linux")]
+fn linux_desktop_entries() -> &'static Vec<LinuxDesktopEntry> {
+    static ENTRIES: OnceLock<Vec<LinuxDesktopEntry>> = OnceLock::new();
+    ENTRIES.get_or_init(load_linux_desktop_entries)
+}
+
+#[cfg(target_os = "linux")]
+fn load_linux_desktop_entries() -> Vec<LinuxDesktopEntry> {
+    let mut files = Vec::new();
+    for dir in linux_desktop_entry_dirs() {
+        collect_desktop_files(&dir, &mut files);
+    }
+
+    files
+        .into_iter()
+        .filter_map(|path| parse_linux_desktop_entry(&path))
+        .collect()
+}
+
+#[cfg(target_os = "linux")]
+fn linux_desktop_entry_dirs() -> Vec<PathBuf> {
+    let mut dirs = Vec::new();
+    if let Some(home) = std::env::var_os("HOME") {
+        let home = PathBuf::from(home);
+        dirs.push(home.join(".local/share/applications"));
+        dirs.push(home.join(".local/share/flatpak/exports/share/applications"));
+    }
+
+    let data_home = std::env::var_os("XDG_DATA_HOME")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".local/share")));
+    if let Some(data_home) = data_home {
+        dirs.push(data_home.join("applications"));
+    }
+
+    let data_dirs = std::env::var("XDG_DATA_DIRS")
+        .unwrap_or_else(|_| "/usr/local/share:/usr/share".to_string());
+    dirs.extend(
+        data_dirs
+            .split(':')
+            .filter(|value| !value.is_empty())
+            .map(|value| PathBuf::from(value).join("applications")),
+    );
+    dirs.push(PathBuf::from("/var/lib/flatpak/exports/share/applications"));
+
+    dirs
+}
+
+#[cfg(target_os = "linux")]
+fn collect_desktop_files(dir: &Path, output: &mut Vec<PathBuf>) {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_desktop_files(&path, output);
+        } else if path.extension().and_then(|ext| ext.to_str()) == Some("desktop") {
+            output.push(path);
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn parse_linux_desktop_entry(path: &Path) -> Option<LinuxDesktopEntry> {
+    let content = fs::read_to_string(path).ok()?;
+    let mut in_desktop_entry = false;
+    let mut entry_type = None;
+    let mut name = None;
+    let mut icon = None;
+    let mut startup_wm_class = None;
+    let mut exec = None;
+    let mut hidden = false;
+
+    for raw_line in content.lines() {
+        let line = raw_line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        if line.starts_with('[') && line.ends_with(']') {
+            in_desktop_entry = line == "[Desktop Entry]";
+            continue;
+        }
+        if !in_desktop_entry {
+            continue;
+        }
+        let Some((key, value)) = line.split_once('=') else {
+            continue;
+        };
+        let value = value.trim();
+        match key {
+            "Type" => entry_type = Some(value.to_string()),
+            "Name" if name.is_none() => name = Some(value.to_string()),
+            "Icon" => icon = Some(value.to_string()),
+            "StartupWMClass" => startup_wm_class = Some(value.to_string()),
+            "Exec" => exec = Some(value.to_string()),
+            "Hidden" | "NoDisplay" if value.eq_ignore_ascii_case("true") => hidden = true,
+            _ => {}
+        }
+    }
+
+    if hidden {
+        return None;
+    }
+
+    if !matches!(entry_type.as_deref(), None | Some("Application")) {
+        return None;
+    }
+
+    Some(LinuxDesktopEntry {
+        desktop_id: path.file_stem()?.to_string_lossy().to_string(),
+        name,
+        icon,
+        startup_wm_class,
+        exec,
+    })
+}
+
+#[cfg(target_os = "linux")]
+fn normalize_lookup_key(value: &str) -> Option<String> {
+    let normalized: String = value
+        .chars()
+        .filter(|ch| ch.is_ascii_alphanumeric())
+        .flat_map(char::to_lowercase)
+        .collect();
+    if normalized.is_empty() {
+        None
+    } else {
+        Some(normalized)
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn linux_exec_key(exec: &str) -> Option<String> {
+    let command = exec
+        .split_whitespace()
+        .next()
+        .unwrap_or_default()
+        .trim_matches('"');
+    let command = command
+        .trim_end_matches(|ch: char| matches!(ch, '%' | 'U' | 'u' | 'F' | 'f' | 'i' | 'c' | 'k'));
+    let stem = Path::new(command)
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .unwrap_or(command);
+    normalize_lookup_key(stem)
+}
+
+#[cfg(target_os = "linux")]
+fn desktop_match_score(
+    entry: &LinuxDesktopEntry,
+    class_key: Option<&str>,
+    app_key: Option<&str>,
+    exe_key: Option<&str>,
+) -> i32 {
+    let mut candidates = Vec::new();
+    if let Some(value) = normalize_lookup_key(&entry.desktop_id) {
+        candidates.push(value);
+    }
+    if let Some(value) = entry.name.as_deref().and_then(normalize_lookup_key) {
+        candidates.push(value);
+    }
+    if let Some(value) = entry
+        .startup_wm_class
+        .as_deref()
+        .and_then(normalize_lookup_key)
+    {
+        candidates.push(value);
+    }
+    if let Some(value) = entry.exec.as_deref().and_then(linux_exec_key) {
+        candidates.push(value);
+    }
+
+    let mut best = 0;
+    for (needle, weight) in [(class_key, 120), (exe_key, 110), (app_key, 100)] {
+        let Some(needle) = needle else {
+            continue;
+        };
+        for candidate in &candidates {
+            if candidate == needle {
+                best = best.max(weight);
+            } else if candidate.contains(needle) || needle.contains(candidate) {
+                best = best.max(weight - 20);
+            }
+        }
+    }
+
+    best
+}
+
+#[cfg(target_os = "linux")]
+fn linux_icon_search_roots() -> Vec<PathBuf> {
+    let mut roots = Vec::new();
+    if let Some(home) = std::env::var_os("HOME") {
+        let home = PathBuf::from(home);
+        roots.push(home.join(".icons"));
+        roots.push(home.join(".local/share/icons"));
+        roots.push(home.join(".local/share/pixmaps"));
+    }
+
+    let data_dirs = std::env::var("XDG_DATA_DIRS")
+        .unwrap_or_else(|_| "/usr/local/share:/usr/share".to_string());
+    roots.extend(
+        data_dirs
+            .split(':')
+            .filter(|value| !value.is_empty())
+            .flat_map(|value| {
+                let root = PathBuf::from(value);
+                [root.join("icons"), root.join("pixmaps")]
+            }),
+    );
+
+    roots.push(PathBuf::from("/usr/share/pixmaps"));
+    roots.push(PathBuf::from("/var/lib/flatpak/exports/share/icons"));
+    roots
+}
+
+#[cfg(target_os = "linux")]
+fn find_icon_recursively(dir: &Path, icon_name: &str) -> Option<PathBuf> {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return None;
+    };
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            if let Some(found) = find_icon_recursively(&path, icon_name) {
+                return Some(found);
+            }
+            continue;
+        }
+
+        let Some(stem) = path.file_stem().and_then(|value| value.to_str()) else {
+            continue;
+        };
+        if stem != icon_name {
+            continue;
+        }
+
+        match path.extension().and_then(|value| value.to_str()) {
+            Some("png") | Some("svg") => return Some(path),
+            _ => {}
+        }
+    }
+
+    None
+}
+
+#[cfg(target_os = "linux")]
+fn resolve_linux_icon_data_url(icon: &str) -> Option<String> {
+    let path = if Path::new(icon).is_absolute() {
+        PathBuf::from(icon)
+    } else {
+        linux_icon_search_roots()
+            .into_iter()
+            .find_map(|root| find_icon_recursively(&root, icon))?
+    };
+
+    let bytes = fs::read(&path).ok()?;
+    match path.extension().and_then(|value| value.to_str()) {
+        Some("png") => Some(image_data_url("image/png", &bytes)),
+        Some("svg") => Some(image_data_url("image/svg+xml", &bytes)),
+        _ => None,
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn get_linux_app_icon(
+    class_name: Option<&str>,
+    app_name: Option<&str>,
+    exe_path: Option<&str>,
+) -> Option<String> {
+    let class_key = class_name.and_then(normalize_lookup_key);
+    let app_key = app_name.and_then(normalize_lookup_key);
+    let exe_key = exe_path
+        .and_then(|value| Path::new(value).file_stem().and_then(|stem| stem.to_str()))
+        .and_then(normalize_lookup_key);
+    let cache_key = format!(
+        "{}|{}|{}",
+        class_key.as_deref().unwrap_or_default(),
+        app_key.as_deref().unwrap_or_default(),
+        exe_key.as_deref().unwrap_or_default()
+    );
+
+    cached_data_url(linux_app_icon_cache(), &cache_key, || {
+        let (_, entry) = linux_desktop_entries()
+            .iter()
+            .filter_map(|entry| {
+                let score = desktop_match_score(
+                    entry,
+                    class_key.as_deref(),
+                    app_key.as_deref(),
+                    exe_key.as_deref(),
+                );
+                (score > 0)
+                    .then_some((score, entry))
+                    .filter(|(_, entry)| entry.icon.is_some())
+            })
+            .max_by_key(|(score, _)| *score)?;
+        resolve_linux_icon_data_url(entry.icon.as_deref()?)
+    })
 }
 
 #[cfg(target_os = "linux")]
@@ -280,7 +819,15 @@ fn get_clipboard_source() -> ClipboardSource {
 
     let class_name = run_command("xdotool", &["getwindowclassname", &window_id]);
     let window_title = run_command("xdotool", &["getwindowname", &window_id]);
+    let exe_path = run_command("xdotool", &["getwindowpid", &window_id])
+        .and_then(|pid| fs::read_link(format!("/proc/{pid}/exe")).ok())
+        .map(|path| path.to_string_lossy().to_string());
     let app_name = class_name.as_deref().and_then(normalize_app_name);
+    let icon = get_linux_app_icon(
+        class_name.as_deref(),
+        app_name.as_deref(),
+        exe_path.as_deref(),
+    );
 
     let label = match (app_name.as_deref(), window_title.as_deref()) {
         (Some(app), Some(title)) if is_browser_app(app) => normalize_window_title(title, Some(app)),
@@ -291,6 +838,7 @@ fn get_clipboard_source() -> ClipboardSource {
         app_name,
         label,
         url: get_clipboard_source_url(),
+        icon,
     }
 }
 
@@ -1021,46 +1569,48 @@ impl ClipboardMonitor {
                         last_image_hash.clear();
                         last_text_hash.clear();
 
-                            match db.find_by_hash(&hash) {
-                                Ok(Some(existing)) => {
-                                    let source = get_clipboard_source();
-                                    let source_label = source.display_name();
-                                    let _ = db.update_entry_timestamp(
-                                        &existing.id,
-                                        source_label.as_deref(),
-                                        source.url.as_deref(),
-                                    );
-                                    if let Ok(Some(updated)) = db.get_entry(&existing.id) {
-                                        callback(updated);
-                                    }
+                        match db.find_by_hash(&hash) {
+                            Ok(Some(existing)) => {
+                                let source = get_clipboard_source();
+                                let source_label = source.display_name();
+                                let _ = db.update_entry_timestamp(
+                                    &existing.id,
+                                    source_label.as_deref(),
+                                    source.url.as_deref(),
+                                    source.icon.as_deref(),
+                                );
+                                if let Ok(Some(updated)) = db.get_entry(&existing.id) {
+                                    callback(updated);
                                 }
-                                Ok(None) => {
-                                    let source = get_clipboard_source();
-                                    let source_label = source.display_name();
-                                    let now = chrono::Utc::now().to_rfc3339();
-                                    let entry = ClipboardEntry {
-                                        id: uuid::Uuid::new_v4().to_string(),
-                                        content_type: ContentType::FilePaths,
-                                        text_content: Some(joined),
-                                        html_content: None,
-                                        blob_path: None,
-                                        thumbnail_path: None,
-                                        content_hash: hash,
-                                        source_app: source_label.clone(),
-                                        source_url: source.url.clone(),
-                                        device_id: device_id.clone(),
-                                        is_favorite: false,
-                                        is_pinned: false,
-                                        tags: Vec::new(),
-                                        created_at: now.clone(),
-                                        updated_at: now,
-                                        synced_at: None,
-                                        sync_status: SyncStatus::Local,
-                                        sync_version: 0,
-                                        ai_summary: None,
-                                        content_category: Some("FilePath".to_string()),
-                                        detected_language: None,
-                                    };
+                            }
+                            Ok(None) => {
+                                let source = get_clipboard_source();
+                                let source_label = source.display_name();
+                                let now = chrono::Utc::now().to_rfc3339();
+                                let entry = ClipboardEntry {
+                                    id: uuid::Uuid::new_v4().to_string(),
+                                    content_type: ContentType::FilePaths,
+                                    text_content: Some(joined),
+                                    html_content: None,
+                                    blob_path: None,
+                                    thumbnail_path: None,
+                                    content_hash: hash,
+                                    source_app: source_label.clone(),
+                                    source_url: source.url.clone(),
+                                    source_icon: source.icon.clone(),
+                                    device_id: device_id.clone(),
+                                    is_favorite: false,
+                                    is_pinned: false,
+                                    tags: Vec::new(),
+                                    created_at: now.clone(),
+                                    updated_at: now,
+                                    synced_at: None,
+                                    sync_status: SyncStatus::Local,
+                                    sync_version: 0,
+                                    ai_summary: None,
+                                    content_category: Some("FilePath".to_string()),
+                                    detected_language: None,
+                                };
 
                                 if let Err(e) = db.insert_entry(&entry) {
                                     log::error!("Failed to insert file paths entry: {}", e);
@@ -1104,6 +1654,7 @@ impl ClipboardMonitor {
                                         &existing.id,
                                         source_label.as_deref(),
                                         source.url.as_deref(),
+                                        source.icon.as_deref(),
                                     );
                                     if let Ok(Some(updated)) = db.get_entry(&existing.id) {
                                         callback(updated);
@@ -1154,6 +1705,7 @@ impl ClipboardMonitor {
                                         content_hash: hash,
                                         source_app: source_label.clone(),
                                         source_url: source.url.clone(),
+                                        source_icon: source.icon.clone(),
                                         device_id: device_id.clone(),
                                         is_favorite: false,
                                         is_pinned: false,
@@ -1203,11 +1755,15 @@ impl ClipboardMonitor {
                                         Ok(Some(existing)) => {
                                             let source = get_clipboard_source();
                                             let source_label = source.display_name();
-                                            let source_url = source.url.clone().or_else(get_clipboard_source_url);
+                                            let source_url = source
+                                                .url
+                                                .clone()
+                                                .or_else(get_clipboard_source_url);
                                             let _ = db.update_entry_timestamp(
                                                 &existing.id,
                                                 source_label.as_deref(),
                                                 source_url.as_deref(),
+                                                source.icon.as_deref(),
                                             );
                                             if let Ok(Some(updated)) = db.get_entry(&existing.id) {
                                                 callback(updated);
@@ -1256,6 +1812,7 @@ impl ClipboardMonitor {
                                                 content_hash: hash,
                                                 source_app: source_label.clone(),
                                                 source_url,
+                                                source_icon: source.icon.clone(),
                                                 device_id: device_id.clone(),
                                                 is_favorite: false,
                                                 is_pinned: false,
@@ -1299,9 +1856,18 @@ mod tests {
 
     #[test]
     fn normalize_common_app_names() {
-        assert_eq!(normalize_app_name("chrome.exe").as_deref(), Some("Google Chrome"));
-        assert_eq!(normalize_app_name("Brave Browser").as_deref(), Some("Brave"));
-        assert_eq!(normalize_app_name("google-chrome").as_deref(), Some("Google Chrome"));
+        assert_eq!(
+            normalize_app_name("chrome.exe").as_deref(),
+            Some("Google Chrome")
+        );
+        assert_eq!(
+            normalize_app_name("Brave Browser").as_deref(),
+            Some("Brave")
+        );
+        assert_eq!(
+            normalize_app_name("google-chrome").as_deref(),
+            Some("Google Chrome")
+        );
         assert_eq!(normalize_app_name("  ").as_deref(), None);
     }
 

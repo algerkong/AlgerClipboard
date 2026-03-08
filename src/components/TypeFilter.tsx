@@ -40,7 +40,7 @@ export function TypeFilter() {
   } as const;
   const secondaryTabs = useMemo(() => [null, ...tagSummaries.map(({ tag }) => tag)], [tagSummaries]);
 
-  const handlePrimaryClick = (item: typeof filters[number] | "tag") => {
+  const handlePrimaryClick = useCallback((item: typeof filters[number] | "tag") => {
     setActiveRow("primary");
     if (item === "tag") {
       setShowTagPanel(true);
@@ -54,12 +54,12 @@ export function TypeFilter() {
 
     setShowFavoritesOnly(false);
     setTypeFilter(item.filter);
-  };
+  }, [setShowFavoritesOnly, setShowTagPanel, setTypeFilter, showFavoritesOnly]);
 
-  const handleSecondaryClick = (tag: string | null) => {
+  const handleSecondaryClick = useCallback((tag: string | null) => {
     setActiveRow("secondary");
     setTagFilter(tag);
-  };
+  }, [setTagFilter]);
 
   const getActivePrimaryIndex = useCallback(() => {
     if (showTagPanel) return filters.length;
@@ -73,17 +73,6 @@ export function TypeFilter() {
     if (showFavoritesOnly || showTagPanel) return false;
     return typeFilter === item.filter;
   };
-
-  useEffect(() => {
-    if (!showTagPanel) {
-      setActiveRow("primary");
-      return;
-    }
-
-    if (tagFilter !== null) {
-      setActiveRow("secondary");
-    }
-  }, [showTagPanel, tagFilter]);
 
   useEffect(() => {
     const activeIndex = showTagPanel ? filters.length : getActivePrimaryIndex();
@@ -152,12 +141,13 @@ export function TypeFilter() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeRow, getActivePrimaryIndex, secondaryTabs, showTagPanel, tagFilter, showFavoritesOnly, typeFilter]);
+  }, [activeRow, getActivePrimaryIndex, handlePrimaryClick, handleSecondaryClick, secondaryTabs, showTagPanel, tagFilter]);
 
   return (
-    <div className="border-b border-border/30">
-      <div className="tab-scroll-area overflow-x-auto px-2 py-1.5">
-        <div className="inline-flex min-w-full items-center gap-0.5">
+    <div className="px-3 pb-2 pt-1">
+      <div className="surface-panel overflow-hidden rounded-[1.25rem] shadow-sm">
+        <div className="tab-scroll-area overflow-x-auto px-2 py-1.5">
+          <div className="inline-flex min-w-full items-center gap-1">
           {filters.map((item, index) => (
             <button
               key={item.labelKey}
@@ -166,11 +156,12 @@ export function TypeFilter() {
               }}
               onClick={() => handlePrimaryClick(item)}
               style={tabStyle}
+              data-active={isPrimaryActive(item)}
               className={cn(
-                "flex shrink-0 items-center whitespace-nowrap rounded-md font-medium leading-none transition-colors",
+                "filter-pill flex shrink-0 items-center whitespace-nowrap px-0 font-medium leading-none text-muted-foreground transition-all",
                 isPrimaryActive(item)
-                  ? "bg-primary/15 text-primary"
-                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                  ? "text-foreground"
+                  : "hover:border-primary/20 hover:bg-accent/50 hover:text-foreground"
               )}
             >
               <span style={tabIconStyle} className="inline-flex items-center justify-center">{item.icon}</span>
@@ -184,11 +175,12 @@ export function TypeFilter() {
             }}
             onClick={() => handlePrimaryClick("tag")}
             style={tabStyle}
+            data-active={isPrimaryActive("tag")}
             className={cn(
-              "flex shrink-0 items-center whitespace-nowrap rounded-md font-medium leading-none transition-colors",
+              "filter-pill flex shrink-0 items-center whitespace-nowrap px-0 font-medium leading-none text-muted-foreground transition-all",
               isPrimaryActive("tag")
-                ? "bg-primary/15 text-primary"
-                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                ? "text-foreground"
+                : "hover:border-primary/20 hover:bg-accent/50 hover:text-foreground"
             )}
           >
             <Tag style={tabIconStyle} />
@@ -198,20 +190,26 @@ export function TypeFilter() {
       </div>
 
       {showTagPanel && (
-        <div className="border-t border-border/20 px-2 py-1.5">
+        <div className="border-t border-border/10 bg-background/20 px-2.5 py-2">
+          <div className="mb-1 flex items-center justify-between px-1">
+            <span className="text-2xs font-semibold uppercase tracking-[0.18em] text-muted-foreground/80">
+              {t("tags.title")}
+            </span>
+          </div>
           <div className="tab-scroll-area overflow-x-auto">
-            <div className="inline-flex min-w-full items-center gap-0.5">
+            <div className="inline-flex min-w-full items-center gap-1">
               <button
                 ref={(element) => {
                   secondaryButtonRefs.current[0] = element;
                 }}
                 onClick={() => handleSecondaryClick(null)}
                 style={tabStyle}
+                data-active={tagFilter === null}
                 className={cn(
-                  "flex shrink-0 items-center whitespace-nowrap rounded-md font-medium leading-none transition-colors",
+                  "filter-pill flex shrink-0 items-center whitespace-nowrap px-0 font-medium leading-none text-muted-foreground transition-all",
                   tagFilter === null
-                    ? "bg-primary/15 text-primary"
-                    : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                    ? "text-foreground"
+                    : "hover:border-primary/20 hover:bg-accent/50 hover:text-foreground"
                 )}
               >
                 <span>{t("tags.all")}</span>
@@ -225,15 +223,16 @@ export function TypeFilter() {
                   }}
                   onClick={() => handleSecondaryClick(tag)}
                   style={tabStyle}
+                  data-active={tagFilter === tag}
                   className={cn(
-                    "flex shrink-0 items-center whitespace-nowrap rounded-md font-medium leading-none transition-colors",
+                    "filter-pill flex shrink-0 items-center whitespace-nowrap px-0 font-medium leading-none text-muted-foreground transition-all",
                     tagFilter === tag
-                      ? "bg-primary/15 text-primary"
-                      : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                      ? "text-foreground"
+                      : "hover:border-primary/20 hover:bg-accent/50 hover:text-foreground"
                   )}
                 >
                   <span>{tag}</span>
-                  <span className="rounded-full bg-background/80 px-1.5 py-0.5 text-[10px] leading-none text-muted-foreground">
+                  <span className="meta-pill px-1.5 py-0.5 text-[10px] leading-none text-muted-foreground">
                     {count}
                   </span>
                 </button>
@@ -242,7 +241,7 @@ export function TypeFilter() {
               <button
                 onClick={() => void openTagManagerWindow()}
                 style={tabStyle}
-                className="ml-1 flex shrink-0 items-center whitespace-nowrap rounded-md font-medium leading-none text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
+                className="filter-pill ml-1 flex shrink-0 items-center whitespace-nowrap px-0 font-medium leading-none text-muted-foreground transition-all hover:border-primary/20 hover:bg-accent/50 hover:text-foreground"
               >
                 <Settings style={tabIconStyle} />
                 <span>{t("tags.manage")}</span>
@@ -251,6 +250,7 @@ export function TypeFilter() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
