@@ -1,49 +1,73 @@
 export interface AskAiPreset {
   id: string;
-  labelKey: string;
+  label: string;
   iconName: string;
   promptTemplate: string;
+  builtin?: boolean;
 }
 
-export const ASK_AI_PRESETS: AskAiPreset[] = [
+export const DEFAULT_ASK_AI_PRESETS: AskAiPreset[] = [
   {
     id: "translate",
-    labelKey: "askAi.presets.translate",
+    label: "Translate",
     iconName: "Languages",
     promptTemplate:
       "Please translate the following text to English. If it's already in English, translate to Chinese:\n\n{content}",
+    builtin: true,
   },
   {
     id: "summarize",
-    labelKey: "askAi.presets.summarize",
+    label: "Summarize",
     iconName: "FileText",
     promptTemplate: "Please summarize the following text concisely:\n\n{content}",
+    builtin: true,
   },
   {
     id: "explain",
-    labelKey: "askAi.presets.explain",
+    label: "Explain",
     iconName: "HelpCircle",
     promptTemplate:
       "Please explain the following text in simple terms:\n\n{content}",
+    builtin: true,
   },
   {
     id: "rewrite",
-    labelKey: "askAi.presets.rewrite",
+    label: "Rewrite",
     iconName: "PenLine",
     promptTemplate:
       "Please rewrite the following text to improve clarity and style:\n\n{content}",
+    builtin: true,
   },
   {
     id: "continue",
-    labelKey: "askAi.presets.continue",
+    label: "Continue Writing",
     iconName: "ArrowRight",
     promptTemplate:
       "Please continue writing from where the following text ends:\n\n{content}",
+    builtin: true,
   },
   {
     id: "custom",
-    labelKey: "askAi.presets.custom",
+    label: "Custom Prompt",
     iconName: "MessageSquare",
     promptTemplate: "{customPrompt}\n\n{content}",
+    builtin: true,
   },
 ];
+
+export const PRESET_ICON_OPTIONS = [
+  "Languages",
+  "FileText",
+  "HelpCircle",
+  "PenLine",
+  "ArrowRight",
+  "MessageSquare",
+  "Sparkles",
+  "Wand2",
+  "BookOpen",
+  "Code",
+  "ListChecks",
+  "Lightbulb",
+  "Search",
+  "Zap",
+] as const;
