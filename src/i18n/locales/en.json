@@ -502,6 +502,7 @@
       "continue": "Continue Writing",
       "custom": "Custom Prompt"
     },
+    "tabBar": "AI Services",
     "customPromptPlaceholder": "Type your prompt...",
     "send": "Send",
     "selectService": "Select AI Service",

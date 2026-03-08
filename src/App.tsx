@@ -9,6 +9,7 @@ import { TemplateManager } from "@/pages/TemplateManager";
 import { ImageViewerPage } from "@/components/ImageViewer";
 import { DetailPage } from "@/pages/DetailPage";
 import { TagManagerPage } from "@/pages/TagManager";
+import { AskAiPanel } from "@/pages/AskAiPanel";
 import { openSettingsWindow } from "@/services/settingsWindowService";
 import { toast } from "@/lib/toast";
 import { useClipboardStore } from "@/stores/clipboardStore";
@@ -40,6 +41,7 @@ const isTemplateManager = searchParams.get("window") === "template-manager";
 const isSettings = searchParams.get("window") === "settings";
 const isDetail = searchParams.get("window") === "detail";
 const isTagManager = searchParams.get("window") === "tag-manager";
+const isAskAi = searchParams.get("window") === "ask-ai";
 const initialSettingsTab = searchParams.get("tab") || undefined;
 
 function applyTheme(theme: "light" | "dark" | "system") {
@@ -112,6 +114,15 @@ function App() {
     return (
       <PlatformProvider>
         <TagManagerWindow />
+      </PlatformProvider>
+    );
+  }
+
+  // If this is an ask-ai window, render the AI panel
+  if (isAskAi) {
+    return (
+      <PlatformProvider>
+        <AskAiWindow />
       </PlatformProvider>
     );
   }
@@ -324,6 +335,44 @@ function TagManagerWindow() {
       </div>
     </div>
   );
+}
+
+function AskAiWindow() {
+  const { i18n } = useTranslation();
+  const theme = useSettingsStore((s) => s.theme);
+  const locale = useSettingsStore((s) => s.locale);
+  const loadSettings = useSettingsStore((s) => s.loadSettings);
+
+  useEffect(() => {
+    document.documentElement.classList.add("dark");
+  }, []);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  useEffect(() => {
+    if (locale && i18n.language !== locale) {
+      i18n.changeLanguage(locale);
+    }
+  }, [locale, i18n]);
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+
+  // Escape key closes the window
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        getCurrentWebviewWindow().close();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  return <AskAiPanel />;
 }
 
 function MainApp() {
