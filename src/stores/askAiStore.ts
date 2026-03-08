@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { getSetting, updateSetting } from "@/services/settingsService";
 import { AI_WEB_SERVICES } from "@/constants/aiServices";
-import { fetchServiceFavicon } from "@/services/askAiService";
+
 import {
   type AskAiPreset,
   DEFAULT_ASK_AI_PRESETS,
@@ -81,21 +81,13 @@ export const useAskAiStore = create<AskAiState>((set, get) => ({
   },
 
   loadFavicons: async () => {
-    const results = await Promise.allSettled(
-      AI_WEB_SERVICES.map(async (service) => {
-        const hostname = new URL(service.url).hostname;
-        const url = await fetchServiceFavicon(service.id, hostname);
-        return { serviceId: service.id, url };
-      }),
-    );
-
+    // Use direct iconUrl from service definitions (no Google API dependency)
     const favicons: Record<string, string> = {};
-    for (const result of results) {
-      if (result.status === "fulfilled" && result.value.url) {
-        favicons[result.value.serviceId] = result.value.url;
+    for (const service of AI_WEB_SERVICES) {
+      if (service.iconUrl) {
+        favicons[service.id] = service.iconUrl;
       }
     }
-
     set({ favicons });
   },
 

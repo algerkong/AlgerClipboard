@@ -214,7 +214,7 @@ export function PresetSelector() {
                     )}
                   >
                     {Icon && <Icon className="h-4 w-4 shrink-0" />}
-                    <span>{preset.label}</span>
+                    <span>{preset.labelKey ? t(preset.labelKey) : preset.label}</span>
                   </button>
                 );
               })}
