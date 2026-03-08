@@ -252,6 +252,12 @@
       }
     },
     "tabAi": "AI",
+    "tabAskAi": "Ask AI",
+    "askAi": {
+      "description": "Select AI services to use with Ask AI. Enabled services can be opened in a WebView window.",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
     "ai": {
       "enable": "Enable AI Features",
       "provider": "AI Provider",

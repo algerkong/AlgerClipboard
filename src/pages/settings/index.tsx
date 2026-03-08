@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Settings2, Cloud, Languages, Database, Brain, Brush } from "lucide-react";
+import { Settings2, Cloud, Languages, Database, Brain, Brush, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { GeneralTab } from "./GeneralTab";
@@ -8,8 +8,9 @@ import { TranslateTab } from "./TranslateTab";
 import { DataTab } from "./DataTab";
 import { AiTab } from "./AiTab";
 import { RichTextTab } from "./RichTextTab";
+import { AskAiTab } from "./AskAiTab";
 
-type SettingsTab = "general" | "richText" | "sync" | "translate" | "data" | "ai";
+type SettingsTab = "general" | "richText" | "sync" | "translate" | "data" | "ai" | "askAi";
 
 interface Props {
   onBack: () => void;
@@ -46,6 +47,11 @@ const TABS: { key: SettingsTab; labelKey: string; icon: React.ReactNode }[] = [
     key: "ai",
     labelKey: "settings.tabAi",
     icon: <Brain className="h-[var(--app-tab-icon-size)] w-[var(--app-tab-icon-size)]" />,
+  },
+  {
+    key: "askAi",
+    labelKey: "settings.tabAskAi",
+    icon: <Globe className="h-[var(--app-tab-icon-size)] w-[var(--app-tab-icon-size)]" />,
   },
 ];
 
@@ -95,6 +101,7 @@ export function SettingsPage({ initialTab }: Props) {
         {activeTab === "translate" && <TranslateTab />}
         {activeTab === "data" && <DataTab />}
         {activeTab === "ai" && <AiTab />}
+        {activeTab === "askAi" && <AskAiTab />}
       </div>
     </div>
   );

@@ -252,6 +252,12 @@
       }
     },
     "tabAi": "AI",
+    "tabAskAi": "\u95ee AI",
+    "askAi": {
+      "description": "\u9009\u62e9\u8981\u4f7f\u7528\u7684 AI \u670d\u52a1\u3002\u542f\u7528\u7684\u670d\u52a1\u53ef\u4ee5\u5728 WebView \u7a97\u53e3\u4e2d\u6253\u5f00\u3002",
+      "enabled": "\u5df2\u542f\u7528",
+      "disabled": "\u5df2\u7981\u7528"
+    },
     "ai": {
       "enable": "启用 AI 功能",
       "provider": "AI 服务商",
