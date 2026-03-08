@@ -19,12 +19,14 @@ interface AskAiState {
   isSending: boolean;
   presets: AskAiPreset[];
   presetsLoaded: boolean;
+  activeServiceId: string | null;
 
   loadEnabledServices: () => Promise<void>;
   toggleService: (serviceId: string) => Promise<void>;
   isServiceEnabled: (serviceId: string) => boolean;
   loadFavicons: () => Promise<void>;
   getFavicon: (serviceId: string) => string | null;
+  setActiveServiceId: (id: string | null) => void;
   startAskAi: (entryId: string, anchor: { x: number; y: number }) => void;
   cancelAskAi: () => void;
   setIsSending: (v: boolean) => void;
@@ -46,6 +48,7 @@ export const useAskAiStore = create<AskAiState>((set, get) => ({
   isSending: false,
   presets: DEFAULT_ASK_AI_PRESETS,
   presetsLoaded: false,
+  activeServiceId: null,
 
   loadEnabledServices: async () => {
     set({ isLoading: true });
@@ -93,6 +96,10 @@ export const useAskAiStore = create<AskAiState>((set, get) => ({
 
   getFavicon: (serviceId: string) => {
     return get().favicons[serviceId] || null;
+  },
+
+  setActiveServiceId: (id: string | null) => {
+    set({ activeServiceId: id });
   },
 
   startAskAi: (entryId: string, anchor: { x: number; y: number }) => {

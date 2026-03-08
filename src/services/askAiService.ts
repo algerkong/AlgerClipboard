@@ -1,10 +1,10 @@
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
-import { isMacOS } from "@/services/windowOptions";
 import type { AiWebService } from "@/constants/aiServices";
 import { AI_WEB_SERVICES } from "@/constants/aiServices";
 import type { AskAiPreset } from "@/constants/askAiPresets";
 import { getInjectionScript } from "@/services/injectionScripts";
+import { useAskAiStore } from "@/stores/askAiStore";
 
 /**
  * Create a deterministic 16-byte identifier from a service ID.
@@ -19,13 +19,11 @@ export function serviceIdToDataStoreId(serviceId: string): number[] {
 }
 
 /**
- * Open (or focus) a WebView window for the given AI service.
- * Each service gets its own persistent, isolated session via:
- * - macOS: `dataStoreIdentifier` (WKWebsiteDataStore)
- * - Windows/Linux: `dataDirectory` (per-service profile folder)
+ * Open (or focus) the ask-ai-panel window.
+ * This is a single window that contains a React tab bar and Rust-managed child webviews.
  */
-export async function openAiWebView(service: AiWebService) {
-  const label = `ai-webview-${service.id}`;
+export async function openAskAiPanel() {
+  const label = "ask-ai-panel";
 
   // If the window already exists, just show and focus it
   const existing = await WebviewWindow.getByLabel(label);
@@ -35,14 +33,9 @@ export async function openAiWebView(service: AiWebService) {
     return;
   }
 
-  // Build platform-specific session isolation options
-  const sessionOptions = isMacOS()
-    ? { dataStoreIdentifier: serviceIdToDataStoreId(service.id) }
-    : { dataDirectory: service.id };
-
   const win = new WebviewWindow(label, {
-    url: service.url,
-    title: service.name,
+    url: "index.html?window=ask-ai",
+    title: "Ask AI",
     width: 1000,
     height: 700,
     minWidth: 600,
@@ -51,12 +44,20 @@ export async function openAiWebView(service: AiWebService) {
     center: true,
     shadow: true,
     resizable: true,
-    ...sessionOptions,
   });
 
   win.once("tauri://error", (e) => {
-    console.error(`Failed to create WebView window for ${service.name}:`, e);
+    console.error("Failed to create ask-ai-panel window:", e);
   });
+}
+
+/**
+ * Open (or focus) a WebView window for the given AI service.
+ * @deprecated Use openAskAiPanel() instead. Kept for backward compat (settings page open button).
+ */
+export async function openAiWebView(service: AiWebService) {
+  // Redirect to the new ask-ai-panel
+  await openAskAiPanel();
 }
 
 /**
@@ -77,7 +78,7 @@ export async function fetchServiceFavicon(
 }
 
 /**
- * Orchestrate the Ask AI flow: build prompt, open WebView, inject fill+submit script.
+ * Orchestrate the Ask AI flow: build prompt, open panel, inject fill+submit script.
  *
  * Best-effort auto-send -- errors are logged but not rethrown so the WebView
  * remains open for manual interaction even if injection fails.
@@ -100,16 +101,18 @@ export async function askAi(
       throw new Error(`Unknown AI service: ${serviceId}`);
     }
 
-    // 3. Open or focus the WebView window
-    await openAiWebView(service);
+    // 3. Open or focus the ask-ai-panel window
+    await openAskAiPanel();
 
-    // 4. Wait for the WebView window to be created and start loading.
-    //    The injection script itself has its own retry/polling for DOM readiness.
+    // 4. Wait for the panel to initialize and create the child webview.
+    //    The AskAiPanel component auto-creates the first service's webview on mount.
     await new Promise((r) => setTimeout(r, 2000));
 
     // 5. Build and inject the fill+submit script
-    const script = getInjectionScript(serviceId, fullPrompt);
-    const label = `ai-webview-${serviceId}`;
+    //    Use the active service ID from the store (set by AskAiPanel)
+    const activeId = useAskAiStore.getState().activeServiceId || serviceId;
+    const script = getInjectionScript(activeId, fullPrompt);
+    const label = `ask-ai-svc-${activeId}`;
     await invoke("eval_webview_js", { label, js: script });
   } catch (e) {
     console.error(`askAi failed for service ${serviceId}:`, e);
