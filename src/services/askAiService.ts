@@ -2,6 +2,9 @@ import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { isMacOS } from "@/services/windowOptions";
 import type { AiWebService } from "@/constants/aiServices";
+import { AI_WEB_SERVICES } from "@/constants/aiServices";
+import type { AskAiPreset } from "@/constants/askAiPresets";
+import { getInjectionScript } from "@/services/injectionScripts";
 
 /**
  * Create a deterministic 16-byte identifier from a service ID.
@@ -70,5 +73,45 @@ export async function fetchServiceFavicon(
   } catch (e) {
     console.error(`Failed to fetch favicon for ${serviceId}:`, e);
     return null;
+  }
+}
+
+/**
+ * Orchestrate the Ask AI flow: build prompt, open WebView, inject fill+submit script.
+ *
+ * Best-effort auto-send -- errors are logged but not rethrown so the WebView
+ * remains open for manual interaction even if injection fails.
+ */
+export async function askAi(
+  serviceId: string,
+  clipboardText: string,
+  preset: AskAiPreset,
+  customPrompt?: string,
+): Promise<void> {
+  try {
+    // 1. Build the full prompt from template
+    const fullPrompt = preset.promptTemplate
+      .replace("{content}", clipboardText)
+      .replace("{customPrompt}", customPrompt || "");
+
+    // 2. Find the service definition
+    const service = AI_WEB_SERVICES.find((s) => s.id === serviceId);
+    if (!service) {
+      throw new Error(`Unknown AI service: ${serviceId}`);
+    }
+
+    // 3. Open or focus the WebView window
+    await openAiWebView(service);
+
+    // 4. Wait for the WebView window to be created and start loading.
+    //    The injection script itself has its own retry/polling for DOM readiness.
+    await new Promise((r) => setTimeout(r, 2000));
+
+    // 5. Build and inject the fill+submit script
+    const script = getInjectionScript(serviceId, fullPrompt);
+    const label = `ai-webview-${serviceId}`;
+    await invoke("eval_webview_js", { label, js: script });
+  } catch (e) {
+    console.error(`askAi failed for service ${serviceId}:`, e);
   }
 }
