@@ -1,6 +1,6 @@
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
-import { isMacOS, getManagedWindowDecorations } from "@/services/windowOptions";
+import { isMacOS } from "@/services/windowOptions";
 import type { AiWebService } from "@/constants/aiServices";
 
 /**
@@ -44,7 +44,7 @@ export async function openAiWebView(service: AiWebService) {
     height: 700,
     minWidth: 600,
     minHeight: 400,
-    ...getManagedWindowDecorations(),
+    decorations: true,
     center: true,
     shadow: true,
     resizable: true,
