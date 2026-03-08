@@ -7,12 +7,20 @@ import {
   ArrowRight,
   MessageSquare,
   Loader2,
+  Sparkles,
+  Wand2,
+  BookOpen,
+  Code,
+  ListChecks,
+  Lightbulb,
+  Search,
+  Zap,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { useAskAiStore } from "@/stores/askAiStore";
 import { useClipboardStore } from "@/stores/clipboardStore";
-import { ASK_AI_PRESETS, type AskAiPreset } from "@/constants/askAiPresets";
+import type { AskAiPreset } from "@/constants/askAiPresets";
 import { AI_WEB_SERVICES } from "@/constants/aiServices";
 import { askAi } from "@/services/askAiService";
 import { cn } from "@/lib/utils";
@@ -24,7 +32,17 @@ const ICON_MAP: Record<string, React.FC<{ className?: string }>> = {
   PenLine,
   ArrowRight,
   MessageSquare,
+  Sparkles,
+  Wand2,
+  BookOpen,
+  Code,
+  ListChecks,
+  Lightbulb,
+  Search,
+  Zap,
 };
+
+export { ICON_MAP };
 
 export function PresetSelector() {
   const { t } = useTranslation();
@@ -35,6 +53,10 @@ export function PresetSelector() {
   const setIsSending = useAskAiStore((s) => s.setIsSending);
   const enabledServiceIds = useAskAiStore((s) => s.enabledServiceIds);
   const getFavicon = useAskAiStore((s) => s.getFavicon);
+  const loadEnabledServices = useAskAiStore((s) => s.loadEnabledServices);
+  const loadFavicons = useAskAiStore((s) => s.loadFavicons);
+  const presets = useAskAiStore((s) => s.presets);
+  const loadPresets = useAskAiStore((s) => s.loadPresets);
 
   const entries = useClipboardStore((s) => s.entries);
 
@@ -53,13 +75,16 @@ export function PresetSelector() {
     }
   }, [enabledServiceIds]);
 
-  // Reset state when popover opens
+  // Load enabled services, favicons, and presets when popover opens
   useEffect(() => {
     if (askAiEntryId) {
       setSelectedPreset(null);
       setCustomPrompt("");
+      void loadEnabledServices();
+      void loadFavicons();
+      void loadPresets();
     }
-  }, [askAiEntryId]);
+  }, [askAiEntryId, loadEnabledServices, loadFavicons, loadPresets]);
 
   // Close on Escape key
   useEffect(() => {
@@ -174,7 +199,7 @@ export function PresetSelector() {
           <>
             {/* Preset list */}
             <div className="p-1">
-              {ASK_AI_PRESETS.map((preset) => {
+              {presets.map((preset) => {
                 const Icon = ICON_MAP[preset.iconName];
                 const isActive = selectedPreset?.id === preset.id;
                 return (
@@ -189,7 +214,7 @@ export function PresetSelector() {
                     )}
                   >
                     {Icon && <Icon className="h-4 w-4 shrink-0" />}
-                    <span>{t(preset.labelKey)}</span>
+                    <span>{preset.label}</span>
                   </button>
                 );
               })}

@@ -2,8 +2,13 @@ import { create } from "zustand";
 import { getSetting, updateSetting } from "@/services/settingsService";
 import { AI_WEB_SERVICES } from "@/constants/aiServices";
 import { fetchServiceFavicon } from "@/services/askAiService";
+import {
+  type AskAiPreset,
+  DEFAULT_ASK_AI_PRESETS,
+} from "@/constants/askAiPresets";
 
 const SETTING_KEY = "ask_ai_enabled_services";
+const PRESETS_KEY = "ask_ai_presets";
 
 interface AskAiState {
   enabledServiceIds: string[];
@@ -12,6 +17,8 @@ interface AskAiState {
   askAiEntryId: string | null;
   askAiAnchor: { x: number; y: number } | null;
   isSending: boolean;
+  presets: AskAiPreset[];
+  presetsLoaded: boolean;
 
   loadEnabledServices: () => Promise<void>;
   toggleService: (serviceId: string) => Promise<void>;
@@ -21,6 +28,13 @@ interface AskAiState {
   startAskAi: (entryId: string, anchor: { x: number; y: number }) => void;
   cancelAskAi: () => void;
   setIsSending: (v: boolean) => void;
+  loadPresets: () => Promise<void>;
+  savePresets: (presets: AskAiPreset[]) => Promise<void>;
+  addPreset: (preset: AskAiPreset) => Promise<void>;
+  updatePreset: (id: string, updates: Partial<AskAiPreset>) => Promise<void>;
+  removePreset: (id: string) => Promise<void>;
+  reorderPresets: (presets: AskAiPreset[]) => Promise<void>;
+  resetPresets: () => Promise<void>;
 }
 
 export const useAskAiStore = create<AskAiState>((set, get) => ({
@@ -30,6 +44,8 @@ export const useAskAiStore = create<AskAiState>((set, get) => ({
   askAiEntryId: null,
   askAiAnchor: null,
   isSending: false,
+  presets: DEFAULT_ASK_AI_PRESETS,
+  presetsLoaded: false,
 
   loadEnabledServices: async () => {
     set({ isLoading: true });
@@ -97,5 +113,54 @@ export const useAskAiStore = create<AskAiState>((set, get) => ({
 
   setIsSending: (v: boolean) => {
     set({ isSending: v });
+  },
+
+  loadPresets: async () => {
+    try {
+      const raw = await getSetting(PRESETS_KEY);
+      if (raw) {
+        const parsed: AskAiPreset[] = JSON.parse(raw);
+        set({ presets: parsed, presetsLoaded: true });
+      } else {
+        set({ presets: DEFAULT_ASK_AI_PRESETS, presetsLoaded: true });
+      }
+    } catch (e) {
+      console.error("Failed to load ask-ai presets:", e);
+      set({ presets: DEFAULT_ASK_AI_PRESETS, presetsLoaded: true });
+    }
+  },
+
+  savePresets: async (presets: AskAiPreset[]) => {
+    set({ presets });
+    try {
+      await updateSetting(PRESETS_KEY, JSON.stringify(presets));
+    } catch (e) {
+      console.error("Failed to save ask-ai presets:", e);
+    }
+  },
+
+  addPreset: async (preset: AskAiPreset) => {
+    const next = [...get().presets, preset];
+    await get().savePresets(next);
+  },
+
+  updatePreset: async (id: string, updates: Partial<AskAiPreset>) => {
+    const next = get().presets.map((p) =>
+      p.id === id ? { ...p, ...updates } : p,
+    );
+    await get().savePresets(next);
+  },
+
+  removePreset: async (id: string) => {
+    const next = get().presets.filter((p) => p.id !== id);
+    await get().savePresets(next);
+  },
+
+  reorderPresets: async (presets: AskAiPreset[]) => {
+    await get().savePresets(presets);
+  },
+
+  resetPresets: async () => {
+    await get().savePresets(DEFAULT_ASK_AI_PRESETS);
   },
 }));

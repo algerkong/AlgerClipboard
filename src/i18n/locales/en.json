@@ -257,7 +257,18 @@
       "description": "Select AI services to use with Ask AI. Enabled services can be opened in a WebView window.",
       "enabled": "Enabled",
       "disabled": "Disabled",
-      "open": "Open"
+      "open": "Open",
+      "presetTitle": "Preset Operations",
+      "presetDesc": "Customize the operations shown in the Ask AI menu. Use {content} as placeholder for clipboard text.",
+      "addPreset": "Add",
+      "resetPresets": "Reset to defaults",
+      "presetNamePlaceholder": "Operation name...",
+      "presetIcon": "Icon",
+      "presetPrompt": "Prompt Template",
+      "presetPromptPlaceholder": "Enter prompt template... use {content} for clipboard text",
+      "presetPromptHint": "Use {content} for clipboard text, {customPrompt} for user input",
+      "save": "Save",
+      "cancel": "Cancel"
     },
     "ai": {
       "enable": "Enable AI Features",

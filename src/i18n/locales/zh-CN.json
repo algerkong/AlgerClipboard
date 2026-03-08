@@ -254,10 +254,21 @@
     "tabAi": "AI",
     "tabAskAi": "\u95ee AI",
     "askAi": {
-      "description": "\u9009\u62e9\u8981\u4f7f\u7528\u7684 AI \u670d\u52a1\u3002\u542f\u7528\u7684\u670d\u52a1\u53ef\u4ee5\u5728 WebView \u7a97\u53e3\u4e2d\u6253\u5f00\u3002",
-      "enabled": "\u5df2\u542f\u7528",
-      "disabled": "\u5df2\u7981\u7528",
-      "open": "\u6253\u5f00"
+      "description": "选择要使用的 AI 服务。启用的服务可以在 WebView 窗口中打开。",
+      "enabled": "已启用",
+      "disabled": "已禁用",
+      "open": "打开",
+      "presetTitle": "预设操作",
+      "presetDesc": "自定义问 AI 菜单中显示的操作。使用 {content} 作为剪贴板文本的占位符。",
+      "addPreset": "添加",
+      "resetPresets": "恢复默认",
+      "presetNamePlaceholder": "操作名称...",
+      "presetIcon": "图标",
+      "presetPrompt": "提示词模板",
+      "presetPromptPlaceholder": "输入提示词模板... 使用 {content} 代表剪贴板文本",
+      "presetPromptHint": "使用 {content} 代表剪贴板文本，{customPrompt} 代表用户输入",
+      "save": "保存",
+      "cancel": "取消"
     },
     "ai": {
       "enable": "启用 AI 功能",
