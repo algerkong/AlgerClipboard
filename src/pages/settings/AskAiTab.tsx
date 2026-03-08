@@ -230,7 +230,7 @@ export function AskAiTab() {
                 <GripVertical className="w-3 h-3 text-muted-foreground/40 shrink-0" />
                 {Icon && <Icon className="w-4 h-4 text-muted-foreground shrink-0" />}
                 <div className="flex-1 min-w-0">
-                  <span className="text-sm2 block truncate">{preset.label}</span>
+                  <span className="text-sm2 block truncate">{preset.labelKey ? t(preset.labelKey) : preset.label}</span>
                   <span className="text-xs2 text-muted-foreground block truncate">
                     {preset.promptTemplate.slice(0, 60)}
                     {preset.promptTemplate.length > 60 ? "..." : ""}
