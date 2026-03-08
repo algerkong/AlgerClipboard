@@ -402,6 +402,7 @@ pub fn run() {
             commands::ai_cmd::classify_text,
             commands::ai_cmd::detect_code_language,
             commands::ai_cmd::update_ai_summary,
+            commands::favicon_cmd::fetch_favicon,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
