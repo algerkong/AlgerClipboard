@@ -24,6 +24,7 @@ import type { AskAiPreset } from "@/constants/askAiPresets";
 import { AI_WEB_SERVICES } from "@/constants/aiServices";
 import { askAi } from "@/services/askAiService";
 import { cn } from "@/lib/utils";
+import { FaviconImg } from "@/pages/settings/AskAiTab";
 
 const ICON_MAP: Record<string, React.FC<{ className?: string }>> = {
   Languages,
@@ -269,17 +270,7 @@ export function PresetSelector() {
                         )}
                         title={service.name}
                       >
-                        {favicon ? (
-                          <img
-                            src={favicon}
-                            alt=""
-                            className="h-3.5 w-3.5 rounded-sm"
-                          />
-                        ) : (
-                          <span className="flex h-3.5 w-3.5 items-center justify-center rounded-sm bg-muted text-2xs font-bold">
-                            {service.name.charAt(0)}
-                          </span>
-                        )}
+                        <FaviconImg url={favicon} name={service.name} size="h-3.5 w-3.5" />
                         <span>{service.name}</span>
                       </button>
                     );
