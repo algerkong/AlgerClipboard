@@ -1,5 +1,5 @@
 import { memo, useCallback, useState, useEffect, useMemo, useRef } from "react";
-import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages, Pin, Eye, Copy, ClipboardPaste, Maximize2, Cloud, Upload, CloudAlert, Code, Tag, X, ExternalLink, Brain } from "lucide-react";
+import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages, Pin, Eye, Copy, ClipboardPaste, Maximize2, Cloud, Upload, CloudAlert, Code, Tag, X, ExternalLink, Brain, Sparkles } from "lucide-react";
 
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { useCapabilityStore } from "@/stores/capabilityStore";
@@ -13,6 +13,8 @@ import { openImageViewer } from "@/services/imageViewerService";
 import { openDetailWindow } from "@/services/detailWindowService";
 import { ContextMenu, type ContextMenuItem } from "@/components/ContextMenu";
 import { SourceBadge } from "@/components/SourceBadge";
+import { PresetSelector } from "@/components/PresetSelector";
+import { useAskAiStore } from "@/stores/askAiStore";
 import { toast } from "@/lib/toast";
 import { sanitizePreviewHtml } from "@/lib/richText";
 
@@ -157,6 +159,8 @@ export const EntryCard = memo(function EntryCard({
   const canTranslate = useCapabilityStore((s) => s.can_translate);
   const hasAi = useCapabilityStore((s) => s.has_ai);
   const richTextPreview = useSettingsStore((s) => s.richTextPreview);
+  const startAskAi = useAskAiStore((s) => s.startAskAi);
+  const askAiEntryId = useAskAiStore((s) => s.askAiEntryId);
   const isSelected = selectedId === entry.id;
   const [showUrlPicker, setShowUrlPicker] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
@@ -395,6 +399,22 @@ export const EntryCard = memo(function EntryCard({
             </div>
 
             <div className="flex shrink-0 items-center gap-1">
+              {hasText && entry.text_content && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    startAskAi(entry.id, { x: e.clientX, y: e.clientY });
+                  }}
+                  className={cn(
+                    "entry-action text-muted-foreground transition-all hover:text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    isSelected ? "opacity-100 scale-100" : "opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100"
+                  )}
+                  title={t("askAi.askAi")}
+                  aria-label={t("askAi.askAi")}
+                >
+                  <Sparkles className="h-3 w-3" />
+                </button>
+              )}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -631,6 +651,8 @@ export const EntryCard = memo(function EntryCard({
           onClose={() => setContextMenu(null)}
         />
       )}
+
+      {askAiEntryId === entry.id && <PresetSelector />}
 
       {showUrlPicker && urls.length > 0 && (
         <div
