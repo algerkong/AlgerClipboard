@@ -404,6 +404,10 @@ pub fn run() {
             commands::ai_cmd::update_ai_summary,
             commands::favicon_cmd::fetch_favicon,
             commands::webview_cmd::eval_webview_js,
+            commands::webview_cmd::create_ai_child_webview,
+            commands::webview_cmd::show_ai_webview,
+            commands::webview_cmd::hide_ai_webview,
+            commands::webview_cmd::resize_ai_webview,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
