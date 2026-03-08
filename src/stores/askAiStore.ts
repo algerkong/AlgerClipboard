@@ -112,7 +112,18 @@ export const useAskAiStore = create<AskAiState>((set, get) => ({
       const raw = await getSetting(PRESETS_KEY);
       if (raw) {
         const parsed: AskAiPreset[] = JSON.parse(raw);
-        set({ presets: parsed, presetsLoaded: true });
+        // Restore labelKey for builtin presets (may be missing from older stored data)
+        const defaultMap = new Map(
+          DEFAULT_ASK_AI_PRESETS.map((p) => [p.id, p]),
+        );
+        const merged = parsed.map((p) => {
+          const def = defaultMap.get(p.id);
+          if (def?.labelKey && !p.labelKey) {
+            return { ...p, labelKey: def.labelKey, builtin: true };
+          }
+          return p;
+        });
+        set({ presets: merged, presetsLoaded: true });
       } else {
         set({ presets: DEFAULT_ASK_AI_PRESETS, presetsLoaded: true });
       }

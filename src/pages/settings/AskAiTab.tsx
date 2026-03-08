@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ExternalLink,
@@ -117,19 +117,7 @@ export function AskAiTab() {
                 className="flex items-center justify-between py-1.5"
               >
                 <div className="flex items-center gap-2.5 min-w-0">
-                  {faviconUrl ? (
-                    <img
-                      src={faviconUrl}
-                      alt={service.name}
-                      className="w-4 h-4 rounded-sm shrink-0"
-                    />
-                  ) : (
-                    <div className="w-4 h-4 rounded-md bg-muted inline-flex items-center justify-center shrink-0">
-                      <span className="text-[10px] font-medium leading-none text-muted-foreground">
-                        {service.name.charAt(0)}
-                      </span>
-                    </div>
-                  )}
+                  <FaviconImg url={faviconUrl} name={service.name} size="w-4 h-4" />
                   <div className="min-w-0">
                     <span className="text-sm2 block truncate">
                       {service.name}
@@ -373,6 +361,31 @@ function PresetForm({
           {t("settings.askAi.save")}
         </button>
       </div>
+    </div>
+  );
+}
+
+/* --- Favicon with onError fallback --- */
+export function FaviconImg({ url, name, size = "w-4 h-4" }: { url: string | null; name: string; size?: string }) {
+  const [failed, setFailed] = useState(false);
+  const onError = useCallback(() => setFailed(true), []);
+
+  if (url && !failed) {
+    return (
+      <img
+        src={url}
+        alt={name}
+        className={`${size} rounded-sm shrink-0`}
+        onError={onError}
+      />
+    );
+  }
+
+  return (
+    <div className={`${size} rounded-md bg-muted inline-flex items-center justify-center shrink-0`}>
+      <span className="text-[10px] font-medium leading-none text-muted-foreground">
+        {name.charAt(0)}
+      </span>
     </div>
   );
 }
