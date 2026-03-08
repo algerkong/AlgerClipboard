@@ -226,20 +226,22 @@ export function DetailPage() {
   const hasText = entry.content_type === "PlainText" || entry.content_type === "RichText";
 
   return (
-    <div className="flex flex-col h-full bg-background overflow-hidden">
-      <div className="flex items-center gap-3 px-3 border-b border-border/30 shrink-0">
-        <div className="tab-scroll-area min-w-0 flex-1 overflow-x-auto">
-          <div className="flex w-max items-center gap-0">
+    <div className="app-shell flex h-full flex-col overflow-hidden bg-background">
+      <div className="tab-shell shrink-0 px-3 py-2">
+        <div className="flex items-center gap-3">
+          <div className="tab-scroll-area min-w-0 flex-1 overflow-x-auto">
+            <div className="flex w-max items-center gap-1">
             {(["view", "translate", "ai"] as const).map((t2) => (
               <button
                 key={t2}
                 onClick={() => setTab(t2)}
                 style={tabStyle}
+                data-active={tab === t2}
                 className={cn(
-                  "flex shrink-0 items-center whitespace-nowrap border-b-2 font-medium transition-colors leading-none",
+                  "filter-pill flex shrink-0 items-center whitespace-nowrap font-medium leading-none text-muted-foreground transition-all",
                   tab === t2
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
+                    ? "text-foreground"
+                    : "hover:border-primary/20 hover:bg-accent/50 hover:text-foreground"
                 )}
               >
                 {t2 === "view" && <Eye style={tabIconStyle} />}
@@ -248,42 +250,48 @@ export function DetailPage() {
                 {t(`detail.tab${t2.charAt(0).toUpperCase() + t2.slice(1)}`)}
               </button>
             ))}
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="min-w-0 max-w-[40%] flex-[0_1_10rem]">
+              <SourceBadge
+                sourceApp={entry.source_app}
+                sourceUrl={entry.source_url}
+                sourceIcon={entry.source_icon}
+                className="meta-pill w-full px-2 py-1"
+                textClassName="text-2xs"
+              />
+            </div>
+            {hasText && (
+              <div className="surface-panel flex items-center gap-1 rounded-full px-1 py-1">
+                <HintIconButton
+                  onClick={handleCopy}
+                  label={copied ? t("detail.copied") : t("detail.copy")}
+                  className={cn(
+                    "entry-action p-0 text-muted-foreground hover:text-foreground",
+                    copied && "text-green-400"
+                  )}
+                >
+                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                </HintIconButton>
+                <HintIconButton
+                  onClick={handlePaste}
+                  label={t("detail.paste")}
+                  className="entry-action p-0 text-muted-foreground hover:text-foreground"
+                >
+                  <ClipboardPaste className="w-3.5 h-3.5" />
+                </HintIconButton>
+              </div>
+            )}
           </div>
         </div>
-        <div className="min-w-0 max-w-[40%] flex-[0_1_10rem]">
-          <SourceBadge
-            sourceApp={entry.source_app}
-            sourceUrl={entry.source_url}
-            className="w-full"
-            textClassName="text-2xs"
-          />
-        </div>
-        {hasText && (
-          <div className="flex items-center gap-1 shrink-0">
-            <HintIconButton
-              onClick={handleCopy}
-              label={copied ? t("detail.copied") : t("detail.copy")}
-              className={cn(
-                copied ? "text-green-400" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-            </HintIconButton>
-            <HintIconButton
-              onClick={handlePaste}
-              label={t("detail.paste")}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <ClipboardPaste className="w-3.5 h-3.5" />
-            </HintIconButton>
-          </div>
-        )}
       </div>
 
-      {/* Content */}
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden px-3 pb-3 pt-2">
+        <div className="surface-panel h-full overflow-hidden rounded-[1.2rem]">
         {tab === "view" && (
           <ViewTab
+            key={`${entry.id}-${richTextDetailMode}`}
             entry={entry}
             isEditing={isEditing}
             editText={editText}
@@ -314,6 +322,7 @@ export function DetailPage() {
             onSummarize={handleSummarize}
           />
         )}
+        </div>
       </div>
     </div>
   );
@@ -355,10 +364,6 @@ function ViewTab({
   }, [entry.html_content, renderMode]);
 
   useEffect(() => {
-    setRenderMode(defaultRenderMode);
-  }, [defaultRenderMode, entry.id]);
-
-  useEffect(() => {
     if (isEditing && textareaRef.current) {
       textareaRef.current.focus();
     }
@@ -379,30 +384,30 @@ function ViewTab({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Toolbar */}
       {hasText && (
-        <div className="flex items-center justify-between px-3 py-1 border-b border-border/20 shrink-0">
-        <div className="flex items-center gap-1">
+        <div className="tab-shell flex items-center justify-between px-3 py-2 shrink-0">
+        <div className="flex items-center gap-2">
             {isRichText && !isEditing && (
               <>
                 <button
                   onClick={() => setViewMode(viewMode === "rendered" ? "source" : "rendered")}
-                  className="flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-medium text-purple-400 bg-purple-400/10 hover:bg-purple-400/20 transition-colors"
+                  className="filter-pill flex items-center gap-1 px-3 text-2xs font-medium text-violet-400 transition-colors hover:bg-violet-400/10"
                 >
                   {viewMode === "rendered" ? <Code className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                   {viewMode === "rendered" ? t("viewer.viewSource") : t("viewer.viewRendered")}
                 </button>
                 {viewMode === "rendered" && (
-                  <div className="flex items-center gap-1 rounded-md border border-border/40 bg-muted/20 p-0.5">
+                  <div className="surface-panel flex items-center gap-1 rounded-full px-1 py-1">
                     {(["clean", "full"] as const).map((mode) => (
                       <button
                         key={mode}
                         onClick={() => setRenderMode(mode)}
+                        data-active={renderMode === mode}
                         className={cn(
-                          "rounded px-1.5 py-0.5 text-2xs font-medium transition-colors",
+                          "filter-pill min-h-0 px-3 py-1 text-2xs font-medium transition-colors",
                           renderMode === mode
-                            ? "bg-primary/15 text-primary"
-                            : "text-muted-foreground hover:text-foreground",
+                            ? "text-foreground"
+                            : "hover:border-primary/20 hover:bg-accent/50 hover:text-foreground",
                         )}
                       >
                         {t(`settings.richText.detailModes.${mode}.label`)}
@@ -418,7 +423,7 @@ function ViewTab({
               <>
                 <button
                   onClick={onCancelEdit}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  className="filter-pill flex items-center gap-1 px-3 text-2xs font-medium text-muted-foreground transition-colors hover:border-primary/20 hover:bg-accent/50 hover:text-foreground"
                 >
                   <X className="w-3 h-3" />
                   {t("detail.cancel")}
@@ -426,7 +431,7 @@ function ViewTab({
                 <button
                   onClick={onSave}
                   disabled={saving}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  className="filter-pill flex items-center gap-1 border-primary/60 bg-primary px-3 text-2xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
                 >
                   {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
                   {t("detail.save")}
@@ -435,7 +440,7 @@ function ViewTab({
             ) : (
               <button
                 onClick={onStartEdit}
-                className="flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-medium text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/50 transition-colors"
+                className="filter-pill flex items-center gap-1 px-3 text-2xs font-medium text-muted-foreground transition-colors hover:border-primary/20 hover:bg-accent/50 hover:text-foreground"
               >
                 <Pencil className="w-3 h-3" />
                 {t("detail.edit")}
@@ -445,20 +450,19 @@ function ViewTab({
         </div>
       )}
 
-      {/* Content area */}
-      <div className="flex-1 overflow-y-auto p-3">
+      <div className="flex-1 overflow-y-auto p-4">
         {isEditing ? (
           <textarea
             ref={textareaRef}
             value={editText}
             onChange={(e) => onEditTextChange(e.target.value)}
-            className="w-full h-full min-h-[200px] p-2 rounded-md border border-border/50 bg-muted/10 text-sm2 leading-relaxed text-foreground font-mono resize-none focus:outline-none focus:ring-1 focus:ring-primary/30"
+            className="h-full min-h-[200px] w-full rounded-[1rem] border border-border/60 bg-card/85 p-3 text-sm2 leading-relaxed text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary/30"
           />
         ) : hasText ? (
           isRichText && viewMode === "rendered" ? (
             <div
               className={cn(
-                "rich-text-content text-sm2 leading-relaxed text-foreground",
+                "rich-text-content rounded-[1rem] border border-border/50 bg-card/72 p-4 text-sm2 leading-relaxed text-foreground",
                 renderMode === "full"
                   ? "rich-text-content--detail-full"
                   : "rich-text-content--detail-clean",
@@ -476,30 +480,29 @@ function ViewTab({
               }}
             />
           ) : (
-            <pre className="text-sm2 leading-relaxed whitespace-pre-wrap break-all text-foreground">
+            <pre className="rounded-[1rem] border border-border/50 bg-card/72 p-4 text-sm2 leading-relaxed whitespace-pre-wrap break-all text-foreground">
               {entry.text_content}
             </pre>
           )
         ) : (
-          <div className="text-sm2 text-muted-foreground">
+          <div className="rounded-[1rem] border border-border/50 bg-card/72 p-4 text-sm2 text-muted-foreground">
             {entry.content_type === "Image" ? "Image content" : entry.content_type}
           </div>
         )}
       </div>
 
-      {/* Meta info */}
-      <div className="flex items-center gap-3 px-3 py-1.5 border-t border-border/20 text-2xs text-muted-foreground/60 shrink-0">
-        <span>{entry.content_type}</span>
+      <div className="tab-shell flex items-center gap-2 px-3 py-2 text-2xs text-muted-foreground/70 shrink-0">
+        <span className="meta-pill px-2 py-0.5">{entry.content_type}</span>
         {entry.content_category && entry.content_category !== "General" && (
-          <span className="text-blue-400">{entry.content_category}</span>
+          <span className="meta-pill px-2 py-0.5 text-blue-400">{entry.content_category}</span>
         )}
         {entry.detected_language && (
-          <span className="text-emerald-400">{entry.detected_language}</span>
+          <span className="meta-pill px-2 py-0.5 text-emerald-400">{entry.detected_language}</span>
         )}
         {entry.text_content && (
-          <span>{entry.text_content.length} chars</span>
+          <span className="meta-pill px-2 py-0.5">{entry.text_content.length} chars</span>
         )}
-        <span>{new Date(entry.created_at).toLocaleString()}</span>
+        <span className="meta-pill px-2 py-0.5">{new Date(entry.created_at).toLocaleString()}</span>
       </div>
     </div>
   );
@@ -520,14 +523,14 @@ function SettingsHintPanel({
 }) {
   return (
     <div className="flex h-full items-center justify-center p-4">
-      <div className="w-full max-w-sm rounded-xl border border-border/50 bg-muted/10 px-5 py-6 text-center">
+      <div className="surface-panel w-full max-w-sm rounded-[1.2rem] px-5 py-6 text-center">
         <div className="space-y-1.5">
           <p className="text-sm2 font-medium text-foreground">{title}</p>
           <p className="text-xs2 leading-relaxed text-muted-foreground">{description}</p>
         </div>
         <button
           onClick={onOpenSettings}
-          className="mt-4 h-8 rounded-md bg-primary/15 px-3 text-xs2 font-medium text-primary transition-colors hover:bg-primary/25"
+          className="filter-pill mt-4 px-3 text-xs2 font-medium text-primary transition-colors hover:bg-primary/25"
         >
           {buttonLabel}
         </button>
@@ -638,12 +641,11 @@ function TranslateTab({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Language bar */}
-      <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border/20 shrink-0">
+      <div className="tab-shell flex items-center gap-1.5 px-3 py-2 shrink-0">
         <select
           value={fromLang}
           onChange={(e) => setFromLang(e.target.value)}
-          className="flex-1 h-6 px-1.5 text-xs2 bg-muted/30 border border-border/50 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+          className="h-8 flex-1 rounded-xl border border-border/50 bg-card/80 px-2 text-xs2 text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
         >
           {LANGUAGES.map((l) => (
             <option key={l.value} value={l.value}>
@@ -656,7 +658,7 @@ function TranslateTab({
           onClick={handleSwapLangs}
           disabled={fromLang === "auto"}
           className={cn(
-            "shrink-0 p-1 rounded transition-colors",
+            "entry-action shrink-0 p-0 transition-colors",
             fromLang === "auto"
               ? "text-muted-foreground/30 cursor-not-allowed"
               : "text-muted-foreground hover:text-primary hover:bg-primary/10"
@@ -668,7 +670,7 @@ function TranslateTab({
         <select
           value={toLang}
           onChange={(e) => setToLang(e.target.value)}
-          className="flex-1 h-6 px-1.5 text-xs2 bg-muted/30 border border-border/50 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+          className="h-8 flex-1 rounded-xl border border-border/50 bg-card/80 px-2 text-xs2 text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
         >
           {LANGUAGES.filter((l) => l.value !== "auto").map((l) => (
             <option key={l.value} value={l.value}>
@@ -681,7 +683,7 @@ function TranslateTab({
           onClick={handleTranslate}
           disabled={loading}
           className={cn(
-            "shrink-0 flex items-center gap-1 h-6 px-2 rounded text-xs2 font-medium transition-colors",
+            "filter-pill shrink-0 flex items-center gap-1 px-3 text-xs2 font-medium transition-colors",
             loading
               ? "bg-muted/50 text-muted-foreground cursor-not-allowed"
               : "bg-primary/15 text-primary hover:bg-primary/25"
@@ -694,7 +696,7 @@ function TranslateTab({
           <button
             onClick={() => setUseAi(!useAi)}
             className={cn(
-              "shrink-0 flex items-center gap-1 h-6 px-2 rounded text-xs2 font-medium transition-colors",
+              "filter-pill shrink-0 flex items-center gap-1 px-3 text-xs2 font-medium transition-colors",
               useAi
                 ? "bg-primary text-primary-foreground"
                 : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
@@ -707,27 +709,23 @@ function TranslateTab({
         )}
       </div>
 
-      {/* Source text */}
-      <div className="px-3 pt-2.5 pb-2 shrink-0">
+      <div className="px-4 pt-4 shrink-0">
         {translateUsesAiByDefault && (
-          <span className="mb-2 inline-flex rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-2xs font-medium text-primary">
+          <span className="meta-pill mb-2 inline-flex px-2 py-0.5 text-2xs font-medium text-primary">
             {t("translate.defaultAi")}
           </span>
         )}
         <p className="text-2xs text-muted-foreground/60 uppercase tracking-wider mb-1">
           {t("translate.sourceText")}
         </p>
-        <p className="text-sm2 text-muted-foreground bg-muted/10 rounded-md px-2.5 py-2 max-h-[120px] overflow-y-auto break-words leading-relaxed select-text">
+        <p className="surface-panel max-h-[120px] overflow-y-auto rounded-[1rem] px-3 py-3 text-sm2 leading-relaxed break-words text-muted-foreground select-text">
           {text.length > 800 ? text.substring(0, 800) + "\u2026" : text}
         </p>
       </div>
 
-      <div className="mx-3 border-t border-border/20" />
-
-      {/* Result area */}
-      <div className="flex-1 min-h-0 px-3 pt-2 pb-3 flex flex-col overflow-y-auto">
+      <div className="flex-1 min-h-0 px-4 pb-4 pt-3 flex flex-col overflow-y-auto">
         {loading && (
-          <div className="flex items-center justify-center gap-1.5 py-8 text-muted-foreground">
+          <div className="surface-panel flex items-center justify-center gap-1.5 rounded-[1rem] py-8 text-muted-foreground">
             <Loader2 className="w-4 h-4 animate-spin" />
             <span className="text-sm2">{t("translate.translating")}</span>
           </div>
@@ -735,7 +733,7 @@ function TranslateTab({
 
         {error && (
           <div className="py-2">
-            <p className="text-xs2 text-red-400 bg-red-400/10 rounded-md px-2.5 py-2">
+            <p className="rounded-[1rem] border border-red-400/20 bg-red-400/10 px-3 py-3 text-xs2 text-red-400">
               {t("translate.error")}: {error}
             </p>
           </div>
@@ -753,7 +751,7 @@ function TranslateTab({
                 )}
               </p>
             </div>
-            <p className="text-sm2 text-foreground bg-primary/5 border border-primary/10 rounded-md px-2.5 py-2 flex-1 overflow-y-auto break-words leading-relaxed select-text">
+            <p className="surface-panel flex-1 overflow-y-auto rounded-[1rem] border-primary/15 bg-primary/5 px-3 py-3 text-sm2 leading-relaxed break-words text-foreground select-text">
               {result.translated}
             </p>
 
@@ -761,7 +759,7 @@ function TranslateTab({
               <button
                 onClick={handleCopyResult}
                 className={cn(
-                  "flex items-center gap-1 h-6 px-2.5 rounded text-xs2 font-medium transition-all",
+                  "filter-pill flex items-center gap-1 px-3 text-xs2 font-medium transition-all",
                   copied
                     ? "bg-green-500/15 text-green-400"
                     : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
@@ -772,7 +770,7 @@ function TranslateTab({
               </button>
               <button
                 onClick={handleUseTranslation}
-                className="flex items-center gap-1 h-6 px-2.5 rounded text-xs2 font-medium bg-primary/15 text-primary hover:bg-primary/25 transition-colors"
+                className="filter-pill flex items-center gap-1 px-3 text-xs2 font-medium bg-primary/15 text-primary transition-colors hover:bg-primary/25"
               >
                 <ClipboardPaste className="w-2.5 h-2.5" />
                 {t("translate.useTranslation")}
@@ -782,7 +780,7 @@ function TranslateTab({
         )}
 
         {!loading && !error && !result && (
-          <div className="flex items-center justify-center py-8 text-muted-foreground/40">
+          <div className="surface-panel flex items-center justify-center rounded-[1rem] py-8 text-muted-foreground/40">
             <span className="text-xs2">{t("translate.noResult")}</span>
           </div>
         )}
@@ -820,8 +818,7 @@ function AiTab({
   }
 
   return (
-    <div className="flex flex-col h-full p-3 gap-3">
-      {/* Summary section */}
+    <div className="flex h-full flex-col gap-3 p-4">
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium text-foreground">
@@ -831,7 +828,7 @@ function AiTab({
             onClick={onSummarize}
             disabled={summarizing || !entry.text_content}
             className={cn(
-              "flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-medium transition-colors",
+              "filter-pill flex items-center gap-1 px-3 text-2xs font-medium transition-colors",
               "bg-primary/15 text-primary hover:bg-primary/25",
               "disabled:opacity-50 disabled:cursor-not-allowed"
             )}
@@ -850,23 +847,22 @@ function AiTab({
         </div>
 
         {entry.ai_summary ? (
-          <div className="text-sm2 text-foreground bg-primary/5 border border-primary/10 rounded-md px-3 py-2.5 leading-relaxed select-text">
+          <div className="surface-panel rounded-[1rem] border-primary/15 bg-primary/5 px-3 py-3 text-sm2 leading-relaxed text-foreground select-text">
             {entry.ai_summary}
           </div>
         ) : (
-          <div className="text-sm2 text-muted-foreground/50 bg-muted/10 rounded-md px-3 py-2.5 italic">
+          <div className="surface-panel rounded-[1rem] px-3 py-3 text-sm2 italic text-muted-foreground/50">
             {t("detail.noSummary")}
           </div>
         )}
       </div>
 
-      {/* Original text preview */}
       {entry.text_content && (
         <div className="flex-1 min-h-0 flex flex-col">
           <span className="text-2xs text-muted-foreground/60 uppercase tracking-wider mb-1 shrink-0">
             {t("translate.sourceText")}
           </span>
-          <pre className="flex-1 text-sm2 text-muted-foreground bg-muted/10 rounded-md px-3 py-2 overflow-y-auto break-words whitespace-pre-wrap leading-relaxed select-text">
+          <pre className="surface-panel flex-1 overflow-y-auto rounded-[1rem] px-3 py-3 text-sm2 leading-relaxed break-words whitespace-pre-wrap text-muted-foreground select-text">
             {entry.text_content}
           </pre>
         </div>

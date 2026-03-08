@@ -9,6 +9,7 @@ import {
   type UIScale,
   type FontFamily,
   type ButtonPosition,
+  type ThemeColorPreset,
 } from "@/stores/settingsStore";
 import {
   checkForUpdates,
@@ -37,6 +38,8 @@ export function GeneralTab() {
   const locale = useSettingsStore((s) => s.locale);
   const uiScale = useSettingsStore((s) => s.uiScale);
   const fontFamily = useSettingsStore((s) => s.fontFamily);
+  const themeColorPreset = useSettingsStore((s) => s.themeColorPreset);
+  const themeColorCustom = useSettingsStore((s) => s.themeColorCustom);
   const toggleShortcut = useSettingsStore((s) => s.toggleShortcut);
   const autoCheckUpdate = useSettingsStore((s) => s.autoCheckUpdate);
   const autoDownloadUpdate = useSettingsStore((s) => s.autoDownloadUpdate);
@@ -49,6 +52,8 @@ export function GeneralTab() {
   const setLocale = useSettingsStore((s) => s.setLocale);
   const setUIScale = useSettingsStore((s) => s.setUIScale);
   const setFontFamily = useSettingsStore((s) => s.setFontFamily);
+  const setThemeColorPreset = useSettingsStore((s) => s.setThemeColorPreset);
+  const setThemeColorCustom = useSettingsStore((s) => s.setThemeColorCustom);
   const setToggleShortcut = useSettingsStore((s) => s.setToggleShortcut);
   const setAutoCheckUpdate = useSettingsStore((s) => s.setAutoCheckUpdate);
   const setAutoDownloadUpdate = useSettingsStore((s) => s.setAutoDownloadUpdate);
@@ -118,6 +123,21 @@ export function GeneralTab() {
       icon: <Monitor className="w-3.5 h-3.5" />,
     },
   ];
+  const themeColors: {
+    value: Exclude<ThemeColorPreset, "custom">;
+    labelKey: string;
+    color: string;
+  }[] = [
+    { value: "indigo", labelKey: "settings.themeColor_indigo", color: "#4f46e5" },
+    { value: "ocean", labelKey: "settings.themeColor_ocean", color: "#2563eb" },
+    { value: "cyan", labelKey: "settings.themeColor_cyan", color: "#06b6d4" },
+    { value: "emerald", labelKey: "settings.themeColor_emerald", color: "#10b981" },
+    { value: "amber", labelKey: "settings.themeColor_amber", color: "#d97706" },
+    { value: "rose", labelKey: "settings.themeColor_rose", color: "#e11d48" },
+    { value: "crimson", labelKey: "settings.themeColor_crimson", color: "#9f1239" },
+    { value: "violet", labelKey: "settings.themeColor_violet", color: "#7c3aed" },
+    { value: "slate", labelKey: "settings.themeColor_slate", color: "#475569" },
+  ];
 
   const handleLocaleChange = (newLocale: string) => {
     setLocale(newLocale);
@@ -173,6 +193,64 @@ export function GeneralTab() {
               {t(themeItem.labelKey)}
             </button>
           ))}
+        </div>
+      </section>
+
+      <section>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
+            {t("settings.themeColor")}
+          </label>
+          <div className="flex items-center gap-1.5 min-w-0 shrink-0">
+             <div className="flex items-center gap-2 px-2 py-1 bg-card/60 border border-border/40 rounded-lg">
+                <span
+                  title={t("settings.themeColor_custom")}
+                  className={cn(
+                    "flex items-center justify-center p-0.5 rounded-full outline-none transition-all cursor-pointer ring-offset-2 ring-offset-background",
+                    themeColorPreset === "custom" ? "ring-2 ring-primary scale-110" : "hover:scale-110"
+                  )}
+                  onClick={() => setThemeColorPreset("custom")}
+                >
+                  <span
+                    className="h-4 w-4 rounded-full border border-black/10 shadow-inner"
+                    style={{ background: `conic-gradient(from 180deg at 50% 50%, #ff0000, #ff8000, #ffff00, #00ff00, #00ffff, #0000ff, #8000ff, #ff0080, #ff0000)` }}
+                  />
+                </span>
+                <input
+                  type="color"
+                  value={themeColorCustom}
+                  onChange={(e) => {
+                    setThemeColorCustom(e.target.value);
+                    setThemeColorPreset("custom");
+                  }}
+                  className="h-6 w-8 cursor-pointer rounded border border-border/60 bg-transparent p-0 flex-shrink-0"
+                  aria-label={t("settings.themeColorPicker")}
+                />
+             </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2.5">
+          {themeColors.map((themeColor) => {
+            const active = themeColorPreset === themeColor.value;
+            return (
+              <button
+                key={themeColor.value}
+                onClick={() => setThemeColorPreset(themeColor.value)}
+                title={t(themeColor.labelKey)}
+                aria-label={t(themeColor.labelKey)}
+                className={cn(
+                  "flex items-center justify-center p-0.5 rounded-full outline-none transition-all cursor-pointer ring-offset-2 ring-offset-background",
+                  active ? "ring-2 ring-primary scale-110" : "hover:scale-110"
+                )}
+              >
+                <span
+                  className="h-5 w-5 rounded-full border border-black/10 shadow-sm"
+                  style={{ backgroundColor: themeColor.color }}
+                />
+              </button>
+            );
+          })}
         </div>
       </section>
 

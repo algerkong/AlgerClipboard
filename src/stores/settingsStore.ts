@@ -20,6 +20,19 @@ type Theme = "light" | "dark" | "system";
 export type UIScale = "xs" | "sm" | "md" | "lg" | "xl";
 export type FontFamily = "system" | "microsoft-yahei" | "noto-sans" | "mono";
 export type ButtonPosition = "left" | "right";
+export type ThemeColorPreset = "indigo" | "ocean" | "amber" | "rose" | "violet" | "emerald" | "cyan" | "slate" | "crimson" | "custom";
+
+const THEME_COLOR_PRESET_MAP: Record<Exclude<ThemeColorPreset, "custom">, string> = {
+  indigo: "#4f46e5",
+  ocean: "#2563eb",
+  amber: "#d97706",
+  rose: "#e11d48",
+  violet: "#7c3aed",
+  emerald: "#10b981",
+  cyan: "#06b6d4",
+  slate: "#475569",
+  crimson: "#9f1239",
+};
 
 const UI_SCALE_MAP: Record<
   UIScale,
@@ -102,6 +115,39 @@ function applyFontFamily(family: FontFamily) {
   );
 }
 
+function normalizeThemeColor(value: string | null | undefined): string {
+  const raw = value?.trim() ?? "";
+  if (/^#[0-9a-fA-F]{6}$/.test(raw)) {
+    return raw.toLowerCase();
+  }
+  if (/^#[0-9a-fA-F]{3}$/.test(raw)) {
+    const [, r, g, b] = raw;
+    return `#${r}${r}${g}${g}${b}${b}`.toLowerCase();
+  }
+  return THEME_COLOR_PRESET_MAP.indigo;
+}
+
+function resolveThemeColor(preset: ThemeColorPreset, customColor: string): string {
+  if (preset === "custom") {
+    return normalizeThemeColor(customColor);
+  }
+
+  return THEME_COLOR_PRESET_MAP[preset];
+}
+
+function applyThemeColor(preset: ThemeColorPreset, customColor: string) {
+  const resolvedColor = resolveThemeColor(preset, customColor);
+  const el = document.documentElement;
+  // Remove first to break potential WebKit color-mix() caching
+  el.style.removeProperty("--theme-accent-source");
+  // Force synchronous reflow so the removal is processed
+  void el.offsetHeight;
+  // Set the new value
+  el.style.setProperty("--theme-accent-source", resolvedColor);
+  // Force another reflow to ensure all color-mix() expressions recompute
+  void el.offsetHeight;
+}
+
 // Migrate old font_size values to new ui_scale values
 const FONT_SIZE_MIGRATION: Record<string, UIScale> = {
   small: "xs",
@@ -118,6 +164,8 @@ interface SettingsState {
   locale: string;
   uiScale: UIScale;
   fontFamily: FontFamily;
+  themeColorPreset: ThemeColorPreset;
+  themeColorCustom: string;
   toggleShortcut: string;
   autoCheckUpdate: boolean;
   autoDownloadUpdate: boolean;
@@ -137,6 +185,8 @@ interface SettingsState {
   setLocale: (locale: string) => Promise<void>;
   setUIScale: (scale: UIScale) => Promise<void>;
   setFontFamily: (family: FontFamily) => Promise<void>;
+  setThemeColorPreset: (preset: ThemeColorPreset) => Promise<void>;
+  setThemeColorCustom: (color: string) => Promise<void>;
   setToggleShortcut: (shortcut: string) => Promise<void>;
   setAutoCheckUpdate: (enabled: boolean) => Promise<void>;
   setAutoDownloadUpdate: (enabled: boolean) => Promise<void>;
@@ -161,6 +211,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   locale: "zh-CN",
   uiScale: "lg",
   fontFamily: "system",
+  themeColorPreset: "indigo",
+  themeColorCustom: THEME_COLOR_PRESET_MAP.indigo,
   toggleShortcut: "CmdOrCtrl+Shift+V",
   autoCheckUpdate: true,
   autoDownloadUpdate: false,
@@ -182,6 +234,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         uiScale,
         oldFontSize,
         fontFamily,
+        themeColorPreset,
+        themeColorCustom,
         autoStartEnabled,
         toggleShortcut,
         autoCheckUpdate,
@@ -200,6 +254,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         getSetting("ui_scale"),
         getSetting("font_size"),
         getSetting("font_family"),
+        getSetting("theme_color_preset"),
+        getSetting("theme_color_custom"),
         getAutoStart(),
         getSetting("toggle_shortcut"),
         getSetting("auto_check_update"),
@@ -222,12 +278,18 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       }
 
       const ff = (fontFamily as FontFamily) || "system";
+      const resolvedThemeColorPreset =
+        themeColorPreset && (themeColorPreset === "custom" || themeColorPreset in THEME_COLOR_PRESET_MAP)
+          ? (themeColorPreset as ThemeColorPreset)
+          : "indigo";
+      const resolvedThemeColorCustom = normalizeThemeColor(themeColorCustom);
       const parsedRichTextPreview = parseRichTextPreviewOptions(richTextPreview);
       const resolvedDetailMode =
         richTextDetailMode === "full" ? "full" : DEFAULT_RICH_TEXT_DETAIL_MODE;
 
       applyUIScale(scale);
       applyFontFamily(ff);
+      applyThemeColor(resolvedThemeColorPreset, resolvedThemeColorCustom);
 
       set({
         theme: (theme as Theme) ?? "dark",
@@ -238,6 +300,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         locale: locale ?? "zh-CN",
         uiScale: scale,
         fontFamily: ff,
+        themeColorPreset: resolvedThemeColorPreset,
+        themeColorCustom: resolvedThemeColorCustom,
         toggleShortcut: toggleShortcut?.trim() || "CmdOrCtrl+Shift+V",
         autoCheckUpdate: autoCheckUpdate !== "false",
         autoDownloadUpdate: autoDownloadUpdate === "true",
@@ -323,6 +387,31 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       await updateSetting("font_family", family);
     } catch (err) {
       console.error("Failed to save font_family:", err);
+    }
+  },
+
+  setThemeColorPreset: async (preset: ThemeColorPreset) => {
+    const nextCustom = useSettingsStore.getState().themeColorCustom;
+    applyThemeColor(preset, nextCustom);
+    set({ themeColorPreset: preset });
+    try {
+      await updateSetting("theme_color_preset", preset);
+    } catch (err) {
+      console.error("Failed to save theme_color_preset:", err);
+    }
+  },
+
+  setThemeColorCustom: async (color: string) => {
+    const normalized = normalizeThemeColor(color);
+    applyThemeColor("custom", normalized);
+    set({ themeColorPreset: "custom", themeColorCustom: normalized });
+    try {
+      await Promise.all([
+        updateSetting("theme_color_preset", "custom"),
+        updateSetting("theme_color_custom", normalized),
+      ]);
+    } catch (err) {
+      console.error("Failed to save theme_color_custom:", err);
     }
   },
 

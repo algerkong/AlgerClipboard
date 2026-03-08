@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 interface SourceBadgeProps {
   sourceApp: string | null;
   sourceUrl?: string | null;
+  sourceIcon?: string | null;
   className?: string;
   textClassName?: string;
   iconClassName?: string;
@@ -58,12 +59,14 @@ function getFaviconCandidates(sourceUrl: string): string[] {
 export function SourceBadge({
   sourceApp,
   sourceUrl,
+  sourceIcon,
   className,
   textClassName,
   iconClassName,
 }: SourceBadgeProps) {
   const { t } = useTranslation();
   const [faviconIndex, setFaviconIndex] = useState(0);
+  const [sourceIconFailed, setSourceIconFailed] = useState(false);
 
   const faviconCandidates = useMemo(
     () => (sourceUrl ? getFaviconCandidates(sourceUrl) : []),
@@ -72,7 +75,8 @@ export function SourceBadge({
 
   useEffect(() => {
     setFaviconIndex(0);
-  }, [sourceUrl]);
+    setSourceIconFailed(false);
+  }, [sourceIcon, sourceUrl]);
 
   if (!sourceApp) {
     return null;
@@ -80,7 +84,9 @@ export function SourceBadge({
 
   const badgeMeta = getAppBadgeMeta(sourceApp);
   const BadgeIcon = badgeMeta.icon ?? Globe;
-  const faviconSrc = faviconCandidates[faviconIndex];
+  const imageSrc = !sourceIconFailed && sourceIcon
+    ? sourceIcon
+    : faviconCandidates[faviconIndex];
 
   const content = (
     <>
@@ -90,12 +96,16 @@ export function SourceBadge({
           iconClassName,
         )}
       >
-        {faviconSrc ? (
+        {imageSrc ? (
           <img
-            src={faviconSrc}
+            src={imageSrc}
             alt=""
             className="h-full w-full object-cover"
             onError={() => {
+              if (sourceIcon && !sourceIconFailed) {
+                setSourceIconFailed(true);
+                return;
+              }
               if (faviconIndex < faviconCandidates.length - 1) {
                 setFaviconIndex((current) => current + 1);
               } else {
