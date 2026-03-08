@@ -481,6 +481,22 @@
     "resummarize": "Re-summarize",
     "delete": "Delete"
   },
+  "askAi": {
+    "askAi": "Ask AI",
+    "presets": {
+      "translate": "Translate",
+      "summarize": "Summarize",
+      "explain": "Explain",
+      "rewrite": "Rewrite",
+      "continue": "Continue Writing",
+      "custom": "Custom Prompt"
+    },
+    "customPromptPlaceholder": "Type your prompt...",
+    "send": "Send",
+    "selectService": "Select AI Service",
+    "sending": "Sending...",
+    "noEnabledServices": "No AI services enabled. Enable services in Settings > Ask AI."
+  },
   "toast": {
     "copied": "Copied",
     "pasted": "Pasted",

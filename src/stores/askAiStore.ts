@@ -9,18 +9,27 @@ interface AskAiState {
   enabledServiceIds: string[];
   isLoading: boolean;
   favicons: Record<string, string>;
+  askAiEntryId: string | null;
+  askAiAnchor: { x: number; y: number } | null;
+  isSending: boolean;
 
   loadEnabledServices: () => Promise<void>;
   toggleService: (serviceId: string) => Promise<void>;
   isServiceEnabled: (serviceId: string) => boolean;
   loadFavicons: () => Promise<void>;
   getFavicon: (serviceId: string) => string | null;
+  startAskAi: (entryId: string, anchor: { x: number; y: number }) => void;
+  cancelAskAi: () => void;
+  setIsSending: (v: boolean) => void;
 }
 
 export const useAskAiStore = create<AskAiState>((set, get) => ({
   enabledServiceIds: [],
   isLoading: false,
   favicons: {},
+  askAiEntryId: null,
+  askAiAnchor: null,
+  isSending: false,
 
   loadEnabledServices: async () => {
     set({ isLoading: true });
@@ -76,5 +85,17 @@ export const useAskAiStore = create<AskAiState>((set, get) => ({
 
   getFavicon: (serviceId: string) => {
     return get().favicons[serviceId] || null;
+  },
+
+  startAskAi: (entryId: string, anchor: { x: number; y: number }) => {
+    set({ askAiEntryId: entryId, askAiAnchor: anchor });
+  },
+
+  cancelAskAi: () => {
+    set({ askAiEntryId: null, askAiAnchor: null });
+  },
+
+  setIsSending: (v: boolean) => {
+    set({ isSending: v });
   },
 }));
