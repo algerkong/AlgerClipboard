@@ -1,20 +1,26 @@
 import { create } from "zustand";
 import { getSetting, updateSetting } from "@/services/settingsService";
+import { AI_WEB_SERVICES } from "@/constants/aiServices";
+import { fetchServiceFavicon } from "@/services/askAiService";
 
 const SETTING_KEY = "ask_ai_enabled_services";
 
 interface AskAiState {
   enabledServiceIds: string[];
   isLoading: boolean;
+  favicons: Record<string, string>;
 
   loadEnabledServices: () => Promise<void>;
   toggleService: (serviceId: string) => Promise<void>;
   isServiceEnabled: (serviceId: string) => boolean;
+  loadFavicons: () => Promise<void>;
+  getFavicon: (serviceId: string) => string | null;
 }
 
 export const useAskAiStore = create<AskAiState>((set, get) => ({
   enabledServiceIds: [],
   isLoading: false,
+  favicons: {},
 
   loadEnabledServices: async () => {
     set({ isLoading: true });
@@ -47,5 +53,28 @@ export const useAskAiStore = create<AskAiState>((set, get) => ({
 
   isServiceEnabled: (serviceId: string) => {
     return get().enabledServiceIds.includes(serviceId);
+  },
+
+  loadFavicons: async () => {
+    const results = await Promise.allSettled(
+      AI_WEB_SERVICES.map(async (service) => {
+        const hostname = new URL(service.url).hostname;
+        const url = await fetchServiceFavicon(service.id, hostname);
+        return { serviceId: service.id, url };
+      }),
+    );
+
+    const favicons: Record<string, string> = {};
+    for (const result of results) {
+      if (result.status === "fulfilled" && result.value.url) {
+        favicons[result.value.serviceId] = result.value.url;
+      }
+    }
+
+    set({ favicons });
+  },
+
+  getFavicon: (serviceId: string) => {
+    return get().favicons[serviceId] || null;
   },
 }));

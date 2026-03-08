@@ -256,7 +256,8 @@
     "askAi": {
       "description": "Select AI services to use with Ask AI. Enabled services can be opened in a WebView window.",
       "enabled": "Enabled",
-      "disabled": "Disabled"
+      "disabled": "Disabled",
+      "open": "Open"
     },
     "ai": {
       "enable": "Enable AI Features",
