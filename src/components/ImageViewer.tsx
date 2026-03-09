@@ -18,8 +18,8 @@ import {
 import { translateText } from "@/services/translateService";
 import { toast } from "@/lib/toast";
 import type { OcrResult, OcrTextLine } from "@/types";
-
-const VIEWER_SIZE_KEY = "image-viewer-size";
+import { trackWindowSize } from "@/lib/windowSize";
+import { IMAGE_VIEWER_SIZE_KEY } from "@/services/imageViewerService";
 
 export function ImageViewerPage() {
   const { t } = useTranslation();
@@ -42,23 +42,7 @@ export function ImageViewerPage() {
   const [imgSize, setImgSize] = useState({ width: 0, height: 0 });
 
   // Save window size on resize (debounced), restored by imageViewerService on next open
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>;
-    const handleResize = () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        localStorage.setItem(VIEWER_SIZE_KEY, JSON.stringify({
-          width: window.outerWidth,
-          height: window.outerHeight,
-        }));
-      }, 500);
-    };
-    window.addEventListener("resize", handleResize);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
+  useEffect(() => trackWindowSize(IMAGE_VIEWER_SIZE_KEY), []);
 
   useEffect(() => {
     if (!blobPath) return;
