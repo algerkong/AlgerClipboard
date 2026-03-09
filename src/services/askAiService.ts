@@ -1,9 +1,12 @@
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
+import { emit } from "@tauri-apps/api/event";
 import type { AiWebService } from "@/constants/aiServices";
 import { AI_WEB_SERVICES } from "@/constants/aiServices";
 import type { AskAiPreset } from "@/constants/askAiPresets";
 import { getInjectionScript } from "@/services/injectionScripts";
 import { useAskAiStore } from "@/stores/askAiStore";
+import { getSavedWindowSize } from "@/lib/windowSize";
+import { ASK_AI_SIZE_KEY } from "@/pages/AskAiPanel";
 
 const TAB_BAR_HEIGHT = 40;
 
@@ -27,10 +30,13 @@ export function serviceIdToDataStoreId(serviceId: string): number[] {
 export async function openAskAiPanel() {
   const enabledIds = useAskAiStore.getState().enabledServiceIds;
   const singleService = enabledIds.length <= 1;
+  const saved = getSavedWindowSize(ASK_AI_SIZE_KEY, { width: 1000, height: 700 });
 
   await invoke("create_ask_ai_panel", {
     tabBarHeight: TAB_BAR_HEIGHT,
     singleService,
+    width: saved.width,
+    height: saved.height,
   });
 }
 
@@ -39,6 +45,7 @@ export async function openAskAiPanel() {
  * @deprecated Use openAskAiPanel() instead. Kept for backward compat (settings page open button).
  */
 export async function openAiWebView(_service: AiWebService) {
+  void _service;
   // Redirect to the new ask-ai-panel
   await openAskAiPanel();
 }
@@ -58,6 +65,22 @@ export async function fetchServiceFavicon(
     console.error(`Failed to fetch favicon for ${serviceId}:`, e);
     return null;
   }
+}
+
+async function delay(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForWebview(label: string, timeoutMs = 8000) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    const exists = await invoke<boolean>("webview_exists", { label });
+    if (exists) {
+      return;
+    }
+    await delay(200);
+  }
+  throw new Error(`Timed out waiting for WebView '${label}'`);
 }
 
 /**
@@ -87,15 +110,19 @@ export async function askAi(
     // 3. Open or focus the ask-ai-panel window
     await openAskAiPanel();
 
-    // 4. Wait for the panel to initialize and create the child webview.
-    //    The AskAiPanel component auto-creates the first service's webview on mount.
-    await new Promise((r) => setTimeout(r, 2000));
+    // 4. Ask the panel to switch to the requested service tab.
+    // Emit twice to cover the first-open race where the tab-bar listener is still mounting.
+    await delay(250);
+    await emit("ask-ai:open-service", { serviceId });
+    await delay(600);
+    await emit("ask-ai:open-service", { serviceId });
 
-    // 5. Build and inject the fill+submit script
-    //    Use the active service ID from the store (set by AskAiPanel)
-    const activeId = useAskAiStore.getState().activeServiceId || serviceId;
-    const script = getInjectionScript(activeId, fullPrompt);
-    const label = `ask-ai-svc-${activeId}`;
+    // 5. Wait for the target child webview to exist before injecting.
+    const label = `ask-ai-svc-${serviceId}`;
+    await waitForWebview(label);
+
+    // 6. Build and inject the fill+submit script into the requested service.
+    const script = getInjectionScript(serviceId, fullPrompt);
     await invoke("eval_webview_js", { label, js: script });
   } catch (e) {
     console.error(`askAi failed for service ${serviceId}:`, e);
