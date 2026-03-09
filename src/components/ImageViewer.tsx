@@ -7,9 +7,12 @@ import {
   Languages,
   Loader2,
 } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { platform as getPlatform } from "@tauri-apps/plugin-os";
 import { cn } from "@/lib/utils";
+import { usePreviewCloseShortcut } from "@/hooks/usePreviewCloseShortcut";
+import { CloseConfirmDialog } from "@/components/CloseConfirmDialog";
 import { useTranslation } from "react-i18next";
 import {
   getThumbnailBase64,
@@ -94,7 +97,10 @@ export function ImageViewerPage() {
     }
   }, [blobPath, t]);
 
-  const handleClose = useCallback(() => { getCurrentWebviewWindow().close(); }, []);
+  const handleClose = useCallback(async () => {
+    await invoke("focus_main_window").catch(() => {});
+    getCurrentWebviewWindow().close();
+  }, []);
   const handleZoomIn = useCallback(() => setZoom((z) => Math.min(z + 0.25, 5)), []);
   const handleZoomOut = useCallback(() => setZoom((z) => Math.max(z - 0.25, 0.25)), []);
   const handleResetZoom = useCallback(() => setZoom(1), []);
@@ -136,11 +142,7 @@ export function ImageViewerPage() {
     return () => document.removeEventListener("copy", handleCopy);
   }, []);
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") handleClose(); };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [handleClose]);
+  const { showConfirm, handleConfirmYes, handleConfirmNo, closeKey } = usePreviewCloseShortcut();
 
   const hasOcrText = ocrResult && ocrResult.lines.length > 0;
 
@@ -267,6 +269,13 @@ export function ImageViewerPage() {
         <div className="border-t border-border/30 px-3 py-1.5 shrink-0">
           <p className="text-xs2 text-red-400">{ocrError}</p>
         </div>
+      )}
+      {showConfirm && (
+        <CloseConfirmDialog
+          shortcutKey={closeKey}
+          onConfirm={handleConfirmYes}
+          onCancel={handleConfirmNo}
+        />
       )}
     </div>
   );
