@@ -1,5 +1,54 @@
 use tauri::{Manager, WebviewUrl};
 
+fn ask_ai_top_inset(single_service: bool) -> f64 {
+    if single_service {
+        return 0.0;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        28.0
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        0.0
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn bring_tab_bar_to_front_impl(app: &tauri::AppHandle) -> Result<(), String> {
+    let tab_bar = app
+        .get_webview("ask-ai-tab-bar")
+        .ok_or_else(|| "Tab bar webview not found".to_string())?;
+
+    tab_bar
+        .with_webview(|platform_wv| {
+            use objc2::rc::Retained;
+            use objc2_app_kit::NSView;
+
+            unsafe {
+                let ns_view_ptr = platform_wv.inner() as *mut NSView;
+                if ns_view_ptr.is_null() {
+                    return;
+                }
+                let ns_view = &*ns_view_ptr;
+
+                if let Some(superview) = ns_view.superview() {
+                    let retained: Retained<NSView> = Retained::retain(ns_view_ptr).unwrap();
+                    ns_view.removeFromSuperview();
+                    superview.addSubview(&retained);
+                }
+            }
+        })
+        .map_err(|e| format!("with_webview failed: {}", e))
+}
+
+#[cfg(not(target_os = "macos"))]
+fn bring_tab_bar_to_front_impl(_app: &tauri::AppHandle) -> Result<(), String> {
+    Ok(())
+}
+
 /// Create the ask-ai-panel window with the React tab bar as a child webview.
 /// Uses a bare Window so the tab bar and service webviews are at the same z-level.
 #[tauri::command]
@@ -7,6 +56,8 @@ pub async fn create_ask_ai_panel(
     app: tauri::AppHandle,
     tab_bar_height: f64,
     single_service: bool,
+    width: Option<f64>,
+    height: Option<f64>,
 ) -> Result<(), String> {
     let label = "ask-ai-panel";
 
@@ -17,10 +68,13 @@ pub async fn create_ask_ai_panel(
         return Ok(());
     }
 
+    let w = width.unwrap_or(1000.0);
+    let h = height.unwrap_or(700.0);
+
     // Create a bare window (no main webview)
     let window = tauri::WindowBuilder::new(&app, label)
         .title("Ask AI")
-        .inner_size(1000.0, 700.0)
+        .inner_size(w, h)
         .min_inner_size(600.0, 400.0)
         .resizable(true)
         .center()
@@ -30,6 +84,7 @@ pub async fn create_ask_ai_panel(
 
     // Add the React tab bar as a child webview at the top
     let bar_h = if single_service { 0.0 } else { tab_bar_height };
+    let top_inset = ask_ai_top_inset(single_service);
     let win_size = window.inner_size().map_err(|e| format!("Failed to get size: {}", e))?;
     let scale = window.scale_factor().map_err(|e| format!("Failed to get scale: {}", e))?;
     let logical_w = win_size.width as f64 / scale;
@@ -43,8 +98,11 @@ pub async fn create_ask_ai_panel(
     window
         .add_child(
             tab_bar_builder,
-            tauri::Position::Logical(tauri::LogicalPosition::new(0.0, 0.0)),
-            tauri::Size::Logical(tauri::LogicalSize::new(logical_w, if bar_h > 0.0 { bar_h } else { logical_h })),
+            tauri::Position::Logical(tauri::LogicalPosition::new(0.0, top_inset)),
+            tauri::Size::Logical(tauri::LogicalSize::new(
+                logical_w,
+                if bar_h > 0.0 { bar_h } else { logical_h },
+            )),
         )
         .map_err(|e| format!("Failed to add tab bar webview: {}", e))?;
 
@@ -76,8 +134,14 @@ pub async fn eval_webview_js(
     Err(format!("WebView '{}' not found", label))
 }
 
+#[tauri::command]
+pub async fn webview_exists(app: tauri::AppHandle, label: String) -> Result<bool, String> {
+    Ok(app.get_webview(&label).is_some() || app.get_webview_window(&label).is_some())
+}
+
 /// Convert a service ID string into a deterministic 16-byte array.
 /// Same logic as the JS `serviceIdToDataStoreId` function.
+#[cfg(target_os = "macos")]
 fn service_id_to_data_store_id(service_id: &str) -> [u8; 16] {
     let mut bytes = [0u8; 16];
     for (i, ch) in service_id.bytes().enumerate() {
@@ -140,6 +204,8 @@ pub async fn create_ai_child_webview(
         .add_child(builder, position, size)
         .map_err(|e| format!("Failed to create child webview: {}", e))?;
 
+    let _ = bring_tab_bar_to_front_impl(&app);
+
     Ok(())
 }
 
@@ -147,6 +213,7 @@ pub async fn create_ai_child_webview(
 #[tauri::command]
 pub async fn resize_tab_bar(
     app: tauri::AppHandle,
+    y: f64,
     width: f64,
     height: f64,
 ) -> Result<(), String> {
@@ -154,8 +221,12 @@ pub async fn resize_tab_bar(
         .get_webview("ask-ai-tab-bar")
         .ok_or_else(|| "Tab bar webview not found".to_string())?;
     webview
+        .set_position(tauri::Position::Logical(tauri::LogicalPosition::new(0.0, y)))
+        .map_err(|e| format!("Failed to reposition tab bar: {}", e))?;
+    webview
         .set_size(tauri::Size::Logical(tauri::LogicalSize::new(width, height)))
-        .map_err(|e| format!("Failed to resize tab bar: {}", e))
+        .map_err(|e| format!("Failed to resize tab bar: {}", e))?;
+    bring_tab_bar_to_front_impl(&app)
 }
 
 /// Bring the tab bar webview to the front of the z-order on macOS.
@@ -163,38 +234,7 @@ pub async fn resize_tab_bar(
 /// This command re-inserts the tab bar's underlying NSView so it renders above service webviews.
 #[tauri::command]
 pub async fn bring_tab_bar_to_front(app: tauri::AppHandle) -> Result<(), String> {
-    let tab_bar = app
-        .get_webview("ask-ai-tab-bar")
-        .ok_or_else(|| "Tab bar webview not found".to_string())?;
-
-    #[cfg(target_os = "macos")]
-    {
-        tab_bar
-            .with_webview(|platform_wv| {
-                use objc2::rc::Retained;
-                use objc2_app_kit::NSView;
-
-                unsafe {
-                    // platform_wv.inner() returns *mut c_void pointing to the WKWebView (an NSView)
-                    let ns_view_ptr = platform_wv.inner() as *mut NSView;
-                    if ns_view_ptr.is_null() {
-                        return;
-                    }
-                    let ns_view = &*ns_view_ptr;
-
-                    if let Some(superview) = ns_view.superview() {
-                        // Retain the view before removing it
-                        let retained: Retained<NSView> = Retained::retain(ns_view_ptr).unwrap();
-                        // Remove from superview, then re-add — this places it on top
-                        ns_view.removeFromSuperview();
-                        superview.addSubview(&retained);
-                    }
-                }
-            })
-            .map_err(|e| format!("with_webview failed: {}", e))?;
-    }
-
-    Ok(())
+    bring_tab_bar_to_front_impl(&app)
 }
 
 /// Show a child webview by service ID.
@@ -209,7 +249,9 @@ pub async fn show_ai_webview(
         .ok_or_else(|| format!("Webview '{}' not found", label))?;
     webview
         .show()
-        .map_err(|e| format!("Failed to show webview: {}", e))
+        .map_err(|e| format!("Failed to show webview: {}", e))?;
+    let _ = bring_tab_bar_to_front_impl(&app);
+    Ok(())
 }
 
 /// Hide a child webview by service ID.
@@ -246,5 +288,7 @@ pub async fn resize_ai_webview(
         .map_err(|e| format!("Failed to set position: {}", e))?;
     webview
         .set_size(tauri::Size::Logical(tauri::LogicalSize::new(width, height)))
-        .map_err(|e| format!("Failed to set size: {}", e))
+        .map_err(|e| format!("Failed to set size: {}", e))?;
+    let _ = bring_tab_bar_to_front_impl(&app);
+    Ok(())
 }
