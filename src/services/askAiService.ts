@@ -1,10 +1,11 @@
-import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import type { AiWebService } from "@/constants/aiServices";
 import { AI_WEB_SERVICES } from "@/constants/aiServices";
 import type { AskAiPreset } from "@/constants/askAiPresets";
 import { getInjectionScript } from "@/services/injectionScripts";
 import { useAskAiStore } from "@/stores/askAiStore";
+
+const TAB_BAR_HEIGHT = 40;
 
 /**
  * Create a deterministic 16-byte identifier from a service ID.
@@ -20,34 +21,16 @@ export function serviceIdToDataStoreId(serviceId: string): number[] {
 
 /**
  * Open (or focus) the ask-ai-panel window.
- * This is a single window that contains a React tab bar and Rust-managed child webviews.
+ * Creates a bare window from Rust with the React tab bar as a child webview,
+ * so it stays at the same z-level as service webviews (no overlap).
  */
 export async function openAskAiPanel() {
-  const label = "ask-ai-panel";
+  const enabledIds = useAskAiStore.getState().enabledServiceIds;
+  const singleService = enabledIds.length <= 1;
 
-  // If the window already exists, just show and focus it
-  const existing = await WebviewWindow.getByLabel(label);
-  if (existing) {
-    await existing.show();
-    await existing.setFocus();
-    return;
-  }
-
-  const win = new WebviewWindow(label, {
-    url: "index.html?window=ask-ai",
-    title: "Ask AI",
-    width: 1000,
-    height: 700,
-    minWidth: 600,
-    minHeight: 400,
-    decorations: true,
-    center: true,
-    shadow: true,
-    resizable: true,
-  });
-
-  win.once("tauri://error", (e) => {
-    console.error("Failed to create ask-ai-panel window:", e);
+  await invoke("create_ask_ai_panel", {
+    tabBarHeight: TAB_BAR_HEIGHT,
+    singleService,
   });
 }
 

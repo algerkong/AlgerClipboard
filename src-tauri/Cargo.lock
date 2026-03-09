@@ -93,6 +93,7 @@ dependencies = [
  "image",
  "log",
  "md-5",
+ "objc2",
  "objc2-app-kit",
  "rand 0.8.5",
  "regex",

@@ -10,6 +10,7 @@
     "detail-*",
     "ai-webview-*",
     "ask-ai-panel",
+    "ask-ai-tab-bar",
     "ask-ai-svc-*"
   ],
   "permissions": [
