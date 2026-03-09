@@ -219,16 +219,27 @@ body {
   background-clip: text;
 }
 
-/* Hero Typewriter */
-.hero-typewriter {
-  display: inline;
+/* Hero Typewriter — Fixed two-line layout */
+
+/* Line 1: static text, fades on switch */
+.hero-line-static {
+  min-height: 1.1em;
+  transition: opacity 0.3s ease;
 }
 
-.hero-typewriter-static {
-  display: inline;
+.hero-line-static.fade-out {
+  opacity: 0;
 }
 
-.hero-typewriter-dynamic {
+/* Line 2: typed colored text + blinking cursor */
+.hero-line-typed {
+  min-height: 1.1em;
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+}
+
+.hero-typed-text {
   display: inline;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -237,16 +248,15 @@ body {
   animation: gradientShift 3s ease infinite;
 }
 
-.hero-typewriter-cursor {
+.hero-typed-cursor {
   display: inline-block;
   width: 3px;
-  height: 0.85em;
-  margin-left: 4px;
-  vertical-align: baseline;
-  position: relative;
-  top: 0.05em;
+  height: 0.75em;
+  margin-left: 6px;
+  vertical-align: middle;
   border-radius: 2px;
-  animation: cursorBlink 0.8s step-end infinite;
+  animation: cursorBlink 0.75s step-end infinite;
+  flex-shrink: 0;
 }
 
 @keyframes cursorBlink {
@@ -259,7 +269,7 @@ body {
   50% { background-position: 100% 50%; }
 }
 
-/* Color themes for each slogan */
+/* 8 gradient color themes */
 .hero-color-0 { background-image: linear-gradient(135deg, #00FFA3, #00D4AA, #7CFFCB); }
 .hero-color-1 { background-image: linear-gradient(135deg, #FF6B9D, #C44569, #FF8E9E); }
 .hero-color-2 { background-image: linear-gradient(135deg, #667EEA, #764BA2, #A78BFA); }
@@ -269,7 +279,6 @@ body {
 .hero-color-6 { background-image: linear-gradient(135deg, #A18CD1, #FBC2EB, #E8B4F8); }
 .hero-color-7 { background-image: linear-gradient(135deg, #FDDB92, #D1FDFF, #96E6A1); }
 
-/* Cursor color matches text */
 .hero-cursor-0 { background-color: #00FFA3; }
 .hero-cursor-1 { background-color: #FF6B9D; }
 .hero-cursor-2 { background-color: #667EEA; }
