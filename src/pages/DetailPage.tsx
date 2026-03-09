@@ -11,14 +11,20 @@ import {
   ArrowRightLeft,
   RotateCcw,
   ClipboardPaste,
-  Code,
   Eye,
+  PanelLeft,
+  Columns2,
+  PanelRight,
 } from "lucide-react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useTranslation } from "react-i18next";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
-import { getEntry, pasteEntry, updateEntryText } from "@/services/clipboardService";
+import {
+  getEntry,
+  pasteEntry,
+  updateEntryText,
+} from "@/services/clipboardService";
 import { aiSummarize, updateAiSummary } from "@/services/aiService";
 import { openSettingsWindow } from "@/services/settingsWindowService";
 import { useTranslateStore } from "@/stores/translateStore";
@@ -28,10 +34,22 @@ import { openUrl } from "@/services/settingsService";
 import { SourceBadge } from "@/components/SourceBadge";
 import type { ClipboardEntry } from "@/types";
 import { sanitizeDetailHtml, type RichTextDetailMode } from "@/lib/richText";
+import { CodeEditor } from "@/components/editor/CodeEditor";
+import { RichEditor } from "@/components/editor/RichEditor";
+import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
+import { SplitView } from "@/components/editor/SplitView";
+import {
+  detectContentMode,
+  mapLanguageToCodemirror,
+  type ContentMode,
+} from "@/lib/contentDetect";
+import { trackWindowSize } from "@/lib/windowSize";
+import { DETAIL_SIZE_KEY } from "@/services/detailWindowService";
 
 const searchParams = new URLSearchParams(window.location.search);
 const entryId = searchParams.get("id") || "";
-const initialTab = (searchParams.get("tab") as "view" | "translate" | "ai") || "view";
+const initialTab =
+  (searchParams.get("tab") as "view" | "translate" | "ai") || "view";
 
 function applyTheme(theme: "light" | "dark" | "system") {
   const root = document.documentElement;
@@ -71,10 +89,7 @@ function HintIconButton({
   return (
     <button
       {...props}
-      className={cn(
-        "group relative p-1 rounded transition-colors",
-        className,
-      )}
+      className={cn("group relative p-1 rounded transition-colors", className)}
       aria-label={label}
       title={label}
     >
@@ -91,7 +106,9 @@ export function DetailPage() {
   const canTranslate = useCapabilityStore((s) => s.can_translate);
   const hasTranslateEngine = useCapabilityStore((s) => s.has_translate_engine);
   const hasAi = useCapabilityStore((s) => s.has_ai);
-  const translateUsesAiByDefault = useCapabilityStore((s) => s.translate_uses_ai_by_default);
+  const translateUsesAiByDefault = useCapabilityStore(
+    (s) => s.translate_uses_ai_by_default,
+  );
   const theme = useSettingsStore((s) => s.theme);
   const locale = useSettingsStore((s) => s.locale);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
@@ -120,6 +137,9 @@ export function DetailPage() {
   useEffect(() => {
     document.documentElement.classList.add("dark");
   }, []);
+
+  // Save window size on resize
+  useEffect(() => trackWindowSize(DETAIL_SIZE_KEY), []);
 
   useEffect(() => {
     loadSettings();
@@ -223,63 +243,67 @@ export function DetailPage() {
     );
   }
 
-  const hasText = entry.content_type === "PlainText" || entry.content_type === "RichText";
+  const hasText =
+    entry.content_type === "PlainText" || entry.content_type === "RichText";
 
   return (
     <div className="app-shell flex h-full flex-col overflow-hidden bg-background">
       <div className="tab-shell shrink-0 px-3 py-2">
-        <div className="flex items-center gap-3">
-          <div className="tab-scroll-area min-w-0 flex-1 overflow-x-auto">
+        <div className="flex items-center justify-between gap-2">
+          <div className="tab-scroll-area min-w-0 overflow-x-auto">
             <div className="flex w-max items-center gap-1">
-            {(["view", "translate", "ai"] as const).map((t2) => (
-              <button
-                key={t2}
-                onClick={() => setTab(t2)}
-                style={tabStyle}
-                data-active={tab === t2}
-                className={cn(
-                  "filter-pill flex shrink-0 items-center whitespace-nowrap font-medium leading-none text-muted-foreground transition-all",
-                  tab === t2
-                    ? "text-foreground"
-                    : "hover:border-primary/20 hover:bg-accent/50 hover:text-foreground"
-                )}
-              >
-                {t2 === "view" && <Eye style={tabIconStyle} />}
-                {t2 === "translate" && <Languages style={tabIconStyle} />}
-                {t2 === "ai" && <Brain style={tabIconStyle} />}
-                {t(`detail.tab${t2.charAt(0).toUpperCase() + t2.slice(1)}`)}
-              </button>
-            ))}
+              {(["view", "translate", "ai"] as const).map((t2) => (
+                <button
+                  key={t2}
+                  onClick={() => setTab(t2)}
+                  style={tabStyle}
+                  data-active={tab === t2}
+                  className={cn(
+                    "filter-pill flex shrink-0 items-center whitespace-nowrap font-medium leading-none text-muted-foreground transition-all",
+                    tab === t2
+                      ? "text-foreground"
+                      : "hover:border-primary/20 hover:bg-accent/50 hover:text-foreground",
+                  )}
+                >
+                  {t2 === "view" && <Eye style={tabIconStyle} />}
+                  {t2 === "translate" && <Languages style={tabIconStyle} />}
+                  {t2 === "ai" && <Brain style={tabIconStyle} />}
+                  {t(`detail.tab${t2.charAt(0).toUpperCase() + t2.slice(1)}`)}
+                </button>
+              ))}
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <div className="min-w-0 max-w-[40%] flex-[0_1_10rem]">
-              <SourceBadge
-                sourceApp={entry.source_app}
-                sourceUrl={entry.source_url}
-                sourceIcon={entry.source_icon}
-                className="meta-pill w-full px-2 py-1"
-                textClassName="text-2xs"
-              />
-            </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <SourceBadge
+              sourceApp={entry.source_app}
+              sourceUrl={entry.source_url}
+              sourceIcon={entry.source_icon}
+              className="meta-pill min-w-0 max-w-[200px] px-2.5 py-1"
+              textClassName="text-xs2"
+              iconClassName="!h-[18px] !w-[18px]"
+            />
             {hasText && (
-              <div className="surface-panel flex items-center gap-1 rounded-full px-1 py-1">
+              <div className="surface-panel flex items-center gap-0.5 rounded-full px-1 py-0.5">
                 <HintIconButton
                   onClick={handleCopy}
                   label={copied ? t("detail.copied") : t("detail.copy")}
                   className={cn(
-                    "entry-action p-0 text-muted-foreground hover:text-foreground",
-                    copied && "text-green-400"
+                    "filter-pill min-h-0 p-1.5 transition-colors text-muted-foreground hover:text-foreground",
+                    copied && "text-green-400",
                   )}
                 >
-                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? (
+                    <Check className="w-3 h-3" />
+                  ) : (
+                    <Copy className="w-3 h-3" />
+                  )}
                 </HintIconButton>
                 <HintIconButton
                   onClick={handlePaste}
                   label={t("detail.paste")}
-                  className="entry-action p-0 text-muted-foreground hover:text-foreground"
+                  className="filter-pill min-h-0 p-1.5 transition-colors text-muted-foreground hover:text-foreground"
                 >
-                  <ClipboardPaste className="w-3.5 h-3.5" />
+                  <ClipboardPaste className="w-3 h-3" />
                 </HintIconButton>
               </div>
             )}
@@ -289,39 +313,45 @@ export function DetailPage() {
 
       <div className="flex-1 min-h-0 overflow-hidden px-3 pb-3 pt-2">
         <div className="surface-panel h-full overflow-hidden rounded-[1.2rem]">
-        {tab === "view" && (
-          <ViewTab
-            key={`${entry.id}-${richTextDetailMode}`}
-            entry={entry}
-            isEditing={isEditing}
-            editText={editText}
-            saving={saving}
-            defaultRenderMode={richTextDetailMode}
-            onEditTextChange={setEditText}
-            onStartEdit={() => { setIsEditing(true); setEditText(entry.text_content || ""); }}
-            onCancelEdit={() => { setIsEditing(false); setEditText(entry.text_content || ""); }}
-            onSave={handleSave}
-          />
-        )}
-        {tab === "translate" && (
-          <TranslateTab
-            text={entry.text_content || ""}
-            canTranslate={canTranslate}
-            hasTranslateEngine={hasTranslateEngine}
-            hasAi={hasAi}
-            translateUsesAiByDefault={translateUsesAiByDefault}
-            onOpenSettings={() => openSettingsWindow("translate")}
-          />
-        )}
-        {tab === "ai" && (
-          <AiTab
-            entry={entry}
-            summarizing={summarizing}
-            hasAi={hasAi}
-            onOpenSettings={() => openSettingsWindow("ai")}
-            onSummarize={handleSummarize}
-          />
-        )}
+          {tab === "view" && (
+            <ViewTab
+              key={`${entry.id}-${richTextDetailMode}`}
+              entry={entry}
+              isEditing={isEditing}
+              editText={editText}
+              saving={saving}
+              defaultRenderMode={richTextDetailMode}
+              onEditTextChange={setEditText}
+              onStartEdit={() => {
+                setIsEditing(true);
+                setEditText(entry.text_content || "");
+              }}
+              onCancelEdit={() => {
+                setIsEditing(false);
+                setEditText(entry.text_content || "");
+              }}
+              onSave={handleSave}
+            />
+          )}
+          {tab === "translate" && (
+            <TranslateTab
+              text={entry.text_content || ""}
+              canTranslate={canTranslate}
+              hasTranslateEngine={hasTranslateEngine}
+              hasAi={hasAi}
+              translateUsesAiByDefault={translateUsesAiByDefault}
+              onOpenSettings={() => openSettingsWindow("translate")}
+            />
+          )}
+          {tab === "ai" && (
+            <AiTab
+              entry={entry}
+              summarizing={summarizing}
+              hasAi={hasAi}
+              onOpenSettings={() => openSettingsWindow("ai")}
+              onSummarize={handleSummarize}
+            />
+          )}
         </div>
       </div>
     </div>
@@ -329,6 +359,8 @@ export function DetailPage() {
 }
 
 /* ─── View Tab ─── */
+
+type ViewLayout = "editor" | "split" | "preview";
 
 function ViewTab({
   entry,
@@ -352,22 +384,38 @@ function ViewTab({
   onSave: () => void;
 }) {
   const { t } = useTranslation();
-  const hasText = entry.content_type === "PlainText" || entry.content_type === "RichText";
-  const isRichText = entry.content_type === "RichText" && !!entry.html_content;
-  const [viewMode, setViewMode] = useState<"rendered" | "source">(isRichText ? "rendered" : "source");
-  const [renderMode, setRenderMode] = useState<RichTextDetailMode>(defaultRenderMode);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const hasText =
+    entry.content_type === "PlainText" || entry.content_type === "RichText";
+  const [renderMode, setRenderMode] =
+    useState<RichTextDetailMode>(defaultRenderMode);
+  const [layout, setLayout] = useState<ViewLayout>("preview");
+  const [editHtml, setEditHtml] = useState(entry.html_content || "");
+
+  const contentMode: ContentMode = useMemo(
+    () =>
+      detectContentMode(
+        entry.content_type,
+        entry.text_content,
+        entry.html_content,
+        entry.detected_language,
+      ),
+    [
+      entry.content_type,
+      entry.text_content,
+      entry.html_content,
+      entry.detected_language,
+    ],
+  );
+
+  const cmLanguage = useMemo(
+    () => mapLanguageToCodemirror(entry.detected_language),
+    [entry.detected_language],
+  );
 
   const sanitizedHtml = useMemo(() => {
     if (!entry.html_content) return "";
     return sanitizeDetailHtml(entry.html_content, renderMode);
   }, [entry.html_content, renderMode]);
-
-  useEffect(() => {
-    if (isEditing && textareaRef.current) {
-      textareaRef.current.focus();
-    }
-  }, [isEditing]);
 
   // Ctrl+S to save when editing
   useEffect(() => {
@@ -382,43 +430,204 @@ function ViewTab({
     return () => window.removeEventListener("keydown", handleKey);
   }, [isEditing, onSave]);
 
+  /* ── Render helpers ── */
+
+  const renderPreview = () => {
+    if (contentMode === "richtext") {
+      return (
+        <div
+          className={cn(
+            "rich-text-content h-full overflow-y-auto p-4 text-sm2 leading-relaxed text-foreground",
+            renderMode === "full"
+              ? "rich-text-content--detail-full"
+              : "rich-text-content--detail-clean",
+          )}
+          dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+          onClick={(e) => {
+            const anchor = (e.target as HTMLElement).closest("a");
+            if (anchor) {
+              e.preventDefault();
+              const href = anchor.getAttribute("href");
+              if (href && /^https?:\/\//i.test(href))
+                openUrl(href).catch(() => {});
+            }
+          }}
+        />
+      );
+    }
+    if (contentMode === "markdown") {
+      return (
+        <div className="h-full overflow-y-auto p-4">
+          <MarkdownPreview content={entry.text_content || ""} />
+        </div>
+      );
+    }
+    // code or plaintext — read-only CodeMirror
+    return (
+      <CodeEditor
+        value={entry.text_content || ""}
+        language={cmLanguage}
+        readOnly
+        className="h-full"
+      />
+    );
+  };
+
+  const renderEditor = () => {
+    if (contentMode === "richtext" || contentMode === "plaintext") {
+      return (
+        <RichEditor
+          content={contentMode === "richtext" ? editHtml : editText}
+          onChange={contentMode === "richtext" ? setEditHtml : onEditTextChange}
+          onSave={onSave}
+          className="h-full"
+        />
+      );
+    }
+    return (
+      <CodeEditor
+        value={editText}
+        language={contentMode === "markdown" ? "markdown" : cmLanguage}
+        onChange={onEditTextChange}
+        onSave={onSave}
+        className="h-full"
+      />
+    );
+  };
+
+  const renderEditingPreview = () => {
+    if (contentMode === "richtext") {
+      const html = sanitizeDetailHtml(editHtml, renderMode);
+      return (
+        <div
+          className={cn(
+            "rich-text-content h-full overflow-y-auto p-4 text-sm2 leading-relaxed text-foreground",
+            renderMode === "full"
+              ? "rich-text-content--detail-full"
+              : "rich-text-content--detail-clean",
+          )}
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      );
+    }
+    if (contentMode === "markdown") {
+      return (
+        <div className="h-full overflow-y-auto p-4">
+          <MarkdownPreview content={editText} />
+        </div>
+      );
+    }
+    return (
+      <CodeEditor
+        value={editText}
+        language={cmLanguage}
+        readOnly
+        className="h-full"
+      />
+    );
+  };
+
+  const renderContent = () => {
+    if (!isEditing) return renderPreview();
+
+    // Code mode always uses editor directly (no split/preview)
+    if (contentMode === "code") return renderEditor();
+
+    switch (layout) {
+      case "editor":
+        return renderEditor();
+      case "split":
+        return (
+          <SplitView left={renderEditor()} right={renderEditingPreview()} />
+        );
+      case "preview":
+        return renderEditingPreview();
+    }
+  };
+
+  /* ── Layout ── */
+
+  const contentModeLabel =
+    contentMode === "richtext"
+      ? "Rich Text"
+      : contentMode === "markdown"
+        ? "Markdown"
+        : contentMode === "code"
+          ? "Code"
+          : "Text";
+
   return (
     <div className="flex flex-col h-full">
       {hasText && (
-        <div className="tab-shell flex items-center justify-between px-3 py-2 shrink-0">
-        <div className="flex items-center gap-2">
-            {isRichText && !isEditing && (
-              <>
-                <button
-                  onClick={() => setViewMode(viewMode === "rendered" ? "source" : "rendered")}
-                  className="filter-pill flex items-center gap-1 px-3 text-2xs font-medium text-violet-400 transition-colors hover:bg-violet-400/10"
-                >
-                  {viewMode === "rendered" ? <Code className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                  {viewMode === "rendered" ? t("viewer.viewSource") : t("viewer.viewRendered")}
-                </button>
-                {viewMode === "rendered" && (
-                  <div className="surface-panel flex items-center gap-1 rounded-full px-1 py-1">
-                    {(["clean", "full"] as const).map((mode) => (
-                      <button
-                        key={mode}
-                        onClick={() => setRenderMode(mode)}
-                        data-active={renderMode === mode}
-                        className={cn(
-                          "filter-pill min-h-0 px-3 py-1 text-2xs font-medium transition-colors",
-                          renderMode === mode
-                            ? "text-foreground"
-                            : "hover:border-primary/20 hover:bg-accent/50 hover:text-foreground",
-                        )}
-                      >
-                        {t(`settings.richText.detailModes.${mode}.label`)}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
+        <div className="tab-shell flex items-center justify-between px-3 py-1.5 shrink-0">
+          <div className="flex items-center gap-1.5">
+            {/* Content mode badge */}
+            <span className="meta-pill inline-flex items-center px-2.5 py-1 text-xs2 font-medium text-muted-foreground/70">
+              {contentModeLabel}
+            </span>
+
+            {/* RichText render mode toggle (clean/full) */}
+            {contentMode === "richtext" &&
+              !(isEditing && layout === "editor") && (
+                <div className="surface-panel flex items-center gap-0.5 rounded-full px-1 py-0.5">
+                  {(["clean", "full"] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => setRenderMode(mode)}
+                      data-active={renderMode === mode}
+                      className={cn(
+                        "filter-pill min-h-0 px-2.5 py-1 text-2xs font-medium transition-colors",
+                        renderMode === mode
+                          ? "text-foreground"
+                          : "hover:border-primary/20 hover:bg-accent/50 hover:text-foreground",
+                      )}
+                    >
+                      {t(`settings.richText.detailModes.${mode}.label`)}
+                    </button>
+                  ))}
+                </div>
+              )}
           </div>
+
           <div className="flex items-center gap-1">
+            {/* Layout toggle — only when editing non-code content */}
+            {isEditing && contentMode !== "code" && (
+              <div className="surface-panel flex items-center gap-0.5 rounded-full px-1 py-0.5 mr-1">
+                {[
+                  {
+                    key: "editor" as ViewLayout,
+                    icon: PanelLeft,
+                    label: t("detail.editorOnly"),
+                  },
+                  {
+                    key: "split" as ViewLayout,
+                    icon: Columns2,
+                    label: t("detail.splitView"),
+                  },
+                  {
+                    key: "preview" as ViewLayout,
+                    icon: PanelRight,
+                    label: t("detail.previewOnly"),
+                  },
+                ].map(({ key, icon: Icon, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setLayout(key)}
+                    data-active={layout === key}
+                    title={label}
+                    className={cn(
+                      "filter-pill min-h-0 p-1.5 transition-colors",
+                      layout === key
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
+                    )}
+                  >
+                    <Icon className="w-3 h-3" />
+                  </button>
+                ))}
+              </div>
+            )}
+
             {isEditing ? (
               <>
                 <button
@@ -433,7 +642,11 @@ function ViewTab({
                   disabled={saving}
                   className="filter-pill flex items-center gap-1 border-primary/60 bg-primary px-3 text-2xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
                 >
-                  {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                  {saving ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Save className="w-3 h-3" />
+                  )}
                   {t("detail.save")}
                 </button>
               </>
@@ -450,43 +663,14 @@ function ViewTab({
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto p-4">
-        {isEditing ? (
-          <textarea
-            ref={textareaRef}
-            value={editText}
-            onChange={(e) => onEditTextChange(e.target.value)}
-            className="h-full min-h-[200px] w-full rounded-[1rem] border border-border/60 bg-card/85 p-3 text-sm2 leading-relaxed text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary/30"
-          />
-        ) : hasText ? (
-          isRichText && viewMode === "rendered" ? (
-            <div
-              className={cn(
-                "rich-text-content rounded-[1rem] border border-border/50 bg-card/72 p-4 text-sm2 leading-relaxed text-foreground",
-                renderMode === "full"
-                  ? "rich-text-content--detail-full"
-                  : "rich-text-content--detail-clean",
-              )}
-              dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
-              onClick={(e) => {
-                const anchor = (e.target as HTMLElement).closest("a");
-                if (anchor) {
-                  e.preventDefault();
-                  const href = anchor.getAttribute("href");
-                  if (href && /^https?:\/\//i.test(href)) {
-                    openUrl(href).catch(() => {});
-                  }
-                }
-              }}
-            />
-          ) : (
-            <pre className="rounded-[1rem] border border-border/50 bg-card/72 p-4 text-sm2 leading-relaxed whitespace-pre-wrap break-all text-foreground">
-              {entry.text_content}
-            </pre>
-          )
+      <div className="flex-1 min-h-0 overflow-hidden">
+        {hasText ? (
+          renderContent()
         ) : (
-          <div className="rounded-[1rem] border border-border/50 bg-card/72 p-4 text-sm2 text-muted-foreground">
-            {entry.content_type === "Image" ? "Image content" : entry.content_type}
+          <div className="flex items-center justify-center h-full p-4 text-sm2 text-muted-foreground">
+            {entry.content_type === "Image"
+              ? "Image content"
+              : entry.content_type}
           </div>
         )}
       </div>
@@ -494,15 +678,23 @@ function ViewTab({
       <div className="tab-shell flex items-center gap-2 px-3 py-2 text-2xs text-muted-foreground/70 shrink-0">
         <span className="meta-pill px-2 py-0.5">{entry.content_type}</span>
         {entry.content_category && entry.content_category !== "General" && (
-          <span className="meta-pill px-2 py-0.5 text-blue-400">{entry.content_category}</span>
+          <span className="meta-pill px-2 py-0.5 text-blue-400">
+            {entry.content_category}
+          </span>
         )}
         {entry.detected_language && (
-          <span className="meta-pill px-2 py-0.5 text-emerald-400">{entry.detected_language}</span>
+          <span className="meta-pill px-2 py-0.5 text-emerald-400">
+            {entry.detected_language}
+          </span>
         )}
         {entry.text_content && (
-          <span className="meta-pill px-2 py-0.5">{entry.text_content.length} chars</span>
+          <span className="meta-pill px-2 py-0.5">
+            {entry.text_content.length} chars
+          </span>
         )}
-        <span className="meta-pill px-2 py-0.5">{new Date(entry.created_at).toLocaleString()}</span>
+        <span className="meta-pill px-2 py-0.5">
+          {new Date(entry.created_at).toLocaleString()}
+        </span>
       </div>
     </div>
   );
@@ -526,7 +718,9 @@ function SettingsHintPanel({
       <div className="surface-panel w-full max-w-sm rounded-[1.2rem] px-5 py-6 text-center">
         <div className="space-y-1.5">
           <p className="text-sm2 font-medium text-foreground">{title}</p>
-          <p className="text-xs2 leading-relaxed text-muted-foreground">{description}</p>
+          <p className="text-xs2 leading-relaxed text-muted-foreground">
+            {description}
+          </p>
         </div>
         <button
           onClick={onOpenSettings}
@@ -661,7 +855,7 @@ function TranslateTab({
             "entry-action shrink-0 p-0 transition-colors",
             fromLang === "auto"
               ? "text-muted-foreground/30 cursor-not-allowed"
-              : "text-muted-foreground hover:text-primary hover:bg-primary/10"
+              : "text-muted-foreground hover:text-primary hover:bg-primary/10",
           )}
         >
           <ArrowRightLeft className="w-3 h-3" />
@@ -686,7 +880,7 @@ function TranslateTab({
             "filter-pill shrink-0 flex items-center gap-1 px-3 text-xs2 font-medium transition-colors",
             loading
               ? "bg-muted/50 text-muted-foreground cursor-not-allowed"
-              : "bg-primary/15 text-primary hover:bg-primary/25"
+              : "bg-primary/15 text-primary hover:bg-primary/25",
           )}
         >
           <RotateCcw className={cn("w-2.5 h-2.5", loading && "animate-spin")} />
@@ -699,7 +893,7 @@ function TranslateTab({
               "filter-pill shrink-0 flex items-center gap-1 px-3 text-xs2 font-medium transition-colors",
               useAi
                 ? "bg-primary text-primary-foreground"
-                : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
+                : "bg-muted/30 text-muted-foreground hover:bg-muted/50",
             )}
             title="AI"
           >
@@ -762,10 +956,14 @@ function TranslateTab({
                   "filter-pill flex items-center gap-1 px-3 text-xs2 font-medium transition-all",
                   copied
                     ? "bg-green-500/15 text-green-400"
-                    : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                    : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                 )}
               >
-                {copied ? <Check className="w-2.5 h-2.5" /> : <Copy className="w-2.5 h-2.5" />}
+                {copied ? (
+                  <Check className="w-2.5 h-2.5" />
+                ) : (
+                  <Copy className="w-2.5 h-2.5" />
+                )}
                 {copied ? t("translate.copied") : t("translate.copyResult")}
               </button>
               <button
@@ -830,7 +1028,7 @@ function AiTab({
             className={cn(
               "filter-pill flex items-center gap-1 px-3 text-2xs font-medium transition-colors",
               "bg-primary/15 text-primary hover:bg-primary/25",
-              "disabled:opacity-50 disabled:cursor-not-allowed"
+              "disabled:opacity-50 disabled:cursor-not-allowed",
             )}
           >
             {summarizing ? (

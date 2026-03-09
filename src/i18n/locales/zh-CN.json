@@ -460,7 +460,15 @@
     "generating": "正在生成...",
     "summaryConfigRequired": "请先配置 AI 功能",
     "summaryConfigHint": "当前没有可用的 AI 配置，无法生成摘要。前往设置后完成配置即可使用。",
-    "openAiSettings": "去配置 AI"
+    "openAiSettings": "去配置 AI",
+    "editorOnly": "编辑器",
+    "splitView": "分屏",
+    "previewOnly": "预览",
+    "wordWrap": "自动换行",
+    "lineNumbers": "行号",
+    "detectedAs": "识别为",
+    "fontSizeDown": "缩小字体",
+    "fontSizeUp": "放大字体"
   },
   "imageViewer": {
     "title": "图片预览",
