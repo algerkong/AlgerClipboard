@@ -3,6 +3,7 @@ import { create } from "zustand";
 import type { ClipboardEntry, ContentType, TagSummary } from "@/types";
 import {
   getClipboardHistory,
+  getEntryCount,
   deleteEntries as deleteEntriesApi,
   toggleFavorite as toggleFavoriteApi,
   togglePin as togglePinApi,
@@ -17,6 +18,7 @@ import {
 
 interface ClipboardState {
   entries: ClipboardEntry[];
+  totalCount: number;
   selectedId: string | null;
   loading: boolean;
   typeFilter: ContentType | null;
@@ -59,6 +61,7 @@ interface TagChangeEvent {
 
 export const useClipboardStore = create<ClipboardState>((set, get) => ({
   entries: [],
+  totalCount: 0,
   selectedId: null,
   loading: false,
   typeFilter: null,
@@ -73,15 +76,18 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
     set({ loading: true });
     try {
       const state = get();
-      const entries = await getClipboardHistory({
-        limit: 200,
-        offset: 0,
-        type_filter: state.typeFilter ?? undefined,
-        keyword: state.keyword || undefined,
-        tag_filter: state.tagFilter ?? undefined,
-        tagged_only: state.showTagPanel && !state.tagFilter,
-      });
-      set({ entries, loading: false });
+      const [entries, totalCount] = await Promise.all([
+        getClipboardHistory({
+          limit: 200,
+          offset: 0,
+          type_filter: state.typeFilter ?? undefined,
+          keyword: state.keyword || undefined,
+          tag_filter: state.tagFilter ?? undefined,
+          tagged_only: state.showTagPanel && !state.tagFilter,
+        }),
+        getEntryCount(),
+      ]);
+      set({ entries, totalCount, loading: false });
     } catch (err) {
       console.error("Failed to fetch clipboard history:", err);
       set({ loading: false });
@@ -140,6 +146,7 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
       await deleteEntriesApi(ids);
       set((state) => ({
         entries: state.entries.filter((e) => !ids.includes(e.id)),
+        totalCount: Math.max(0, state.totalCount - ids.length),
         selectedId:
           state.selectedId && ids.includes(state.selectedId)
             ? null
@@ -156,7 +163,11 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
       const filtered = state.entries.filter(
         (e) => e.content_hash !== entry.content_hash
       );
-      return { entries: [entry, ...filtered] };
+      const existed = filtered.length !== state.entries.length;
+      return {
+        entries: [entry, ...filtered],
+        totalCount: existed ? state.totalCount : state.totalCount + 1,
+      };
     });
   },
 
@@ -299,6 +310,11 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
     get().fetchHistory();
   },
 }));
+
+// Refresh list when an entry is edited in the detail window
+listen<string>("entry-updated", () => {
+  void useClipboardStore.getState().fetchHistory();
+}).catch(() => {});
 
 listen<TagChangeEvent>("tags-changed", (event) => {
   const state = useClipboardStore.getState();

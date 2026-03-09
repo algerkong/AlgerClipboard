@@ -25,6 +25,7 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
   const { t } = useTranslation();
   const platform = usePlatform();
   const entries = useClipboardStore((s) => s.entries);
+  const totalCount = useClipboardStore((s) => s.totalCount);
   const loading = useClipboardStore((s) => s.loading);
   const typeFilter = useClipboardStore((s) => s.typeFilter);
   const keyword = useClipboardStore((s) => s.keyword);
@@ -254,7 +255,7 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
       </div>
 
       <div className="status-bar-panel flex shrink-0 items-center justify-between px-4 py-1.5 text-xs2 text-muted-foreground/80">
-        <span>{t("clipboardPanel.items", { count: displayEntries.length })}</span>
+        <span>{t("clipboardPanel.items", { count: totalCount })}</span>
         <span>{t("clipboardPanel.pasteHint")}</span>
       </div>
     </div>
