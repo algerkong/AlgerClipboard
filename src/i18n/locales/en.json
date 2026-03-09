@@ -460,7 +460,15 @@
     "generating": "Generating...",
     "summaryConfigRequired": "Configure AI first",
     "summaryConfigHint": "No usable AI configuration is available right now. Open Settings to finish AI setup before generating summaries.",
-    "openAiSettings": "Configure AI"
+    "openAiSettings": "Configure AI",
+    "editorOnly": "Editor",
+    "splitView": "Split",
+    "previewOnly": "Preview",
+    "wordWrap": "Word Wrap",
+    "lineNumbers": "Lines",
+    "detectedAs": "Detected as",
+    "fontSizeDown": "Decrease Font Size",
+    "fontSizeUp": "Increase Font Size"
   },
   "imageViewer": {
     "title": "Image Preview",

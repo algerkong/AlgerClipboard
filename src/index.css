@@ -145,6 +145,7 @@
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -651,3 +652,19 @@ body {
   background: oklch(0.6 0.18 250 / 0.4);
   color: transparent;
 }
+
+/* Markdown Preview Typography */
+.markdown-preview h1 { @apply text-xl font-bold mt-6 mb-3 pb-2 border-b border-border/30; }
+.markdown-preview h2 { @apply text-lg font-semibold mt-5 mb-2 pb-1.5 border-b border-border/20; }
+.markdown-preview h3 { @apply text-base font-semibold mt-4 mb-2; }
+.markdown-preview h4 { @apply text-sm font-semibold mt-3 mb-1; }
+.markdown-preview h5, .markdown-preview h6 { @apply text-sm font-medium mt-3 mb-1 text-muted-foreground; }
+.markdown-preview p { @apply my-2; }
+.markdown-preview ul { @apply my-2 ml-5 list-disc; }
+.markdown-preview ol { @apply my-2 ml-5 list-decimal; }
+.markdown-preview li { @apply my-0.5; }
+.markdown-preview li > ul, .markdown-preview li > ol { @apply my-0; }
+.markdown-preview img { @apply my-3 max-w-full rounded-lg; }
+.markdown-preview strong { @apply font-semibold; }
+.markdown-preview em { @apply italic; }
+.markdown-preview del { @apply line-through text-muted-foreground; }
