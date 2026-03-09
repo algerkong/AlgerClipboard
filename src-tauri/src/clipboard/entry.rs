@@ -81,4 +81,5 @@ pub struct ClipboardEntry {
     pub ai_summary: Option<String>,
     pub content_category: Option<String>,
     pub detected_language: Option<String>,
+    pub file_meta: Option<String>,
 }

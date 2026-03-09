@@ -24,6 +24,7 @@ export interface ClipboardEntry {
   ai_summary: string | null;
   content_category: string | null;
   detected_language: string | null;
+  file_meta: string | null;
 }
 
 export interface HistoryQuery {
@@ -110,6 +111,40 @@ export interface OcrResult {
   lines: OcrTextLine[];
   image_width: number;
   image_height: number;
+}
+
+export type FileType = "Image" | "Video" | "Audio" | "Document" | "Archive" | "Code" | "Executable" | "Font" | "Data" | "Other";
+
+export interface FileMeta {
+  path: string;
+  name: string;
+  extension: string | null;
+  size: number;
+  is_dir: boolean;
+  modified: number | null;
+  file_type: FileType;
+  child_count: number | null;
+}
+
+export interface FilePreview {
+  content: string;
+  size: number;
+  truncated: boolean;
+}
+
+export interface DirTreeNode {
+  name: string;
+  path: string;
+  is_dir: boolean;
+  size: number;
+  children: DirTreeNode[] | null;
+}
+
+export interface ArchiveEntry {
+  name: string;
+  size: number;
+  compressed_size: number;
+  is_dir: boolean;
 }
 
 export interface Template {
