@@ -1,5 +1,91 @@
 # Changelog
 
+## [1.6.0] - 2026-03-09
+
+### New Features
+
+- **Ask AI Panel**: Built-in AI assistant panel with multi-service WebView integration
+  - **Multi-Service Tabs**: Browser-style tab bar supporting ChatGPT, Claude, Gemini, DeepSeek, Kimi, Doubao, Tongyi Qwen, and more
+  - **One-Click Ask AI**: Sparkle button on each clipboard entry to instantly send content to any AI service with customizable presets
+  - **Preset System**: Built-in presets (Summarize, Translate, Explain Code, etc.) with custom prompt support and icons
+  - **Auto-Fill & Submit**: Injection scripts auto-fill prompts into AI service input fields and optionally auto-submit
+  - **Per-Service Session Isolation**: Each AI service runs in an isolated WebView with separate cookies/sessions
+  - **Favicon Support**: Auto-fetched service favicons with local caching
+  - **Ask AI Settings Tab**: Enable/disable services, reorder tabs, manage presets from settings
+- **Detail Page Redesign**: Completely rebuilt detail page with rich editing and rendering
+  - **CodeMirror 6 Editor**: Full-featured code editor with syntax highlighting for 12+ languages, line numbers, bracket matching, code folding, and active line highlight
+  - **Editor Toolbar**: Font size control (11–20px), line number toggle, word wrap toggle — all dynamically reconfigurable without losing editor state
+  - **TipTap 2 Rich Text Editor**: WYSIWYG editor for rich text and plain text editing with formatting toolbar (bold, italic, underline, lists, tables, code blocks, links, etc.)
+  - **Markdown Preview**: GitHub Flavored Markdown rendering with KaTeX math formulas, Shiki code block syntax highlighting, and Mermaid diagram support
+  - **Split View**: Draggable split layout for simultaneous editing and preview (editor-only / split / preview-only modes)
+  - **Smart Content Detection**: Automatic content type detection (code/markdown/richtext/plaintext) to select the appropriate editor and renderer
+- **Clipboard Source Tracking**: Show source app name, icon, and URL for each clipboard entry with clickable links
+- **Configurable Rich Text Rendering**: Choose between clean and full rendering modes for rich text content in detail view
+- **Tag Manager**: Full tag management with create, rename, delete operations and tag-based filtering
+- **Quick Paste Shortcuts**: Keyboard shortcuts for fast paste operations
+- **Window Size Persistence**: All windows (main, detail, settings, image viewer, Ask AI) now remember their size between sessions
+- **System Notifications**: Native OS notifications for app feedback (via tauri-plugin-notification)
+- **License**: Project license changed to GPL-3.0
+
+### Bug Fixes
+
+- **Clipboard list not updating after detail edit**: Fixed by emitting `entry-updated` event from Rust backend when text is saved
+- **Favicon URLs for Chinese AI services**: Fixed incorrect favicon paths for domestic services
+- **AI WebView window decorations**: Use native window decorations for better cross-platform compatibility
+- **macOS window chrome**: Unified toolbar styling with native mac window chrome
+- **Rust compilation warnings**: Fixed macOS-only function annotations, null pointer type, and dev-mode improvements
+
+### Improvements
+
+- **Translate & AI config flows**: Streamlined translation engine and AI provider configuration
+- **Sync backend adapters**: Refined WebDAV/Google Drive/OneDrive adapter implementations
+- **Paste and OCR backend**: Cleaned up paste simulation and OCR processing flow
+
+---
+
+## [1.6.0] - 2026-03-09 (中文)
+
+### 新功能
+
+- **Ask AI 面板**: 内置 AI 助手面板，多服务 WebView 集成
+  - **多服务标签页**: 浏览器风格标签栏，支持 ChatGPT、Claude、Gemini、DeepSeek、Kimi、豆包、通义千问等
+  - **一键问 AI**: 每条剪贴板记录上的闪光按钮，可将内容即时发送到任意 AI 服务，支持自定义预设
+  - **预设系统**: 内置预设（摘要、翻译、代码解释等），支持自定义提示词和图标
+  - **自动填充提交**: 注入脚本自动将提示词填入 AI 服务的输入框，可选自动提交
+  - **每服务独立会话**: 每个 AI 服务运行在隔离的 WebView 中，独立的 Cookie 和会话
+  - **Favicon 支持**: 自动获取服务图标并本地缓存
+  - **Ask AI 设置标签页**: 在设置中启用/禁用服务、调整顺序、管理预设
+- **详情页全面重构**: 全新的富文本编辑和渲染系统
+  - **CodeMirror 6 代码编辑器**: 支持 12+ 种语言语法高亮、行号、括号匹配、代码折叠、活动行高亮
+  - **编辑器工具栏**: 字体大小调节（11–20px）、行号显示/隐藏、自动换行开关 — 动态切换不丢失编辑状态
+  - **TipTap 2 富文本编辑器**: 所见即所得编辑器，支持格式工具栏（加粗、斜体、下划线、列表、表格、代码块、链接等），纯文本和富文本均可使用
+  - **Markdown 预览**: 支持 GFM 语法、KaTeX 数学公式、Shiki 代码块语法高亮、Mermaid 流程图渲染
+  - **分屏视图**: 可拖拽的分屏布局，支持编辑和预览同时显示（纯编辑器 / 分屏 / 纯预览三种模式）
+  - **智能内容检测**: 自动识别内容类型（代码/Markdown/富文本/纯文本），自动选择合适的编辑器和渲染器
+- **剪贴板来源追踪**: 显示每条记录的来源应用名称、图标和 URL，支持点击链接
+- **可配置富文本渲染**: 在详情视图中选择简洁或完整的富文本渲染模式
+- **标签管理器**: 完整的标签管理功能，支持创建、重命名、删除操作和基于标签的筛选
+- **快捷粘贴**: 快捷键快速粘贴操作
+- **窗口尺寸记忆**: 所有窗口（主窗口、详情、设置、图片查看器、Ask AI）均会记住用户调整的大小，下次打开时自动恢复
+- **系统通知**: 使用原生系统通知进行应用反馈（通过 tauri-plugin-notification）
+- **开源协议**: 项目许可证变更为 GPL-3.0
+
+### Bug 修复
+
+- **详情页编辑后列表不更新**: 通过 Rust 后端发出 `entry-updated` 事件，clipboardStore 监听后自动刷新
+- **国内 AI 服务图标 URL**: 修复国内服务的 favicon 路径错误
+- **AI WebView 窗口装饰**: 使用原生窗口装饰以提升跨平台兼容性
+- **macOS 窗口样式**: 统一工具栏样式与原生 macOS 窗口风格
+- **Rust 编译警告**: 修复 macOS 专用函数注解、空指针类型、开发模式改进
+
+### 改进
+
+- **翻译和 AI 配置流程**: 精简翻译引擎和 AI 服务商配置流程
+- **同步后端适配器**: 优化 WebDAV/Google Drive/OneDrive 适配器实现
+- **粘贴和 OCR 后端**: 清理粘贴模拟和 OCR 处理流程
+
+---
+
 ## [1.5.2] - 2026-03-07
 
 ### New Features
