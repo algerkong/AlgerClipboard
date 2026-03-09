@@ -16,8 +16,9 @@ import {
   Columns2,
   PanelRight,
 } from "lucide-react";
-import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useTranslation } from "react-i18next";
+import { usePreviewCloseShortcut } from "@/hooks/usePreviewCloseShortcut";
+import { CloseConfirmDialog } from "@/components/CloseConfirmDialog";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import {
@@ -166,21 +167,7 @@ export function DetailPage() {
     });
   }, []);
 
-  // Escape closes window
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (isEditing) {
-          setIsEditing(false);
-          setEditText(entry?.text_content || "");
-        } else {
-          getCurrentWebviewWindow().close();
-        }
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isEditing, entry]);
+  const { showConfirm, handleConfirmYes, handleConfirmNo, closeKey } = usePreviewCloseShortcut();
 
   const handleCopy = useCallback(async () => {
     if (!entry?.text_content) return;
@@ -354,6 +341,13 @@ export function DetailPage() {
           )}
         </div>
       </div>
+      {showConfirm && (
+        <CloseConfirmDialog
+          shortcutKey={closeKey}
+          onConfirm={handleConfirmYes}
+          onCancel={handleConfirmNo}
+        />
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { useTranslation } from "react-i18next";
 
@@ -17,11 +18,34 @@ export function SearchBar() {
   }, [keyword]);
 
   useEffect(() => {
-    inputRef.current?.focus();
+    const restoreFocus = () => {
+      const applyFocus = () => {
+        window.focus();
+        void getCurrentWebview().setFocus().catch(() => {});
+        inputRef.current?.focus();
+      };
+
+      applyFocus();
+      const timers = [32, 96, 180].map((delay) => window.setTimeout(applyFocus, delay));
+      return () => timers.forEach((timer) => window.clearTimeout(timer));
+    };
+
+    let clearPendingFocus = restoreFocus();
+
     const unlistenFocus = listen("tauri://focus", () => {
-      setTimeout(() => inputRef.current?.focus(), 50);
+      clearPendingFocus();
+      clearPendingFocus = restoreFocus();
     });
-    return () => { unlistenFocus.then((fn) => fn()); };
+    const unlistenMainWindowOpened = listen("main-window-opened", () => {
+      clearPendingFocus();
+      clearPendingFocus = restoreFocus();
+    });
+
+    return () => {
+      clearPendingFocus();
+      unlistenFocus.then((fn) => fn());
+      unlistenMainWindowOpened.then((fn) => fn());
+    };
   }, []);
 
   const handleChange = useCallback(

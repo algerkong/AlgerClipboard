@@ -12,6 +12,9 @@ import { EntryCard } from "@/components/EntryCard";
 import { TemplateQuickPicker } from "@/components/TemplateQuickPicker";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { pasteEntry } from "@/services/clipboardService";
+import { openImageViewer } from "@/services/imageViewerService";
+import { openFileViewer } from "@/services/fileViewerService";
+import { openDetailWindow } from "@/services/detailWindowService";
 import { useTranslation } from "react-i18next";
 import { toast } from "@/lib/toast";
 import { usePlatform } from "@/contexts/PlatformContext";
@@ -118,11 +121,13 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
 
       if (e.key === "ArrowDown") {
         e.preventDefault();
+        if (isEditableTarget(e.target)) (e.target as HTMLElement).blur();
         const next = Math.min(idx + 1, displayEntries.length - 1);
         selectEntry(displayEntries[next].id);
         virtuosoRef.current?.scrollIntoView({ index: next, behavior: "auto" });
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
+        if (isEditableTarget(e.target)) (e.target as HTMLElement).blur();
         const prev = Math.max(idx - 1, 0);
         selectEntry(displayEntries[prev].id);
         virtuosoRef.current?.scrollIntoView({ index: prev, behavior: "auto" });
@@ -131,6 +136,18 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
         pasteEntry(selectedId)
           .then(() => toast.success(t("toast.pasted")))
           .catch(() => toast.error(t("toast.pasteFailed")));
+      } else if (e.key === " " && selectedId) {
+        if (isEditableTarget(e.target)) return;
+        e.preventDefault();
+        const entry = displayEntries.find((en) => en.id === selectedId);
+        if (!entry) return;
+        if (entry.content_type === "Image" && entry.blob_path) {
+          openImageViewer(entry.blob_path);
+        } else if (entry.content_type === "FilePaths") {
+          openFileViewer(entry.id);
+        } else {
+          openDetailWindow(entry.id, "view");
+        }
       }
     };
 

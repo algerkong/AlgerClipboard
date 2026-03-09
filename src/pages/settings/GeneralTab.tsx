@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { toast } from "@/lib/toast";
 import { usePlatform } from "@/contexts/PlatformContext";
+import { invoke } from "@tauri-apps/api/core";
 import {
   Toggle,
   MODIFIER_KEYS,
@@ -65,6 +66,8 @@ export function GeneralTab() {
   const platform = usePlatform();
   const [isRecordingShortcut, setIsRecordingShortcut] = useState(false);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [previewCloseShortcut, setPreviewCloseShortcutState] = useState("Escape");
+  const [isRecordingCloseShortcut, setIsRecordingCloseShortcut] = useState(false);
 
   useEffect(() => {
     if (!isRecordingShortcut) {
@@ -105,6 +108,44 @@ export function GeneralTab() {
       window.removeEventListener("keydown", handleRecordShortcut, true);
     };
   }, [isRecordingShortcut, setToggleShortcut, t]);
+
+  useEffect(() => {
+    invoke<string | null>("get_settings", { key: "preview_close_shortcut" }).then((val) => {
+      if (val && val !== " " && !(val.length === 1 && /[a-zA-Z0-9]/.test(val))) {
+        setPreviewCloseShortcutState(val);
+      } else if (val) {
+        // Invalid saved key, reset to Escape
+        invoke("update_settings", { key: "preview_close_shortcut", value: "Escape" }).catch(() => {});
+      }
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!isRecordingCloseShortcut) return;
+    const handler = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // Allow Escape to cancel recording (unless current shortcut is already Escape)
+      if (e.key === "Escape" && previewCloseShortcut !== "Escape") {
+        setIsRecordingCloseShortcut(false);
+        return;
+      }
+      const key = e.key;
+      // Reject keys that conflict with text editing
+      if (key === " " || key.length === 1 && /[a-zA-Z0-9]/.test(key)) {
+        toast.error(t("settings.shortcutInvalid"));
+        setIsRecordingCloseShortcut(false);
+        return;
+      }
+      setIsRecordingCloseShortcut(false);
+      setPreviewCloseShortcutState(key);
+      invoke("update_settings", { key: "preview_close_shortcut", value: key })
+        .then(() => toast.success(t("settings.shortcutSaved")))
+        .catch(() => toast.error(t("settings.shortcutInvalid")));
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [isRecordingCloseShortcut, previewCloseShortcut, t]);
 
   const themes: { value: Theme; labelKey: string; icon: React.ReactNode }[] = [
     {
@@ -477,6 +518,55 @@ export function GeneralTab() {
         <p className="mt-1 text-xs2 text-muted-foreground/70">
           {t("settings.toggleShortcutDesc")}
         </p>
+      </section>
+
+      {/* Preview close shortcut */}
+      <section>
+        <div className="flex items-center justify-between">
+          <div>
+            <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
+              {t("preview.closeShortcut")}
+            </label>
+            <p className="mt-0.5 text-xs2 text-muted-foreground/70">
+              {t("preview.closeShortcutDesc")}
+            </p>
+          </div>
+          <button
+            onClick={() => setIsRecordingCloseShortcut(true)}
+            className={cn(
+              "rounded-lg border px-3 py-1.5 text-xs font-mono transition-colors",
+              isRecordingCloseShortcut
+                ? "border-primary bg-primary/10 text-primary animate-pulse"
+                : "border-border bg-card text-foreground hover:bg-accent"
+            )}
+          >
+            {isRecordingCloseShortcut ? t("settings.recording") : previewCloseShortcut}
+          </button>
+        </div>
+      </section>
+
+      {/* Reset close confirmation */}
+      <section>
+        <div className="flex items-center justify-between">
+          <div>
+            <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
+              {t("preview.resetConfirm")}
+            </label>
+            <p className="mt-0.5 text-xs2 text-muted-foreground/70">
+              {t("preview.resetConfirmDesc")}
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              invoke("update_settings", { key: "preview_close_confirmed", value: "false" })
+                .then(() => toast.success(t("preview.resetDone")))
+                .catch(() => {});
+            }}
+            className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-foreground transition-colors hover:bg-accent"
+          >
+            {t("preview.resetConfirm")}
+          </button>
+        </div>
       </section>
 
       {/* Auto check update */}
