@@ -49,30 +49,38 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* =========================================================
- *  Hero Typewriter
- *  Cycles through slogans with typing / deleting animation.
- *  Each slogan has [staticPart, dynamicPart].
- *  The static part appears instantly, the dynamic part is
- *  typed out character by character with a colored gradient,
- *  then after a pause the dynamic part is deleted and the
- *  next slogan begins.
+ *  Hero Typewriter — Two-line fixed layout
+ *
+ *  Layout:
+ *    Line 1 (static):  "为您记忆每一段"     ← fades on switch
+ *    Line 2 (typed):   "数字碎片。|"         ← typewriter + cursor
+ *
+ *  Flow per slogan:
+ *    1. Fade in static line + set color
+ *    2. Type dynamic text char by char
+ *    3. Pause to read
+ *    4. Delete dynamic text char by char
+ *    5. Fade out static line
+ *    6. Move to next slogan
+ *
+ *  No layout jumps because each line has a fixed min-height
+ *  and the typed line is always on its own row.
  * ========================================================= */
 function initHeroRotator() {
-    const container = document.getElementById('hero-typewriter');
-    if (!container) return;
+    const wrapper = document.getElementById('hero-typewriter');
+    if (!wrapper) return;
 
-    const staticEl = container.querySelector('.hero-typewriter-static');
-    const dynamicEl = container.querySelector('.hero-typewriter-dynamic');
-    const cursorEl = container.querySelector('.hero-typewriter-cursor');
+    const staticLine = wrapper.querySelector('.hero-line-static');
+    const typedText = wrapper.querySelector('.hero-typed-text');
+    const cursor = wrapper.querySelector('.hero-typed-cursor');
 
-    const TYPE_SPEED = 80;      // ms per character typing
-    const DELETE_SPEED = 40;    // ms per character deleting
-    const PAUSE_AFTER = 2200;   // ms to hold after fully typed
-    const PAUSE_BETWEEN = 400;  // ms pause between delete and next type
+    const TYPE_SPEED = 90;
+    const DELETE_SPEED = 45;
+    const PAUSE_AFTER = 2400;
+    const FADE_DURATION = 300;
 
     let slogans = [];
     let currentIndex = 0;
-    let rafId = null;
     let running = false;
 
     function getSlogans() {
@@ -83,35 +91,42 @@ function initHeroRotator() {
 
     function setColor(index) {
         const ci = index % 8;
-        // Update dynamic text color class
-        dynamicEl.className = 'hero-typewriter-dynamic hero-color-' + ci;
-        cursorEl.className = 'hero-typewriter-cursor hero-cursor-' + ci;
+        typedText.className = 'hero-typed-text hero-color-' + ci;
+        cursor.className = 'hero-typed-cursor hero-cursor-' + ci;
     }
 
     function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    // Render full text but hide untyped characters to prevent layout jumps
-    function renderPartial(text, visibleCount) {
-        const visible = text.slice(0, visibleCount);
-        const hidden = text.slice(visibleCount);
-        dynamicEl.innerHTML = visible +
-            (hidden ? '<span style="visibility:hidden">' + hidden + '</span>' : '');
+    async function fadeOutStatic() {
+        staticLine.classList.add('fade-out');
+        await sleep(FADE_DURATION);
     }
 
-    async function typeText(text) {
+    async function fadeInStatic(text) {
+        staticLine.textContent = text;
+        staticLine.classList.add('fade-out');
+        // Force reflow so the fade-out state is applied before removing
+        void staticLine.offsetHeight;
+        staticLine.classList.remove('fade-out');
+        await sleep(FADE_DURATION);
+    }
+
+    async function typeChars(text) {
+        typedText.textContent = '';
         for (let i = 0; i <= text.length; i++) {
             if (!running) return;
-            renderPartial(text, i);
+            typedText.textContent = text.slice(0, i);
             await sleep(TYPE_SPEED);
         }
     }
 
-    async function deleteText(text) {
+    async function deleteChars() {
+        const text = typedText.textContent;
         for (let i = text.length; i >= 0; i--) {
             if (!running) return;
-            renderPartial(text, i);
+            typedText.textContent = text.slice(0, i);
             await sleep(DELETE_SPEED);
         }
     }
@@ -119,31 +134,32 @@ function initHeroRotator() {
     async function loop() {
         running = true;
         while (running) {
-            const slogan = slogans[currentIndex];
-            const staticText = slogan[0];
-            const dynamicText = slogan[1];
+            const [staticText, dynamicText] = slogans[currentIndex];
 
+            // Set gradient color for this slogan
             setColor(currentIndex);
-            staticEl.textContent = staticText;
-            dynamicEl.textContent = '';
 
-            // Type the dynamic part
-            await typeText(dynamicText);
+            // Fade in the static line
+            await fadeInStatic(staticText);
             if (!running) return;
 
-            // Hold
+            // Type the dynamic (colored) part
+            await typeChars(dynamicText);
+            if (!running) return;
+
+            // Hold for reading
             await sleep(PAUSE_AFTER);
             if (!running) return;
 
-            // Delete dynamic part
-            await deleteText(dynamicText);
+            // Delete the dynamic part
+            await deleteChars();
             if (!running) return;
 
-            // Brief pause, then clear static and move on
-            await sleep(PAUSE_BETWEEN);
+            // Fade out the static line
+            await fadeOutStatic();
             if (!running) return;
 
-            staticEl.textContent = '';
+            // Next slogan
             currentIndex = (currentIndex + 1) % slogans.length;
         }
     }
@@ -153,6 +169,8 @@ function initHeroRotator() {
         slogans = getSlogans();
         if (!slogans.length) return;
         currentIndex = 0;
+        staticLine.textContent = '';
+        typedText.textContent = '';
         loop();
     }
 
@@ -160,11 +178,9 @@ function initHeroRotator() {
         running = false;
     }
 
-    // Public API for language switching
     window.heroRotator = {
         setLang() {
             stop();
-            // Small delay to let the async loop exit
             setTimeout(start, 100);
         }
     };
