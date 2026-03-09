@@ -219,28 +219,23 @@ body {
   background-clip: text;
 }
 
-/* Hero Typewriter — Fixed two-line layout */
+/* Hero Typewriter — inline layout, fixed container height */
 
-/* Line 1: static text, fades on switch */
-.hero-line-static {
-  min-height: 1.1em;
+.hero-title {
+  /* Lock height to prevent content below from jumping */
+  height: 2.2em;
+  overflow: hidden;
+}
+
+.hero-tw-static {
   transition: opacity 0.3s ease;
 }
 
-.hero-line-static.fade-out {
+.hero-tw-static.fade-out {
   opacity: 0;
 }
 
-/* Line 2: typed colored text + blinking cursor */
-.hero-line-typed {
-  min-height: 1.1em;
-  display: flex;
-  justify-content: center;
-  align-items: baseline;
-}
-
-.hero-typed-text {
-  display: inline;
+.hero-tw-dynamic {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -248,15 +243,14 @@ body {
   animation: gradientShift 3s ease infinite;
 }
 
-.hero-typed-cursor {
+.hero-tw-cursor {
   display: inline-block;
-  width: 3px;
-  height: 0.75em;
-  margin-left: 6px;
-  vertical-align: middle;
+  width: 4px;
+  height: 0.7em;
+  margin-left: 4px;
+  vertical-align: baseline;
   border-radius: 2px;
   animation: cursorBlink 0.75s step-end infinite;
-  flex-shrink: 0;
 }
 
 @keyframes cursorBlink {
@@ -337,39 +331,215 @@ body {
   transform: translateY(-2px);
 }
 
-/* App Showcase */
+/* App Showcase — 3D Perspective Stage */
 .app-showcase {
   position: relative;
   width: 100%;
-  max-width: 1000px;
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  background: #090909;
-  padding: 0.5rem;
-  box-shadow: 0 30px 100px -20px rgba(0, 0, 0, 0.8);
-}
-
-.app-mockup {
-  width: 100%;
-  height: auto;
-  border-radius: var(--radius-md);
-  display: block;
-  position: relative;
-  z-index: 2;
+  max-width: 1100px;
+  height: 600px;
+  margin: 0 auto;
 }
 
 .app-glow {
   position: absolute;
-  top: 50%;
+  top: 45%;
   left: 50%;
-  width: 80%;
-  height: 60%;
+  width: 90%;
+  height: 80%;
   transform: translate(-50%, -50%);
-  background: var(--accent-emerald);
-  filter: blur(150px);
-  opacity: 0.15;
-  z-index: 1;
+  background: radial-gradient(ellipse, var(--accent-emerald) 0%, rgba(102, 126, 234, 0.5) 50%, transparent 80%);
+  filter: blur(120px);
+  opacity: 0.1;
+  z-index: 0;
   pointer-events: none;
+}
+
+.app-gallery {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  perspective: 2000px;
+  transform-style: preserve-3d;
+}
+
+.app-card {
+  position: absolute;
+  border-radius: 20px;
+  overflow: visible;
+  background: linear-gradient(145deg, rgba(30, 30, 30, 0.9), rgba(15, 15, 15, 0.95));
+  padding: 6px;
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: default;
+  will-change: transform;
+  --parallax-x: 0px;
+  --parallax-y: 0px;
+  translate: var(--parallax-x) var(--parallax-y);
+}
+
+/* Glassmorphism border glow */
+.app-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.03) 40%,
+    rgba(0, 255, 163, 0.08) 60%,
+    rgba(255, 255, 255, 0.1) 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Reflection / bottom shine */
+.app-card::after {
+  content: '';
+  position: absolute;
+  bottom: -40%;
+  left: 10%;
+  width: 80%;
+  height: 40%;
+  background: inherit;
+  border-radius: 20px;
+  filter: blur(12px);
+  opacity: 0.04;
+  transform: scaleY(-0.3) scaleX(0.9);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.app-card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 14px;
+  position: relative;
+  z-index: 2;
+}
+
+/* Card 1 — Main clipboard (center-hero, largest) */
+.app-card-1 {
+  width: 270px;
+  height: 480px;
+  left: 50%;
+  top: 50%;
+  z-index: 5;
+  transform: translate(-50%, -50%) rotateY(0deg) scale(1);
+  box-shadow:
+    0 30px 80px -20px rgba(0, 0, 0, 0.8),
+    0 0 60px -10px rgba(0, 255, 163, 0.06);
+  animation: floatCenter 6s ease-in-out infinite;
+}
+
+/* Card 2 — AI menu (left, perspective-rotated) */
+.app-card-2 {
+  width: 230px;
+  height: 410px;
+  left: 4%;
+  top: 50%;
+  z-index: 3;
+  transform: translateY(-50%) rotateY(18deg) scale(0.88);
+  transform-origin: right center;
+  box-shadow:
+    0 25px 60px -15px rgba(0, 0, 0, 0.7),
+    -15px 0 40px -20px rgba(0, 255, 163, 0.04);
+  animation: floatLeft 7s ease-in-out infinite;
+}
+
+/* Card 3 — Dark theme (right, perspective-rotated) */
+.app-card-3 {
+  width: 230px;
+  height: 410px;
+  right: 4%;
+  top: 50%;
+  z-index: 3;
+  transform: translateY(-50%) rotateY(-18deg) scale(0.88);
+  transform-origin: left center;
+  box-shadow:
+    0 25px 60px -15px rgba(0, 0, 0, 0.7),
+    15px 0 40px -20px rgba(0, 255, 163, 0.04);
+  animation: floatRight 7s ease-in-out 0.5s infinite;
+}
+
+/* Card 4 — Settings (bottom-front, wider, overlapping) */
+.app-card-4 {
+  width: 380px;
+  height: 320px;
+  left: 50%;
+  bottom: -20px;
+  z-index: 6;
+  transform: translateX(-50%) rotateX(4deg) scale(0.95);
+  transform-origin: center top;
+  box-shadow:
+    0 40px 100px -25px rgba(0, 0, 0, 0.85),
+    0 0 40px -10px rgba(0, 255, 163, 0.05);
+  animation: floatBottom 8s ease-in-out 1s infinite;
+}
+
+/* Floating animations — subtle, staggered */
+@keyframes floatCenter {
+  0%, 100% { transform: translate(-50%, -50%) rotateY(0deg) scale(1); }
+  50%      { transform: translate(-50%, calc(-50% - 8px)) rotateY(0deg) scale(1); }
+}
+
+@keyframes floatLeft {
+  0%, 100% { transform: translateY(-50%) rotateY(18deg) scale(0.88); }
+  50%      { transform: translateY(calc(-50% - 10px)) rotateY(18deg) scale(0.88); }
+}
+
+@keyframes floatRight {
+  0%, 100% { transform: translateY(-50%) rotateY(-18deg) scale(0.88); }
+  50%      { transform: translateY(calc(-50% - 10px)) rotateY(-18deg) scale(0.88); }
+}
+
+@keyframes floatBottom {
+  0%, 100% { transform: translateX(-50%) rotateX(4deg) scale(0.95); }
+  50%      { transform: translateX(-50%) rotateX(4deg) scale(0.95) translateY(-6px); }
+}
+
+/* Hover — pop forward with glow */
+.app-card:hover {
+  z-index: 20 !important;
+  box-shadow:
+    0 40px 100px -20px rgba(0, 0, 0, 0.9),
+    0 0 80px -20px rgba(0, 255, 163, 0.15),
+    0 0 0 1px rgba(0, 255, 163, 0.2);
+  animation-play-state: paused;
+}
+
+.app-card-1:hover {
+  transform: translate(-50%, -55%) rotateY(0deg) scale(1.05);
+}
+
+.app-card-2:hover {
+  transform: translateY(-55%) rotateY(8deg) scale(0.95);
+}
+
+.app-card-3:hover {
+  transform: translateY(-55%) rotateY(-8deg) scale(0.95);
+}
+
+.app-card-4:hover {
+  transform: translateX(-50%) rotateX(0deg) scale(1.02) translateY(-10px);
+}
+
+/* Hover border glow intensify */
+.app-card:hover::before {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 255, 163, 0.3) 0%,
+    rgba(255, 255, 255, 0.05) 40%,
+    rgba(0, 255, 163, 0.15) 60%,
+    rgba(0, 255, 163, 0.25) 100%
+  );
+  transition: background 0.6s ease;
 }
 
 /* Features Section */
@@ -848,6 +1018,32 @@ body {
 
 /* Responsive adjustments */
 @media (max-width: 1024px) {
+  .app-showcase {
+    height: 480px;
+  }
+
+  .app-card-1 {
+    width: 220px;
+    height: 390px;
+  }
+
+  .app-card-2 {
+    width: 190px;
+    height: 340px;
+    left: 0%;
+  }
+
+  .app-card-3 {
+    width: 190px;
+    height: 340px;
+    right: 0%;
+  }
+
+  .app-card-4 {
+    width: 310px;
+    height: 260px;
+  }
+
   .detail-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -872,6 +1068,37 @@ body {
   .btn {
     width: 100%;
     justify-content: center;
+  }
+
+  .app-showcase {
+    height: 380px;
+  }
+
+  .app-card-1 {
+    width: 160px;
+    height: 285px;
+  }
+
+  .app-card-2 {
+    width: 140px;
+    height: 250px;
+    left: -2%;
+  }
+
+  .app-card-3 {
+    width: 140px;
+    height: 250px;
+    right: -2%;
+  }
+
+  .app-card-4 {
+    width: 240px;
+    height: 200px;
+  }
+
+  .app-card-2,
+  .app-card-3 {
+    transform: translateY(-50%) rotateY(0deg) scale(0.85);
   }
 
   .detail-grid {
