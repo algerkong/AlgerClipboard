@@ -350,9 +350,12 @@ pub fn open_in_explorer(path: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn update_entry_text(
+    app: AppHandle,
     db: State<'_, AppDatabase>,
     id: String,
     text: String,
 ) -> Result<(), String> {
-    db.0.update_entry_text(&id, &text)
+    db.0.update_entry_text(&id, &text)?;
+    let _ = app.emit("entry-updated", &id);
+    Ok(())
 }
