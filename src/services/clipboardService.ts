@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { ClipboardEntry, HistoryQuery, ClipboardStats, OcrResult, TagSummary } from "@/types";
+import type { ClipboardEntry, HistoryQuery, ClipboardStats, OcrResult, TagSummary, FilePreview, DirTreeNode, ArchiveEntry } from "@/types";
 
 export async function getClipboardHistory(
   query: HistoryQuery = {}
@@ -137,4 +137,32 @@ export async function openInExplorer(path: string): Promise<void> {
 
 export async function updateEntryText(id: string, text: string): Promise<void> {
   return invoke("update_entry_text", { id, text });
+}
+
+export async function readFilePreview(path: string, maxBytes?: number): Promise<FilePreview> {
+  return invoke("read_file_preview", { path, maxBytes });
+}
+
+export async function getDirectoryTree(path: string, maxDepth?: number): Promise<DirTreeNode> {
+  return invoke("get_directory_tree", { path, maxDepth });
+}
+
+export async function openFileDefault(path: string): Promise<void> {
+  return invoke("open_file_default", { path });
+}
+
+export async function openInFileExplorer(path: string): Promise<void> {
+  return invoke("open_in_file_explorer", { path });
+}
+
+export async function listArchiveContents(path: string): Promise<ArchiveEntry[]> {
+  return invoke("list_archive_contents", { path });
+}
+
+export async function checkPathsExist(paths: string[]): Promise<boolean[]> {
+  return invoke("check_paths_exist", { paths });
+}
+
+export async function ocrFromFilePath(path: string): Promise<OcrResult> {
+  return invoke("ocr_from_file_path", { path });
 }

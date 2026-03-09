@@ -11,7 +11,8 @@ use clipboard::monitor::ClipboardMonitor;
 use commands::clipboard_cmd::AppDatabase;
 use commands::paste_cmd::{AppBlobStore, AppPasteTargetState, PasteTargetSnapshot};
 use commands::settings_cmd::{
-    register_toggle_shortcut, remember_current_foreground_window, DEFAULT_TOGGLE_SHORTCUT,
+    register_toggle_shortcut, remember_current_foreground_window, show_and_focus_main_window,
+    DEFAULT_TOGGLE_SHORTCUT,
 };
 use std::sync::Arc;
 use storage::blob::BlobStore;
@@ -102,9 +103,7 @@ pub fn run() {
         builder = builder.plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             if let Some(win) = app.get_webview_window("main") {
                 remember_current_foreground_window(app);
-                let _ = app.emit("main-window-opened", serde_json::json!({}));
-                let _ = win.show();
-                let _ = win.set_focus();
+                show_and_focus_main_window(app, &win);
             }
         }));
     }
@@ -291,9 +290,7 @@ pub fn run() {
                         "quit" => app.exit(0),
                         "show" => {
                             remember_current_foreground_window(app);
-                            let _ = app.emit("main-window-opened", serde_json::json!({}));
-                            let _ = tray_window.show();
-                            let _ = tray_window.set_focus();
+                            show_and_focus_main_window(app, &tray_window);
                         }
                         _ => {}
                     },
@@ -308,9 +305,7 @@ pub fn run() {
                         let app = tray.app_handle();
                         if let Some(win) = app.get_webview_window("main") {
                             remember_current_foreground_window(&app);
-                            let _ = app.emit("main-window-opened", serde_json::json!({}));
-                            let _ = win.show();
-                            let _ = win.set_focus();
+                            show_and_focus_main_window(&app, &win);
                         }
                     }
                 })
@@ -383,6 +378,7 @@ pub fn run() {
             commands::settings_cmd::open_url,
             commands::settings_cmd::set_auto_start,
             commands::settings_cmd::get_auto_start,
+            commands::settings_cmd::focus_main_window,
             commands::paste_cmd::paste_entry,
             commands::template_cmd::get_templates,
             commands::template_cmd::create_template,
@@ -427,6 +423,14 @@ pub fn run() {
             commands::webview_cmd::hide_ai_webview,
             commands::webview_cmd::resize_ai_webview,
             commands::webview_cmd::bring_tab_bar_to_front,
+            commands::file_cmd::read_file_preview,
+            commands::file_cmd::get_directory_tree,
+            commands::file_cmd::open_file_default,
+            commands::file_cmd::open_in_file_explorer,
+            commands::file_cmd::collect_file_metas,
+            commands::file_cmd::list_archive_contents,
+            commands::file_cmd::check_paths_exist,
+            commands::file_cmd::ocr_from_file_path,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

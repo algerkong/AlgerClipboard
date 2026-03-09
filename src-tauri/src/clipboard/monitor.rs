@@ -1,6 +1,7 @@
 use crate::ai::classifier::classify_content;
 use crate::ai::language::detect_language;
 use crate::clipboard::entry::{ClipboardEntry, ContentType, SyncStatus};
+use crate::clipboard::file_meta;
 use crate::storage::blob::BlobStore;
 use crate::storage::database::{compute_hash, Database};
 use base64::Engine;
@@ -1588,6 +1589,35 @@ impl ClipboardMonitor {
                             Ok(None) => {
                                 let source = get_clipboard_source();
                                 let source_label = source.display_name();
+
+                                let file_metas = file_meta::collect_all_meta(&paths);
+                                let file_meta_json = if file_metas.is_empty() {
+                                    None
+                                } else {
+                                    serde_json::to_string(&file_metas).ok()
+                                };
+
+                                let mut thumb_path = None;
+                                if paths.len() == 1 {
+                                    if let Some(meta) = file_metas.first() {
+                                        if matches!(meta.file_type, file_meta::FileType::Image) {
+                                            if let Ok(img_data) = std::fs::read(&paths[0]) {
+                                                if let Ok(img) = image::load_from_memory(&img_data) {
+                                                    let thumb = img.thumbnail(200, 200);
+                                                    let mut thumb_bytes = Vec::new();
+                                                    let mut cursor = Cursor::new(&mut thumb_bytes);
+                                                    if thumb.write_to(&mut cursor, image::ImageFormat::Png).is_ok() {
+                                                        let thumb_id = uuid::Uuid::new_v4().to_string();
+                                                        if let Ok(rel) = blob_store.save_thumbnail(&thumb_id, &thumb_bytes) {
+                                                            thumb_path = Some(rel);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
                                 let now = chrono::Utc::now().to_rfc3339();
                                 let entry = ClipboardEntry {
                                     id: uuid::Uuid::new_v4().to_string(),
@@ -1595,7 +1625,7 @@ impl ClipboardMonitor {
                                     text_content: Some(joined),
                                     html_content: None,
                                     blob_path: None,
-                                    thumbnail_path: None,
+                                    thumbnail_path: thumb_path,
                                     content_hash: hash,
                                     source_app: source_label.clone(),
                                     source_url: source.url.clone(),
@@ -1612,6 +1642,7 @@ impl ClipboardMonitor {
                                     ai_summary: None,
                                     content_category: Some("FilePath".to_string()),
                                     detected_language: None,
+                                    file_meta: file_meta_json,
                                 };
 
                                 if let Err(e) = db.insert_entry(&entry) {
@@ -1720,6 +1751,7 @@ impl ClipboardMonitor {
                                         ai_summary: None,
                                         content_category: None,
                                         detected_language: None,
+                                        file_meta: None,
                                     };
 
                                     if let Err(e) = db.insert_entry(&entry) {
@@ -1827,6 +1859,7 @@ impl ClipboardMonitor {
                                                 ai_summary: None,
                                                 content_category: category_str,
                                                 detected_language: language,
+                                                file_meta: None,
                                             };
 
                                             if let Err(e) = db.insert_entry(&entry) {

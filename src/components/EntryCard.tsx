@@ -1,12 +1,14 @@
 import { memo, useCallback, useState, useEffect, useMemo, useRef } from "react";
-import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages, Pin, Eye, Copy, ClipboardPaste, Maximize2, Cloud, Upload, CloudAlert, Code, Tag, X, ExternalLink, Brain, Sparkles } from "lucide-react";
+import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages, Pin, Eye, Copy, ClipboardPaste, Maximize2, Cloud, Upload, CloudAlert, Code, Tag, X, ExternalLink, Brain, Sparkles, File, Video, Music, Archive, FileCode, FileType as FileTypeIcon, Folder } from "lucide-react";
 
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { useCapabilityStore } from "@/stores/capabilityStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { pasteEntry, getThumbnailBase64 } from "@/services/clipboardService";
 import { openUrl } from "@/services/settingsService";
-import type { ClipboardEntry } from "@/types";
+import type { ClipboardEntry, FileMeta } from "@/types";
+import { openFileViewer } from "@/services/fileViewerService";
+import { openInFileExplorer, openFileDefault } from "@/services/clipboardService";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { openImageViewer } from "@/services/imageViewerService";
@@ -29,7 +31,8 @@ function useImageSrc(entry: ClipboardEntry): string | null {
     : null;
 
   useEffect(() => {
-    if (entry.content_type !== "Image" || !path) return;
+    if (!path) return;
+    if (entry.content_type !== "Image" && entry.content_type !== "FilePaths") return;
     if (_thumbCache.has(path)) {
       return;
     }
@@ -57,19 +60,52 @@ function formatTimeAgo(dateStr: string): string {
   return `${d}d`;
 }
 
-function getPreview(entry: ClipboardEntry, t: (key: string) => string): string {
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+}
+
+function getFileTypeIcon(fileType: string) {
+  switch (fileType) {
+    case "Image": return <ImageIcon className="h-4 w-4 text-sky-400" />;
+    case "Video": return <Video className="h-4 w-4 text-purple-400" />;
+    case "Audio": return <Music className="h-4 w-4 text-pink-400" />;
+    case "Document": return <FileText className="h-4 w-4 text-blue-400" />;
+    case "Archive": return <Archive className="h-4 w-4 text-orange-400" />;
+    case "Code": return <FileCode className="h-4 w-4 text-green-400" />;
+    case "Executable": return <FileTypeIcon className="h-4 w-4 text-red-400" />;
+    default: return <File className="h-4 w-4 text-gray-400" />;
+  }
+}
+
+function getPreview(entry: ClipboardEntry, t: (key: string) => string, fileMetas?: FileMeta[]): string {
   if (entry.content_type === "PlainText" || entry.content_type === "RichText") {
     const text = entry.text_content ?? "";
     return text.length > 120 ? text.substring(0, 120) + "\u2026" : text;
   }
   if (entry.content_type === "Image") return t("entryCard.image");
+  if (entry.content_type === "FilePaths" && fileMetas && fileMetas.length > 0) {
+    if (fileMetas.length === 1) {
+      return `${fileMetas[0].name}  (${formatFileSize(fileMetas[0].size)})`;
+    }
+    const totalSize = fileMetas.reduce((sum, f) => sum + f.size, 0);
+    return `${fileMetas.length} files  (${formatFileSize(totalSize)})`;
+  }
   return entry.text_content ?? t("entryCard.file");
 }
 
-function getIcon(type: string) {
+function getIcon(type: string, fileMetas?: FileMeta[]) {
   switch (type) {
     case "Image": return <ImageIcon className="h-4 w-4 text-sky-400" />;
-    case "FilePaths": return <FolderOpen className="h-4 w-4 text-amber-400" />;
+    case "FilePaths":
+      if (fileMetas && fileMetas.length === 1) {
+        if (fileMetas[0].is_dir) return <Folder className="h-4 w-4 text-amber-400" />;
+        return getFileTypeIcon(fileMetas[0].file_type);
+      }
+      return <FolderOpen className="h-4 w-4 text-amber-400" />;
     case "RichText": return <Code className="h-4 w-4 text-violet-400" />;
     default: return <FileText className="h-4 w-4 text-teal-400" />;
   }
@@ -171,6 +207,16 @@ export const EntryCard = memo(function EntryCard({
   const hasText = entry.content_type === "PlainText" || entry.content_type === "RichText";
   const isRichText = entry.content_type === "RichText" && !!entry.html_content;
   const isImage = entry.content_type === "Image";
+  const isFilePaths = entry.content_type === "FilePaths";
+
+  const fileMetas: FileMeta[] = useMemo(() => {
+    if (entry.content_type !== "FilePaths" || !entry.file_meta) return [];
+    try {
+      return JSON.parse(entry.file_meta);
+    } catch {
+      return [];
+    }
+  }, [entry.content_type, entry.file_meta]);
 
 
   const urls = useMemo(() => extractUrls(entry.text_content), [entry.text_content]);
@@ -257,6 +303,39 @@ export const EntryCard = memo(function EntryCard({
 
   const getContextMenuItems = (): ContextMenuItem[] => {
     const items: ContextMenuItem[] = [];
+
+    if (isFilePaths) {
+      items.push({
+        label: t("contextMenu.previewFile"),
+        icon: <Eye className="w-3.5 h-3.5" />,
+        onClick: () => openFileViewer(entry.id),
+      });
+      if (fileMetas.length === 1) {
+        items.push({
+          label: t("contextMenu.openInExplorer"),
+          icon: <FolderOpen className="w-3.5 h-3.5" />,
+          onClick: () => {
+            openInFileExplorer(fileMetas[0].path).catch(() => toast.error(t("toast.openUrlFailed")));
+          },
+        });
+        items.push({
+          label: t("contextMenu.openDefault"),
+          icon: <ExternalLink className="w-3.5 h-3.5" />,
+          onClick: () => {
+            openFileDefault(fileMetas[0].path).catch(() => toast.error(t("toast.openUrlFailed")));
+          },
+        });
+      }
+      items.push({
+        label: t("contextMenu.copyFilePath"),
+        icon: <Copy className="w-3.5 h-3.5" />,
+        onClick: async () => {
+          const paths = fileMetas.map(m => m.path).join("\n");
+          await navigator.clipboard.writeText(paths || entry.text_content || "");
+          toast.success(t("toast.copied"));
+        },
+      });
+    }
 
     if (isImage) {
       items.push({
@@ -370,7 +449,7 @@ export const EntryCard = memo(function EntryCard({
 
       <div className="flex min-w-0 items-start gap-2.5">
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border border-border/40 bg-card/50 shadow-sm">
-          {getIcon(entry.content_type)}
+          {getIcon(entry.content_type, fileMetas)}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex min-h-7 items-center justify-between gap-3">
@@ -429,6 +508,22 @@ export const EntryCard = memo(function EntryCard({
               >
                 <ClipboardPaste className="h-3 w-3" />
               </button>
+              {isFilePaths && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openFileViewer(entry.id);
+                  }}
+                  className={cn(
+                    "entry-action text-muted-foreground transition-all hover:text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    isSelected ? "opacity-100 scale-100" : "opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100"
+                  )}
+                  title={t("contextMenu.previewFile")}
+                  aria-label={t("contextMenu.previewFile")}
+                >
+                  <Eye className="h-3 w-3" />
+                </button>
+              )}
               {(hasText || isImage) && (
                 <button
                   onClick={(e) => {
@@ -477,7 +572,15 @@ export const EntryCard = memo(function EntryCard({
           </div>
 
           <div className="mt-1.5">
-          {isImage && imageSrc ? (
+          {isFilePaths && fileMetas.length === 1 && fileMetas[0].file_type === "Image" && imageSrc ? (
+            <img
+              src={imageSrc}
+              alt={fileMetas[0].name}
+              className="max-h-[82px] max-w-full rounded-lg border border-border/30 object-cover cursor-zoom-in"
+              draggable={false}
+              onClick={(e) => { e.stopPropagation(); openFileViewer(entry.id); }}
+            />
+          ) : isImage && imageSrc ? (
             <img
               src={imageSrc}
               alt=""
@@ -503,7 +606,7 @@ export const EntryCard = memo(function EntryCard({
             />
           ) : (
             <p className="line-clamp-3 text-base2 leading-relaxed text-foreground break-all">
-              {getPreview(entry, t)}
+              {getPreview(entry, t, fileMetas)}
             </p>
           )}
           </div>

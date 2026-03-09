@@ -2,6 +2,7 @@ import { useEffect, useCallback, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
+import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
 import { TitleBar } from "@/components/TitleBar";
 import { ClipboardPanel } from "@/pages/ClipboardPanel";
@@ -11,6 +12,7 @@ import { ImageViewerPage } from "@/components/ImageViewer";
 import { DetailPage } from "@/pages/DetailPage";
 import { TagManagerPage } from "@/pages/TagManager";
 import { AskAiPanel } from "@/pages/AskAiPanel";
+import { FileViewerPage } from "@/pages/FileViewerPage";
 import { openSettingsWindow } from "@/services/settingsWindowService";
 import { toast } from "@/lib/toast";
 import { useClipboardStore } from "@/stores/clipboardStore";
@@ -44,6 +46,7 @@ const isSettings = searchParams.get("window") === "settings";
 const isDetail = searchParams.get("window") === "detail";
 const isTagManager = searchParams.get("window") === "tag-manager";
 const isAskAi = searchParams.get("window") === "ask-ai";
+const isFileViewer = searchParams.get("window") === "file-viewer";
 const initialSettingsTab = searchParams.get("tab") || undefined;
 
 function applyTheme(theme: "light" | "dark" | "system") {
@@ -92,6 +95,15 @@ function App() {
   // If this is an image viewer window, render the standalone viewer
   if (isImageViewer) {
     return <ImageViewerPage />;
+  }
+
+  // If this is a file viewer window, render standalone file viewer
+  if (isFileViewer) {
+    return (
+      <PlatformProvider>
+        <FileViewerWindow />
+      </PlatformProvider>
+    );
   }
 
   // If this is a template manager window, render standalone template manager
@@ -273,7 +285,8 @@ function DetailWindow() {
     void getCurrentWebviewWindow().setTitle(t("detail.title"));
   }, [t, locale]);
 
-  const handleClose = useCallback(() => {
+  const handleClose = useCallback(async () => {
+    await invoke("focus_main_window").catch(() => {});
     getCurrentWebviewWindow().close();
   }, []);
 
@@ -375,6 +388,49 @@ function AskAiWindow() {
   }, []);
 
   return <AskAiPanel />;
+}
+
+function FileViewerWindow() {
+  const { i18n, t } = useTranslation();
+  const theme = useSettingsStore((s) => s.theme);
+  const locale = useSettingsStore((s) => s.locale);
+  const loadSettings = useSettingsStore((s) => s.loadSettings);
+
+  useEffect(() => {
+    document.documentElement.classList.add("dark");
+  }, []);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  useEffect(() => {
+    if (locale && i18n.language !== locale) {
+      i18n.changeLanguage(locale);
+    }
+  }, [locale, i18n]);
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+
+  useEffect(() => {
+    void getCurrentWebviewWindow().setTitle(t("fileViewer.title"));
+  }, [t, locale]);
+
+  const handleClose = useCallback(async () => {
+    await invoke("focus_main_window").catch(() => {});
+    getCurrentWebviewWindow().close();
+  }, []);
+
+  return (
+    <div className="flex flex-col h-screen overflow-hidden">
+      <TitleBar onClose={handleClose} title={t("fileViewer.title")} showSyncIndicator={false} />
+      <div className="flex-1 min-h-0">
+        <FileViewerPage />
+      </div>
+    </div>
+  );
 }
 
 const MAIN_WINDOW_SIZE_KEY = "main-window-size";

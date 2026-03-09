@@ -11,7 +11,8 @@
     "ai-webview-*",
     "ask-ai-panel",
     "ask-ai-tab-bar",
-    "ask-ai-svc-*"
+    "ask-ai-svc-*",
+    "file-viewer-*"
   ],
   "permissions": [
     "core:default",
@@ -52,6 +53,8 @@
     "notification:default",
     "autostart:default",
     "updater:default",
-    "process:allow-restart"
+    "process:allow-restart",
+    "core:window:allow-set-min-size",
+    "core:window:allow-set-title"
   ]
 }
