@@ -252,6 +252,7 @@
         }
       }
     },
+    "tabOcr": "OCR",
     "tabAi": "AI",
     "tabAskAi": "\u95ee AI",
     "askAi": {
@@ -566,6 +567,18 @@
     "selectService": "\u9009\u62e9 AI \u670d\u52a1",
     "sending": "\u6b63\u5728\u53d1\u9001...",
     "noEnabledServices": "\u6ca1\u6709\u542f\u7528\u7684 AI \u670d\u52a1\u3002\u8bf7\u5728\u8bbe\u7f6e > \u95ee AI \u4e2d\u542f\u7528\u3002"
+  },
+  "ocr": {
+    "defaultEngine": "默认 OCR 引擎",
+    "engineConfig": "OCR 引擎配置",
+    "apiKey": "API Key",
+    "apiSecret": "API Secret",
+    "endpoint": "接口地址",
+    "model": "模型名称",
+    "command": "启动命令",
+    "localModelHint": "本地模型需要自行安装环境。程序通过 stdin 传入 base64 图片数据，从 stdout 读取 JSON 结果。",
+    "clearCache": "清除 OCR 缓存",
+    "cacheCleared": "缓存已清除"
   },
   "toast": {
     "copied": "已复制",

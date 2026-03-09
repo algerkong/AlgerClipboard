@@ -1,5 +1,73 @@
 # Changelog
 
+## [1.6.1] - 2026-03-09
+
+### New Features
+
+- **Multi-Engine OCR System**: Completely redesigned OCR architecture with a unified `OcrEngine` trait and 7 engine support
+  - **Native OCR**: Built-in OS-level OCR (Windows.Media.Ocr / macOS Vision / Linux Tesseract), works offline
+  - **Baidu OCR**: High-accuracy Chinese text recognition via Baidu Cloud API (free tier: 50,000 calls/month)
+  - **Google Cloud Vision**: Excellent multi-language OCR via Google Cloud API (free tier: 1,000 calls/month)
+  - **Tencent OCR**: Chinese text recognition via Tencent Cloud API (free tier: 1,000 calls/month)
+  - **Local Model**: Run local OCR models (PaddleOCR, RapidOCR, etc.) via stdin/stdout JSON protocol
+  - **Online Model**: Connect to self-hosted OCR services via HTTP API
+  - **AI Vision**: Use AI models (GPT-4o, Claude, Qwen-VL) for OCR through OpenAI-compatible API
+- **OCR Settings Tab**: New settings tab for configuring OCR engines with auto-save (no manual save button needed)
+  - Enable/disable engines individually with toggle switches
+  - Configure API keys, endpoints, model names per engine
+  - Set default OCR engine for all recognition tasks
+- **OCR Engine Selector**: Dropdown in image preview title bar to switch OCR engines on-the-fly
+- **OCR Result Caching**: OCR results are cached by image content hash + engine type in SQLite, avoiding redundant re-processing of the same image
+  - Cache can be cleared from Settings → OCR → "Clear OCR Cache"
+- **Bilingual Documentation**: Added comprehensive OCR integration guide and cloud sync guide in both Chinese and English (`docs/zh-CN/`, `docs/en/`)
+
+### Bug Fixes
+
+- **Windows OCR CJK spacing**: Fixed Windows.Media.Ocr inserting spaces between every CJK character (e.g. "你 好 世 界" → "你好世界"). Added post-processing to strip spurious spaces between CJK characters while preserving legitimate word spacing
+- **OCR text overlay misalignment**: Fixed OCR selectable text layer being offset to the left with unselected area on the right. Replaced padding-based bounding box expansion with PDF.js-style `scaleX` approach — text is rendered at natural width then scaled horizontally to match the exact OCR bounding box
+- **Image viewer height fitting**: Image preview now prioritizes fitting the full image height within the window, so the entire image is visible without scrolling on first open
+
+### Improvements
+
+- **OCR architecture**: All engines implement a unified `OcrEngine` async trait with `dispatch_ocr()` fallback chain — if the preferred engine fails, remaining engines are tried in order
+- **Extensible engine system**: Adding a new OCR engine requires only 4 steps: create engine file, register module, add to command dispatch, add to frontend engine list
+
+---
+
+## [1.6.1] - 2026-03-09 (中文)
+
+### 新功能
+
+- **多引擎 OCR 系统**: 全面重构 OCR 架构，统一 `OcrEngine` trait，支持 7 种引擎
+  - **原生 OCR**: 系统内置 OCR（Windows.Media.Ocr / macOS Vision / Linux Tesseract），离线可用
+  - **百度 OCR**: 百度智能云高精度中文识别（免费额度：标准版 50,000 次/月）
+  - **Google Cloud Vision**: Google 云多语言 OCR（免费额度：1,000 次/月）
+  - **腾讯 OCR**: 腾讯云中文识别（免费额度：1,000 次/月）
+  - **本地模型**: 运行本地 OCR 模型（PaddleOCR、RapidOCR 等），通过 stdin/stdout JSON 协议通信
+  - **在线模型**: 连接自托管 OCR 服务的 HTTP API
+  - **AI 视觉**: 通过 OpenAI 兼容 API 使用 AI 模型（GPT-4o、Claude、Qwen-VL）进行 OCR
+- **OCR 设置标签页**: 新增 OCR 设置页，配置自动保存（无需手动点击保存按钮）
+  - 独立的引擎启用/禁用开关
+  - 每个引擎独立配置 API Key、端点、模型名等
+  - 设置默认 OCR 引擎
+- **OCR 引擎选择器**: 图片预览标题栏新增引擎下拉菜单，可实时切换 OCR 引擎
+- **OCR 结果缓存**: 按图片内容哈希 + 引擎类型缓存 OCR 结果到 SQLite，避免重复识别同一张图片
+  - 可在 设置 → OCR → "清除 OCR 缓存" 中清除缓存
+- **双语文档**: 新增 OCR 集成指南和云同步指南的中英双语版本（`docs/zh-CN/`、`docs/en/`）
+
+### Bug 修复
+
+- **Windows OCR 中文字符间距**: 修复 Windows.Media.Ocr 在每个中文字符之间插入空格的问题（如 "你 好 世 界" → "你好世界"）。添加后处理逻辑，移除 CJK 字符间的多余空格，保留正常的单词间距
+- **OCR 文字选区偏移**: 修复 OCR 可选文字层向左偏移、右侧有未选中区域的问题。将基于 padding 的边界框扩展替换为 PDF.js 风格的 `scaleX` 方案——文字以自然宽度渲染后水平缩放以精确匹配 OCR 检测到的边界框
+- **图片预览高度适配**: 图片预览现在优先适配完整图片高度，首次打开时整张图片可见，无需滚动
+
+### 改进
+
+- **OCR 架构**: 所有引擎实现统一的 `OcrEngine` 异步 trait，通过 `dispatch_ocr()` 回退链——首选引擎失败时自动尝试其余引擎
+- **可扩展引擎系统**: 添加新 OCR 引擎只需 4 步：创建引擎文件、注册模块、添加命令分发、添加前端引擎列表
+
+---
+
 ## [1.6.0] - 2026-03-09
 
 ### New Features

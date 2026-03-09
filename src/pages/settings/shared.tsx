@@ -21,6 +21,16 @@ export const ENGINE_LIST = [
   { id: "google", label: "Google", hasSecret: false },
 ] as const;
 
+export const OCR_ENGINE_LIST = [
+  { id: "native", label: "Native OCR", fields: [] as const },
+  { id: "baidu", label: "Baidu OCR", fields: ["apiKey", "apiSecret"] as const },
+  { id: "google", label: "Google Vision", fields: ["apiKey"] as const },
+  { id: "tencent", label: "Tencent OCR", fields: ["apiKey", "apiSecret"] as const },
+  { id: "local_model", label: "Local Model", fields: ["command"] as const },
+  { id: "online_model", label: "Online Model", fields: ["endpoint", "apiKey"] as const },
+  { id: "ai_vision", label: "AI Vision", fields: ["endpoint", "apiKey", "model"] as const },
+] as const;
+
 export const MODIFIER_KEYS = new Set(["Shift", "Control", "Meta", "Alt"]);
 
 export function normalizeShortcutMainKey(event: KeyboardEvent): string | null {

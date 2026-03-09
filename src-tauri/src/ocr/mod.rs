@@ -1,7 +1,16 @@
-use serde::Serialize;
+pub mod ai_vision;
+pub mod baidu;
+pub mod engine;
+pub mod google;
+pub mod local_model;
+pub mod native;
+pub mod online_model;
+pub mod tencent;
+
+use serde::{Deserialize, Serialize};
 
 /// A single line of OCR text with its bounding box in normalized coordinates (0.0–1.0).
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OcrTextLine {
     pub text: String,
     /// Left edge as fraction of image width
@@ -15,7 +24,7 @@ pub struct OcrTextLine {
 }
 
 /// OCR result containing positioned text lines.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OcrResult {
     pub lines: Vec<OcrTextLine>,
     pub image_width: u32,

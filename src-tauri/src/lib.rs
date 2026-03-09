@@ -431,6 +431,14 @@ pub fn run() {
             commands::file_cmd::list_archive_contents,
             commands::file_cmd::check_paths_exist,
             commands::file_cmd::ocr_from_file_path,
+            commands::ocr_cmd::ocr_recognize,
+            commands::ocr_cmd::ocr_recognize_file,
+            commands::ocr_cmd::get_ocr_engines,
+            commands::ocr_cmd::configure_ocr_engine,
+            commands::ocr_cmd::get_default_ocr_engine,
+            commands::ocr_cmd::set_default_ocr_engine,
+            commands::ocr_cmd::get_enabled_ocr_engines,
+            commands::ocr_cmd::clear_ocr_cache,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

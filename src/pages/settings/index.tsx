@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Settings2, Cloud, Languages, Database, Brain, Brush, Globe } from "lucide-react";
+import { Settings2, Cloud, Languages, Database, Brain, Brush, Globe, ScanText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { GeneralTab } from "./GeneralTab";
@@ -9,10 +9,11 @@ import { DataTab } from "./DataTab";
 import { AiTab } from "./AiTab";
 import { RichTextTab } from "./RichTextTab";
 import { AskAiTab } from "./AskAiTab";
+import { OcrTab } from "./OcrTab";
 import { trackWindowSize } from "@/lib/windowSize";
 import { SETTINGS_SIZE_KEY } from "@/services/settingsWindowService";
 
-type SettingsTab = "general" | "richText" | "sync" | "translate" | "data" | "ai" | "askAi";
+type SettingsTab = "general" | "richText" | "sync" | "translate" | "ocr" | "data" | "ai" | "askAi";
 
 interface Props {
   onBack: () => void;
@@ -39,6 +40,11 @@ const TABS: { key: SettingsTab; labelKey: string; icon: React.ReactNode }[] = [
     key: "translate",
     labelKey: "settings.tabTranslate",
     icon: <Languages className="h-[var(--app-tab-icon-size)] w-[var(--app-tab-icon-size)]" />,
+  },
+  {
+    key: "ocr",
+    labelKey: "settings.tabOcr",
+    icon: <ScanText className="h-[var(--app-tab-icon-size)] w-[var(--app-tab-icon-size)]" />,
   },
   {
     key: "data",
@@ -104,6 +110,7 @@ export function SettingsPage({ initialTab }: Props) {
         {activeTab === "richText" && <RichTextTab />}
         {activeTab === "sync" && <SyncTab />}
         {activeTab === "translate" && <TranslateTab />}
+        {activeTab === "ocr" && <OcrTab />}
         {activeTab === "data" && <DataTab />}
         {activeTab === "ai" && <AiTab />}
         {activeTab === "askAi" && <AskAiTab />}

@@ -156,6 +156,18 @@ impl Database {
         // Migration: add file_meta column
         let _ = conn.execute("ALTER TABLE entries ADD COLUMN file_meta TEXT", []);
 
+        // OCR cache table
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS ocr_cache (
+                content_hash TEXT NOT NULL,
+                engine_type TEXT NOT NULL,
+                result_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                PRIMARY KEY (content_hash, engine_type)
+            );",
+        )
+        .map_err(|e| format!("Failed to create ocr_cache table: {}", e))?;
+
         // Sync accounts table
         conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS sync_accounts (
@@ -524,6 +536,39 @@ impl Database {
         )
         .map_err(|e| format!("Failed to set setting: {}", e))?;
 
+        Ok(())
+    }
+
+    // ── OCR cache ──
+
+    pub fn get_ocr_cache(&self, content_hash: &str, engine_type: &str) -> Result<Option<String>, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        let result = conn.query_row(
+            "SELECT result_json FROM ocr_cache WHERE content_hash = ?1 AND engine_type = ?2",
+            params![content_hash, engine_type],
+            |row| row.get(0),
+        );
+        match result {
+            Ok(value) => Ok(Some(value)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(format!("Failed to get OCR cache: {}", e)),
+        }
+    }
+
+    pub fn set_ocr_cache(&self, content_hash: &str, engine_type: &str, result_json: &str) -> Result<(), String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        conn.execute(
+            "INSERT OR REPLACE INTO ocr_cache (content_hash, engine_type, result_json, created_at) VALUES (?1, ?2, ?3, ?4)",
+            params![content_hash, engine_type, result_json, now_iso()],
+        )
+        .map_err(|e| format!("Failed to set OCR cache: {}", e))?;
+        Ok(())
+    }
+
+    pub fn clear_ocr_cache(&self) -> Result<(), String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        conn.execute("DELETE FROM ocr_cache", [])
+            .map_err(|e| format!("Failed to clear OCR cache: {}", e))?;
         Ok(())
     }
 

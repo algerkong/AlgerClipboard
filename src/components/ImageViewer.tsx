@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useLayoutEffect } from "react";
 import {
   X,
   ZoomIn,
@@ -14,10 +14,8 @@ import { cn } from "@/lib/utils";
 import { usePreviewCloseShortcut } from "@/hooks/usePreviewCloseShortcut";
 import { CloseConfirmDialog } from "@/components/CloseConfirmDialog";
 import { useTranslation } from "react-i18next";
-import {
-  getThumbnailBase64,
-  extractTextFromImage,
-} from "@/services/clipboardService";
+import { getThumbnailBase64 } from "@/services/clipboardService";
+import { getEnabledOcrEngines, ocrRecognize, type OcrEngineInfo } from "@/services/ocrService";
 import { translateText } from "@/services/translateService";
 import { toast } from "@/lib/toast";
 import type { OcrResult, OcrTextLine } from "@/types";
@@ -37,15 +35,23 @@ export function ImageViewerPage() {
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrError, setOcrError] = useState<string | null>(null);
 
+  const [availableEngines, setAvailableEngines] = useState<OcrEngineInfo[]>([]);
+  const [selectedEngine, setSelectedEngine] = useState<string | undefined>(undefined);
+
   const [translatedLines, setTranslatedLines] = useState<string[] | null>(null);
   const [translateLoading, setTranslateLoading] = useState(false);
   const [showTranslated, setShowTranslated] = useState(false);
 
   const imgRef = useRef<HTMLImageElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [imgSize, setImgSize] = useState({ width: 0, height: 0 });
 
   // Save window size on resize (debounced), restored by imageViewerService on next open
   useEffect(() => trackWindowSize(IMAGE_VIEWER_SIZE_KEY), []);
+
+  useEffect(() => {
+    getEnabledOcrEngines().then(setAvailableEngines).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!blobPath) return;
@@ -56,36 +62,35 @@ export function ImageViewerPage() {
     document.documentElement.classList.add("dark");
   }, []);
 
-  // Auto-OCR
-  const ocrTriggered = useRef(false);
-  const handleImageLoad = useCallback(() => {
+  const updateImgSize = useCallback(() => {
     if (imgRef.current) {
       setImgSize({ width: imgRef.current.clientWidth, height: imgRef.current.clientHeight });
     }
+  }, []);
+
+  // Auto-OCR
+  const ocrTriggered = useRef(false);
+  const handleImageLoad = useCallback(() => {
+    updateImgSize();
     if (!ocrTriggered.current && blobPath) {
       ocrTriggered.current = true;
       runOcr();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blobPath]);
+  }, [blobPath, updateImgSize]);
 
   useEffect(() => {
-    const update = () => {
-      if (imgRef.current) {
-        setImgSize({ width: imgRef.current.clientWidth, height: imgRef.current.clientHeight });
-      }
-    };
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, [zoom, imageSrc]);
+    updateImgSize();
+    window.addEventListener("resize", updateImgSize);
+    return () => window.removeEventListener("resize", updateImgSize);
+  }, [zoom, imageSrc, updateImgSize]);
 
   const runOcr = useCallback(async () => {
     if (!blobPath) return;
     setOcrLoading(true);
     setOcrError(null);
     try {
-      const result = await extractTextFromImage(blobPath);
+      const result = await ocrRecognize(blobPath, selectedEngine);
       setOcrResult(result);
       if (result.lines.length === 0) {
         setOcrError(t("imageViewer.noText"));
@@ -95,7 +100,7 @@ export function ImageViewerPage() {
     } finally {
       setOcrLoading(false);
     }
-  }, [blobPath, t]);
+  }, [blobPath, selectedEngine, t]);
 
   const handleClose = useCallback(async () => {
     await invoke("focus_main_window").catch(() => {});
@@ -172,6 +177,18 @@ export function ImageViewerPage() {
               <RotateCcw className="w-2.5 h-2.5" />
             </button>
           </div>
+          {availableEngines.length > 1 && (
+            <select
+              value={selectedEngine ?? ""}
+              onChange={(e) => setSelectedEngine(e.target.value || undefined)}
+              className="h-5 px-1 text-xs2 bg-background border border-border/50 rounded text-foreground focus:outline-none"
+            >
+              <option value="">{t("ocr.defaultEngine")}</option>
+              {availableEngines.map((eng) => (
+                <option key={eng.engine_type} value={eng.engine_type}>{eng.label}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="flex items-center gap-0.5 -mr-1">
@@ -205,8 +222,8 @@ export function ImageViewerPage() {
         </div>
       </div>
 
-      {/* Image + text layer */}
-      <div className="flex-1 overflow-auto flex items-center justify-center min-h-0" onWheel={handleWheel}>
+      {/* Image + text layer — prioritize fitting full image height */}
+      <div ref={containerRef} className="flex-1 overflow-auto flex items-center justify-center min-h-0" onWheel={handleWheel}>
         {imageSrc ? (
           <div
             className="relative inline-block"
@@ -216,7 +233,8 @@ export function ImageViewerPage() {
               ref={imgRef}
               src={imageSrc}
               alt=""
-              className="block max-w-full max-h-full object-contain"
+              className="block w-auto"
+              style={{ maxHeight: "calc(100vh - 2rem)", maxWidth: "100vw" }}
               draggable={false}
               onLoad={handleImageLoad}
             />
@@ -282,9 +300,9 @@ export function ImageViewerPage() {
 }
 
 /**
- * Invisible but selectable text positioned over the image.
- * Bounding box expanded by padding to fully cover the text in the image.
- * color: transparent, ::selection shows blue highlight.
+ * Invisible but selectable text positioned over the image (PDF.js approach).
+ * Positioned exactly at OCR bounding box, then scaleX is applied to stretch
+ * the text to match the detected width — eliminates left/right offset.
  */
 function OcrSelectableText({
   line,
@@ -295,26 +313,37 @@ function OcrSelectableText({
   containerWidth: number;
   containerHeight: number;
 }) {
-  // Expand bounding box by ~20% padding to fully cover text
-  const padX = line.width * 0.1;
-  const padY = line.height * 0.15;
-  const left = Math.max(0, line.x - padX) * containerWidth;
-  const top = Math.max(0, line.y - padY) * containerHeight;
-  const width = Math.min(1 - Math.max(0, line.x - padX), line.width + padX * 2) * containerWidth;
-  const height = (line.height + padY * 2) * containerHeight;
-  const fontSize = Math.max(8, line.height * containerHeight * 0.85);
+  const spanRef = useRef<HTMLSpanElement>(null);
+  const [scaleX, setScaleX] = useState(1);
+
+  const left = line.x * containerWidth;
+  const top = line.y * containerHeight;
+  const targetWidth = line.width * containerWidth;
+  const height = line.height * containerHeight;
+  const fontSize = Math.max(8, height * 0.85);
+
+  useLayoutEffect(() => {
+    if (spanRef.current) {
+      const naturalWidth = spanRef.current.scrollWidth;
+      if (naturalWidth > 0 && targetWidth > 0) {
+        setScaleX(targetWidth / naturalWidth);
+      }
+    }
+  }, [line.text, targetWidth, fontSize]);
 
   return (
     <span
+      ref={spanRef}
       className="ocr-selectable-text absolute select-text cursor-text whitespace-pre"
       style={{
         left: `${left}px`,
         top: `${top}px`,
-        width: `${width}px`,
         height: `${height}px`,
         fontSize: `${fontSize}px`,
         lineHeight: `${height}px`,
         color: "transparent",
+        transformOrigin: "left top",
+        transform: `scaleX(${scaleX})`,
       }}
     >
       {line.text}
@@ -337,14 +366,11 @@ function TranslatedText({
   containerWidth: number;
   containerHeight: number;
 }) {
-  // Same padding expansion as OCR selection
-  const padX = line.width * 0.1;
-  const padY = line.height * 0.15;
-  const left = Math.max(0, line.x - padX) * containerWidth;
-  const top = Math.max(0, line.y - padY) * containerHeight;
-  const width = Math.min(1 - Math.max(0, line.x - padX), line.width + padX * 2) * containerWidth;
-  const height = (line.height + padY * 2) * containerHeight;
-  const fontSize = Math.max(8, line.height * containerHeight * 0.7);
+  const left = line.x * containerWidth;
+  const top = line.y * containerHeight;
+  const width = line.width * containerWidth;
+  const height = line.height * containerHeight;
+  const fontSize = Math.max(8, height * 0.7);
 
   return (
     <span

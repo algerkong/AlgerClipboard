@@ -1,10 +1,10 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useLayoutEffect } from "react";
 import { ZoomIn, ZoomOut, RotateCcw, Languages, Loader2 } from "lucide-react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import type { FileMeta, OcrResult, OcrTextLine } from "@/types";
-import { ocrFromFilePath } from "@/services/clipboardService";
+import { getEnabledOcrEngines, ocrRecognizeFile, type OcrEngineInfo } from "@/services/ocrService";
 import { translateText } from "@/services/translateService";
 import { toast } from "@/lib/toast";
 import { PreviewHeader } from "./PreviewHeader";
@@ -22,6 +22,10 @@ export function ImagePreview({ file, onBack }: ImagePreviewProps) {
   const imgRef = useRef<HTMLImageElement>(null);
   const [imgSize, setImgSize] = useState({ width: 0, height: 0 });
 
+  // OCR engine state
+  const [availableEngines, setAvailableEngines] = useState<OcrEngineInfo[]>([]);
+  const [selectedEngine, setSelectedEngine] = useState<string | undefined>(undefined);
+
   // OCR state
   const [ocrResult, setOcrResult] = useState<OcrResult | null>(null);
   const [ocrLoading, setOcrLoading] = useState(false);
@@ -32,17 +36,23 @@ export function ImagePreview({ file, onBack }: ImagePreviewProps) {
   const [translateLoading, setTranslateLoading] = useState(false);
   const [showTranslated, setShowTranslated] = useState(false);
 
-  // Track image natural size for OCR overlay positioning
+  // Load OCR engines
   useEffect(() => {
-    const update = () => {
-      if (imgRef.current) {
-        setImgSize({ width: imgRef.current.clientWidth, height: imgRef.current.clientHeight });
-      }
-    };
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, [zoom, src]);
+    getEnabledOcrEngines().then(setAvailableEngines).catch(() => {});
+  }, []);
+
+  const updateImgSize = useCallback(() => {
+    if (imgRef.current) {
+      setImgSize({ width: imgRef.current.clientWidth, height: imgRef.current.clientHeight });
+    }
+  }, []);
+
+  // Track image size for OCR overlay positioning
+  useEffect(() => {
+    updateImgSize();
+    window.addEventListener("resize", updateImgSize);
+    return () => window.removeEventListener("resize", updateImgSize);
+  }, [zoom, src, updateImgSize]);
 
   // Auto-OCR on image load
   const ocrTriggered = useRef(false);
@@ -62,7 +72,7 @@ export function ImagePreview({ file, onBack }: ImagePreviewProps) {
     setOcrLoading(true);
     setOcrError(null);
     try {
-      const result = await ocrFromFilePath(file.path);
+      const result = await ocrRecognizeFile(file.path, selectedEngine);
       setOcrResult(result);
       if (result.lines.length === 0) {
         setOcrError(t("imageViewer.noText"));
@@ -72,17 +82,15 @@ export function ImagePreview({ file, onBack }: ImagePreviewProps) {
     } finally {
       setOcrLoading(false);
     }
-  }, [file.path, t]);
+  }, [file.path, selectedEngine, t]);
 
   const handleImageLoad = useCallback(() => {
-    if (imgRef.current) {
-      setImgSize({ width: imgRef.current.clientWidth, height: imgRef.current.clientHeight });
-    }
+    updateImgSize();
     if (!ocrTriggered.current) {
       ocrTriggered.current = true;
       runOcr();
     }
-  }, [runOcr]);
+  }, [runOcr, updateImgSize]);
 
   // Zoom handlers
   const handleZoomIn = useCallback(() => setZoom((z) => Math.min(z + 0.25, 5)), []);
@@ -143,6 +151,19 @@ export function ImagePreview({ file, onBack }: ImagePreviewProps) {
           <RotateCcw className="h-3 w-3" />
         </button>
 
+        {availableEngines.length > 1 && (
+          <select
+            value={selectedEngine ?? ""}
+            onChange={(e) => setSelectedEngine(e.target.value || undefined)}
+            className="h-5 px-1 text-xs2 bg-background border border-border/50 rounded text-foreground focus:outline-none"
+          >
+            <option value="">{t("ocr.defaultEngine")}</option>
+            {availableEngines.map((eng) => (
+              <option key={eng.engine_type} value={eng.engine_type}>{eng.label}</option>
+            ))}
+          </select>
+        )}
+
         {/* Divider */}
         <div className="h-4 w-px bg-border/50" />
 
@@ -180,7 +201,8 @@ export function ImagePreview({ file, onBack }: ImagePreviewProps) {
             ref={imgRef}
             src={src}
             alt={file.name}
-            className="block max-w-full max-h-full object-contain"
+            className="block w-auto"
+            style={{ maxHeight: "calc(100vh - 3rem)", maxWidth: "100%" }}
             draggable={false}
             onLoad={handleImageLoad}
           />
@@ -224,18 +246,38 @@ export function ImagePreview({ file, onBack }: ImagePreviewProps) {
 }
 
 function OcrSelectableText({ line, containerWidth, containerHeight }: { line: OcrTextLine; containerWidth: number; containerHeight: number }) {
-  const padX = line.width * 0.1;
-  const padY = line.height * 0.15;
-  const left = Math.max(0, line.x - padX) * containerWidth;
-  const top = Math.max(0, line.y - padY) * containerHeight;
-  const width = Math.min(1 - Math.max(0, line.x - padX), line.width + padX * 2) * containerWidth;
-  const height = (line.height + padY * 2) * containerHeight;
-  const fontSize = Math.max(8, line.height * containerHeight * 0.85);
+  const spanRef = useRef<HTMLSpanElement>(null);
+  const [scaleX, setScaleX] = useState(1);
+
+  const left = line.x * containerWidth;
+  const top = line.y * containerHeight;
+  const targetWidth = line.width * containerWidth;
+  const height = line.height * containerHeight;
+  const fontSize = Math.max(8, height * 0.85);
+
+  useLayoutEffect(() => {
+    if (spanRef.current) {
+      const naturalWidth = spanRef.current.scrollWidth;
+      if (naturalWidth > 0 && targetWidth > 0) {
+        setScaleX(targetWidth / naturalWidth);
+      }
+    }
+  }, [line.text, targetWidth, fontSize]);
 
   return (
     <span
+      ref={spanRef}
       className="ocr-selectable-text absolute select-text cursor-text whitespace-pre"
-      style={{ left: `${left}px`, top: `${top}px`, width: `${width}px`, height: `${height}px`, fontSize: `${fontSize}px`, lineHeight: `${height}px`, color: "transparent" }}
+      style={{
+        left: `${left}px`,
+        top: `${top}px`,
+        height: `${height}px`,
+        fontSize: `${fontSize}px`,
+        lineHeight: `${height}px`,
+        color: "transparent",
+        transformOrigin: "left top",
+        transform: `scaleX(${scaleX})`,
+      }}
     >
       {line.text}
     </span>
@@ -243,18 +285,23 @@ function OcrSelectableText({ line, containerWidth, containerHeight }: { line: Oc
 }
 
 function TranslatedText({ line, text, containerWidth, containerHeight }: { line: OcrTextLine; text: string; containerWidth: number; containerHeight: number }) {
-  const padX = line.width * 0.1;
-  const padY = line.height * 0.15;
-  const left = Math.max(0, line.x - padX) * containerWidth;
-  const top = Math.max(0, line.y - padY) * containerHeight;
-  const width = Math.min(1 - Math.max(0, line.x - padX), line.width + padX * 2) * containerWidth;
-  const height = (line.height + padY * 2) * containerHeight;
-  const fontSize = Math.max(8, line.height * containerHeight * 0.7);
+  const left = line.x * containerWidth;
+  const top = line.y * containerHeight;
+  const width = line.width * containerWidth;
+  const height = line.height * containerHeight;
+  const fontSize = Math.max(8, height * 0.7);
 
   return (
     <span
       className="absolute select-text cursor-text whitespace-pre-wrap break-words flex items-center px-[3px] rounded-[2px] bg-white/90 dark:bg-neutral-800/95 text-green-700 dark:text-green-400 font-medium"
-      style={{ left: `${left}px`, top: `${top}px`, width: `${width}px`, minHeight: `${height}px`, fontSize: `${fontSize}px`, lineHeight: 1.3 }}
+      style={{
+        left: `${left}px`,
+        top: `${top}px`,
+        width: `${width}px`,
+        minHeight: `${height}px`,
+        fontSize: `${fontSize}px`,
+        lineHeight: 1.3,
+      }}
     >
       {text}
     </span>
