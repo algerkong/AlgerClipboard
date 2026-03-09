@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { useTranslation } from "react-i18next";
 import { TitleBar } from "@/components/TitleBar";
 import { ClipboardPanel } from "@/pages/ClipboardPanel";
@@ -21,6 +21,7 @@ import { useSyncStore } from "@/stores/syncStore";
 import { checkForUpdates, downloadAndInstall } from "@/services/updateService";
 import { openUrl } from "@/services/settingsService";
 import type { ClipboardEntry } from "@/types";
+import { getSavedWindowSize, trackWindowSize } from "@/lib/windowSize";
 
 // Global safety net: intercept all <a> clicks and open in external browser
 document.addEventListener("click", (e) => {
@@ -376,6 +377,8 @@ function AskAiWindow() {
   return <AskAiPanel />;
 }
 
+const MAIN_WINDOW_SIZE_KEY = "main-window-size";
+
 function MainApp() {
   const { i18n, t } = useTranslation();
   const shouldResetOnNextFocusRef = useRef(false);
@@ -388,6 +391,15 @@ function MainApp() {
   // Apply dark theme immediately on first render (before settings load)
   useEffect(() => {
     document.documentElement.classList.add("dark");
+  }, []);
+
+  // Restore saved window size and track future resizes
+  useEffect(() => {
+    const saved = getSavedWindowSize(MAIN_WINDOW_SIZE_KEY, { width: 0, height: 0 });
+    if (saved.width > 0 && saved.height > 0) {
+      getCurrentWindow().setSize(new LogicalSize(saved.width, saved.height)).catch(() => {});
+    }
+    return trackWindowSize(MAIN_WINDOW_SIZE_KEY);
   }, []);
 
   const loadAccounts = useSyncStore((s) => s.loadAccounts);

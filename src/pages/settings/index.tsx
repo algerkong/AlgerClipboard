@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Settings2, Cloud, Languages, Database, Brain, Brush, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -9,6 +9,8 @@ import { DataTab } from "./DataTab";
 import { AiTab } from "./AiTab";
 import { RichTextTab } from "./RichTextTab";
 import { AskAiTab } from "./AskAiTab";
+import { trackWindowSize } from "@/lib/windowSize";
+import { SETTINGS_SIZE_KEY } from "@/services/settingsWindowService";
 
 type SettingsTab = "general" | "richText" | "sync" | "translate" | "data" | "ai" | "askAi";
 
@@ -61,6 +63,9 @@ export function SettingsPage({ initialTab }: Props) {
   const [activeTab, setActiveTab] = useState<SettingsTab>(
     (initialTab as SettingsTab) || "general"
   );
+
+  // Save window size on resize
+  useEffect(() => trackWindowSize(SETTINGS_SIZE_KEY), []);
   const tabStyle = {
     gap: "var(--app-tab-gap)",
     paddingInline: "var(--app-tab-px)",

@@ -1,6 +1,9 @@
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import i18n from "@/i18n";
 import { getManagedWindowDecorations } from "@/services/windowOptions";
+import { getSavedWindowSize } from "@/lib/windowSize";
+
+export const SETTINGS_SIZE_KEY = "settings-window-size";
 
 let windowCounter = 0;
 
@@ -11,11 +14,13 @@ export async function openSettingsWindow(tab?: string) {
     ? `index.html?window=settings&tab=${tab}`
     : `index.html?window=settings`;
 
+  const size = getSavedWindowSize(SETTINGS_SIZE_KEY, { width: 680, height: 560 });
+
   const win = new WebviewWindow(label, {
     url,
     title: i18n.t("settings.title"),
-    width: 680,
-    height: 560,
+    width: size.width,
+    height: size.height,
     minWidth: 560,
     minHeight: 460,
     ...getManagedWindowDecorations(),
