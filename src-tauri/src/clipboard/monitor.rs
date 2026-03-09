@@ -103,6 +103,7 @@ fn normalize_window_title(title: &str, app_name: Option<&str>) -> Option<String>
     Some(trimmed.to_string())
 }
 
+#[cfg(target_os = "macos")]
 fn run_command(program: &str, args: &[&str]) -> Option<String> {
     let output = std::process::Command::new(program)
         .args(args)
@@ -134,6 +135,7 @@ fn image_data_url(mime: &str, bytes: &[u8]) -> String {
     format!("data:{mime};base64,{encoded}")
 }
 
+#[cfg(target_os = "macos")]
 fn png_data_url_from_base64(raw: &str, max_dim: u32) -> Option<String> {
     let png_bytes = base64::engine::general_purpose::STANDARD
         .decode(raw.trim())
@@ -373,7 +375,7 @@ fn get_windows_app_icon(exe_path: &str) -> Option<String> {
             }],
         };
 
-        let dc = CreateCompatibleDC(0);
+        let dc = CreateCompatibleDC(std::ptr::null_mut());
         if dc.is_null() {
             if !icon_info.hbmColor.is_null() {
                 DeleteObject(icon_info.hbmColor as _);
