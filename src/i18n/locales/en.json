@@ -252,6 +252,7 @@
         }
       }
     },
+    "tabOcr": "OCR",
     "tabAi": "AI",
     "tabAskAi": "Ask AI",
     "askAi": {
@@ -566,6 +567,18 @@
     "selectService": "Select AI Service",
     "sending": "Sending...",
     "noEnabledServices": "No AI services enabled. Enable services in Settings > Ask AI."
+  },
+  "ocr": {
+    "defaultEngine": "Default OCR Engine",
+    "engineConfig": "OCR Engine Configuration",
+    "apiKey": "API Key",
+    "apiSecret": "API Secret",
+    "endpoint": "Endpoint URL",
+    "model": "Model Name",
+    "command": "Command",
+    "localModelHint": "Local model requires manual installation. The program sends base64 image data via stdin and reads JSON results from stdout.",
+    "clearCache": "Clear OCR Cache",
+    "cacheCleared": "Cache Cleared"
   },
   "toast": {
     "copied": "Copied",
