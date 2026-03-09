@@ -40,6 +40,12 @@ export function AskAiPanel() {
     void init();
   }, [loadEnabledServices, loadFavicons]);
 
+  // Get the parent window (ask-ai-panel) for size calculations
+  const getParentWindow = useCallback(() => {
+    // The tab bar webview is a child of ask-ai-panel window
+    return getCurrentWindow();
+  }, []);
+
   // Handle tab change: hide old, create/show new
   const handleTabChange = useCallback(
     async (serviceId: string) => {
@@ -47,12 +53,12 @@ export function AskAiPanel() {
       const service = AI_WEB_SERVICES.find((s) => s.id === serviceId);
       if (!service) return;
 
-      const win = getCurrentWindow();
+      const win = getParentWindow();
       const size = await win.innerSize();
       const scaleFactor = await win.scaleFactor();
       const logicalWidth = size.width / scaleFactor;
       const logicalHeight = size.height / scaleFactor;
-      const barH = enabledServices.length === 1 ? 0 : TAB_BAR_HEIGHT;
+      const barH = isSingleService ? 0 : TAB_BAR_HEIGHT;
 
       // Hide current active webview
       if (localActiveId && localActiveId !== serviceId) {
@@ -80,10 +86,19 @@ export function AskAiPanel() {
         await invoke("show_ai_webview", { serviceId });
       }
 
+      // Bring the tab bar to front so it's not occluded by the service webview
+      if (!isSingleService) {
+        try {
+          await invoke("bring_tab_bar_to_front");
+        } catch {
+          // Tab bar might not exist yet
+        }
+      }
+
       setLocalActiveId(serviceId);
       setActiveServiceId(serviceId);
     },
-    [localActiveId, enabledServices.length, createdWebviews, setActiveServiceId],
+    [localActiveId, isSingleService, createdWebviews, setActiveServiceId, getParentWindow],
   );
 
   // Auto-select first service on mount when services are ready
@@ -93,34 +108,47 @@ export function AskAiPanel() {
     void handleTabChange(enabledServices[0].id);
   }, [ready, enabledServices, handleTabChange]);
 
-  // Window resize handler: resize active webview
+  // Window resize handler: resize tab bar and active child webview
   useEffect(() => {
-    const unlisten = getCurrentWindow().onResized(async (event) => {
-      if (!localActiveId) return;
-      const scaleFactor = await getCurrentWindow().scaleFactor();
+    const win = getParentWindow();
+    const unlisten = win.onResized(async (event) => {
+      const scaleFactor = await win.scaleFactor();
       const logicalWidth = event.payload.width / scaleFactor;
       const logicalHeight = event.payload.height / scaleFactor;
-      const barH = enabledServices.length === 1 ? 0 : TAB_BAR_HEIGHT;
+      const barH = isSingleService ? 0 : TAB_BAR_HEIGHT;
 
+      // Resize the tab bar webview to match window width
       try {
-        await invoke("resize_ai_webview", {
-          serviceId: localActiveId,
-          x: 0,
-          y: barH,
+        await invoke("resize_tab_bar", {
           width: logicalWidth,
-          height: logicalHeight - barH,
+          height: barH > 0 ? barH : logicalHeight,
         });
       } catch {
-        // Webview might not exist yet
+        // Tab bar might not exist yet
+      }
+
+      // Resize the active service webview
+      if (localActiveId) {
+        try {
+          await invoke("resize_ai_webview", {
+            serviceId: localActiveId,
+            x: 0,
+            y: barH,
+            width: logicalWidth,
+            height: logicalHeight - barH,
+          });
+        } catch {
+          // Webview might not exist yet
+        }
       }
     });
 
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, [localActiveId, enabledServices.length]);
+  }, [localActiveId, isSingleService, getParentWindow]);
 
-  // Single service mode: no tab bar
+  // Single service mode: no tab bar, transparent background
   if (isSingleService || enabledServices.length === 0) {
     return <div className="h-screen w-screen" />;
   }
@@ -128,10 +156,7 @@ export function AskAiPanel() {
   // Multi service mode: tab bar
   return (
     <div className="flex flex-col h-screen w-screen bg-background">
-      <div
-        data-tauri-drag-region
-        className="flex items-center h-10 border-b border-border px-2 bg-background shrink-0"
-      >
+      <div className="flex items-center h-10 border-b border-border px-2 bg-background shrink-0">
         <Tabs
           value={localActiveId || ""}
           onValueChange={(v) => void handleTabChange(v)}
@@ -161,8 +186,6 @@ export function AskAiPanel() {
           </TabsList>
         </Tabs>
       </div>
-      {/* Child webviews render below, managed by Rust */}
-      <div className="flex-1" />
     </div>
   );
 }

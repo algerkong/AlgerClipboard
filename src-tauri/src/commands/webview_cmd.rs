@@ -1,5 +1,56 @@
 use tauri::{Manager, WebviewUrl};
 
+/// Create the ask-ai-panel window with the React tab bar as a child webview.
+/// Uses a bare Window so the tab bar and service webviews are at the same z-level.
+#[tauri::command]
+pub async fn create_ask_ai_panel(
+    app: tauri::AppHandle,
+    tab_bar_height: f64,
+    single_service: bool,
+) -> Result<(), String> {
+    let label = "ask-ai-panel";
+
+    // If window already exists, just show and focus it
+    if let Some(existing) = app.get_window(label) {
+        existing.show().map_err(|e| format!("Failed to show: {}", e))?;
+        existing.set_focus().map_err(|e| format!("Failed to focus: {}", e))?;
+        return Ok(());
+    }
+
+    // Create a bare window (no main webview)
+    let window = tauri::WindowBuilder::new(&app, label)
+        .title("Ask AI")
+        .inner_size(1000.0, 700.0)
+        .min_inner_size(600.0, 400.0)
+        .resizable(true)
+        .center()
+        .shadow(true)
+        .build()
+        .map_err(|e| format!("Failed to create window: {}", e))?;
+
+    // Add the React tab bar as a child webview at the top
+    let bar_h = if single_service { 0.0 } else { tab_bar_height };
+    let win_size = window.inner_size().map_err(|e| format!("Failed to get size: {}", e))?;
+    let scale = window.scale_factor().map_err(|e| format!("Failed to get scale: {}", e))?;
+    let logical_w = win_size.width as f64 / scale;
+    let logical_h = win_size.height as f64 / scale;
+
+    let tab_bar_builder = tauri::webview::WebviewBuilder::new(
+        "ask-ai-tab-bar",
+        WebviewUrl::App("index.html?window=ask-ai".into()),
+    );
+
+    window
+        .add_child(
+            tab_bar_builder,
+            tauri::Position::Logical(tauri::LogicalPosition::new(0.0, 0.0)),
+            tauri::Size::Logical(tauri::LogicalSize::new(logical_w, if bar_h > 0.0 { bar_h } else { logical_h })),
+        )
+        .map_err(|e| format!("Failed to add tab bar webview: {}", e))?;
+
+    Ok(())
+}
+
 /// Execute JavaScript in a WebView identified by label.
 /// Searches both WebviewWindow (old-style) and child Webview (new-style) by label.
 #[tauri::command]
@@ -88,6 +139,60 @@ pub async fn create_ai_child_webview(
     window
         .add_child(builder, position, size)
         .map_err(|e| format!("Failed to create child webview: {}", e))?;
+
+    Ok(())
+}
+
+/// Resize the tab bar webview (used on window resize).
+#[tauri::command]
+pub async fn resize_tab_bar(
+    app: tauri::AppHandle,
+    width: f64,
+    height: f64,
+) -> Result<(), String> {
+    let webview = app
+        .get_webview("ask-ai-tab-bar")
+        .ok_or_else(|| "Tab bar webview not found".to_string())?;
+    webview
+        .set_size(tauri::Size::Logical(tauri::LogicalSize::new(width, height)))
+        .map_err(|e| format!("Failed to resize tab bar: {}", e))
+}
+
+/// Bring the tab bar webview to the front of the z-order on macOS.
+/// On macOS, child webviews added later sit on top of earlier ones (NSView subview ordering).
+/// This command re-inserts the tab bar's underlying NSView so it renders above service webviews.
+#[tauri::command]
+pub async fn bring_tab_bar_to_front(app: tauri::AppHandle) -> Result<(), String> {
+    let tab_bar = app
+        .get_webview("ask-ai-tab-bar")
+        .ok_or_else(|| "Tab bar webview not found".to_string())?;
+
+    #[cfg(target_os = "macos")]
+    {
+        tab_bar
+            .with_webview(|platform_wv| {
+                use objc2::rc::Retained;
+                use objc2_app_kit::NSView;
+
+                unsafe {
+                    // platform_wv.inner() returns *mut c_void pointing to the WKWebView (an NSView)
+                    let ns_view_ptr = platform_wv.inner() as *mut NSView;
+                    if ns_view_ptr.is_null() {
+                        return;
+                    }
+                    let ns_view = &*ns_view_ptr;
+
+                    if let Some(superview) = ns_view.superview() {
+                        // Retain the view before removing it
+                        let retained: Retained<NSView> = Retained::retain(ns_view_ptr).unwrap();
+                        // Remove from superview, then re-add — this places it on top
+                        ns_view.removeFromSuperview();
+                        superview.addSubview(&retained);
+                    }
+                }
+            })
+            .map_err(|e| format!("with_webview failed: {}", e))?;
+    }
 
     Ok(())
 }

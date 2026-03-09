@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useTranslation } from "react-i18next";
 import { TitleBar } from "@/components/TitleBar";
 import { ClipboardPanel } from "@/pages/ClipboardPanel";
@@ -361,11 +362,11 @@ function AskAiWindow() {
     applyTheme(theme);
   }, [theme]);
 
-  // Escape key closes the window
+  // Escape key closes the window (use getCurrentWindow for bare Window)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        getCurrentWebviewWindow().close();
+        getCurrentWindow().close();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
