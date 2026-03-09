@@ -8,6 +8,109 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 pub const DEFAULT_TOGGLE_SHORTCUT: &str = "CmdOrCtrl+Shift+V";
 
+/// Force keyboard focus to the window using Win32 API.
+/// Tauri's `set_focus()` alone is insufficient because Windows restricts
+/// `SetForegroundWindow` for background processes. The ALT-key trick
+/// temporarily satisfies the OS requirement, allowing focus steal.
+#[cfg(target_os = "windows")]
+fn force_window_focus(window: &tauri::WebviewWindow) {
+    use windows_sys::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
+        SendInput, INPUT, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, VK_MENU,
+    };
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        GetForegroundWindow, GetWindowThreadProcessId, SetForegroundWindow,
+    };
+
+    let hwnd = match window.hwnd() {
+        Ok(h) => h.0,
+        Err(_) => return,
+    };
+
+    unsafe {
+        // ALT key trick: sending a synthetic ALT press/release unlocks
+        // SetForegroundWindow for the calling process.
+        let mut alt_down: INPUT = std::mem::zeroed();
+        alt_down.r#type = INPUT_KEYBOARD;
+        alt_down.Anonymous.ki = KEYBDINPUT {
+            wVk: VK_MENU,
+            wScan: 0,
+            dwFlags: 0,
+            time: 0,
+            dwExtraInfo: 0,
+        };
+
+        let mut alt_up: INPUT = std::mem::zeroed();
+        alt_up.r#type = INPUT_KEYBOARD;
+        alt_up.Anonymous.ki = KEYBDINPUT {
+            wVk: VK_MENU,
+            wScan: 0,
+            dwFlags: KEYEVENTF_KEYUP,
+            time: 0,
+            dwExtraInfo: 0,
+        };
+
+        let inputs = [alt_down, alt_up];
+        SendInput(2, inputs.as_ptr(), std::mem::size_of::<INPUT>() as i32);
+
+        // Also attach to the foreground thread for extra reliability
+        let cur_thread = GetCurrentThreadId();
+        let fg_hwnd = GetForegroundWindow();
+        let fg_thread = if !fg_hwnd.is_null() {
+            GetWindowThreadProcessId(fg_hwnd, std::ptr::null_mut())
+        } else {
+            0
+        };
+
+        let attached = if cur_thread != fg_thread && fg_thread != 0 {
+            AttachThreadInput(cur_thread, fg_thread, 1) != 0
+        } else {
+            false
+        };
+
+        SetForegroundWindow(hwnd);
+
+        if attached {
+            AttachThreadInput(cur_thread, fg_thread, 0);
+        }
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn force_window_focus(_window: &tauri::WebviewWindow) {
+    // On macOS/Linux, Tauri's set_focus() works reliably
+}
+
+fn focus_window_webview(app: &tauri::AppHandle, window: &tauri::WebviewWindow) {
+    if let Some(webview) = app.get_webview(window.label()) {
+        let _ = webview.set_focus();
+    }
+}
+
+pub fn show_and_focus_main_window(app: &tauri::AppHandle, window: &tauri::WebviewWindow) {
+    let app_handle = app.clone();
+    let window_label = window.label().to_string();
+
+    let _ = window.show();
+    let _ = window.set_focus();
+    force_window_focus(window);
+    focus_window_webview(app, window);
+    let _ = window.set_focus();
+    let _ = app.emit("main-window-opened", serde_json::json!({}));
+
+    tauri::async_runtime::spawn(async move {
+        for delay_ms in [24_u64, 96_u64, 180_u64] {
+            tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
+
+            if let Some(window) = app_handle.get_webview_window(&window_label) {
+                let _ = window.set_focus();
+                force_window_focus(&window);
+                focus_window_webview(&app_handle, &window);
+            }
+        }
+    });
+}
+
 // === Platform-specific: get input position (physical screen coordinates) ===
 
 /// Windows: try text caret via GetGUIThreadInfo, fall back to GetCursorPos.
@@ -264,9 +367,7 @@ pub fn register_toggle_shortcut(app: &tauri::AppHandle, shortcut_str: &str) -> R
                     } else {
                         remember_current_foreground_window(app);
                         position_near_caret(&window);
-                        let _ = app.emit("main-window-opened", serde_json::json!({}));
-                        let _ = window.show();
-                        let _ = window.set_focus();
+                        show_and_focus_main_window(app, &window);
                     }
                 }
             }
@@ -419,4 +520,16 @@ pub fn get_auto_start(app: tauri::AppHandle) -> Result<bool, String> {
     autostart
         .is_enabled()
         .map_err(|e| format!("Failed to check autostart: {}", e))
+}
+
+#[tauri::command]
+pub fn focus_main_window(app: tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        // Use simple show + set_focus instead of show_and_focus_main_window
+        // to avoid the ALT key trick which can trigger the Windows system menu
+        // when the user presses arrow keys or Space shortly after.
+        let _ = window.show();
+        let _ = window.set_focus();
+        focus_window_webview(&app, &window);
+    }
 }
