@@ -75,5 +75,8 @@ pub async fn dispatch_ocr(
         }
     }
 
-    Err(format!("All OCR engines failed. Last error: {}", last_error))
+    Err(format!(
+        "All OCR engines failed. Last error: {}",
+        last_error
+    ))
 }

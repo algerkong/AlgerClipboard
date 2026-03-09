@@ -541,7 +541,11 @@ impl Database {
 
     // ── OCR cache ──
 
-    pub fn get_ocr_cache(&self, content_hash: &str, engine_type: &str) -> Result<Option<String>, String> {
+    pub fn get_ocr_cache(
+        &self,
+        content_hash: &str,
+        engine_type: &str,
+    ) -> Result<Option<String>, String> {
         let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
         let result = conn.query_row(
             "SELECT result_json FROM ocr_cache WHERE content_hash = ?1 AND engine_type = ?2",
@@ -555,7 +559,12 @@ impl Database {
         }
     }
 
-    pub fn set_ocr_cache(&self, content_hash: &str, engine_type: &str, result_json: &str) -> Result<(), String> {
+    pub fn set_ocr_cache(
+        &self,
+        content_hash: &str,
+        engine_type: &str,
+        result_json: &str,
+    ) -> Result<(), String> {
         let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
         conn.execute(
             "INSERT OR REPLACE INTO ocr_cache (content_hash, engine_type, result_json, created_at) VALUES (?1, ?2, ?3, ?4)",

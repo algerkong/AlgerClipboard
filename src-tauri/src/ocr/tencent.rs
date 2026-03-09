@@ -29,12 +29,7 @@ impl TencentOcrEngine {
     }
 
     /// Build TC3-HMAC-SHA256 authorization header.
-    fn build_authorization(
-        &self,
-        timestamp: i64,
-        date: &str,
-        payload: &str,
-    ) -> String {
+    fn build_authorization(&self, timestamp: i64, date: &str, payload: &str) -> String {
         let service = "ocr";
         let host = "ocr.tencentcloudapi.com";
         let content_type = "application/json; charset=utf-8";
@@ -74,8 +69,7 @@ impl TencentOcrEngine {
 
 /// Compute HMAC-SHA256 and return raw bytes.
 fn hmac_sha256(key: &[u8], data: &[u8]) -> Vec<u8> {
-    let mut mac =
-        HmacSha256::new_from_slice(key).expect("HMAC can take key of any size");
+    let mut mac = HmacSha256::new_from_slice(key).expect("HMAC can take key of any size");
     mac.update(data);
     mac.finalize().into_bytes().to_vec()
 }
@@ -168,10 +162,7 @@ impl OcrEngine for TencentOcrEngine {
             .map_err(|e| format!("Tencent OCR response parse failed: {}", e))?;
 
         if let Some(err) = result.response.error {
-            return Err(format!(
-                "Tencent OCR error [{}]: {}",
-                err.code, err.message
-            ));
+            return Err(format!("Tencent OCR error [{}]: {}", err.code, err.message));
         }
 
         let w = img_w as f64;

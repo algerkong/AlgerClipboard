@@ -4,6 +4,12 @@ src-tauri/target/
 .DS_Store
 *.log
 
+# Local RapidOCR runtime build outputs
+.rapidocr-real-venv/
+artifacts/
+scripts/rapidocr/descriptor.mock.json
+scripts/rapidocr/descriptor.real.local.json
+
 .claude/
 CLAUDE.md
 docs/plans/

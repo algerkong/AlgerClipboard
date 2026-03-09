@@ -141,7 +141,11 @@ src-tauri/              # Rust backend
 
 ## Cloud Sync Setup
 
-See the [Cloud Sync Guide](./docs/cloud-sync-guide.md) for detailed configuration instructions.
+See the [Cloud Sync Guide](./docs/en/cloud-sync-guide.md) for detailed configuration instructions.
+
+## OCR Development
+
+See the [RapidOCR Development Guide](./docs/en/rapidocr-development.md) for runtime packaging, installer flow, and release automation details.
 
 ## Donate
 

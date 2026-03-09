@@ -141,7 +141,11 @@ src-tauri/              # Rust 后端
 
 ## 云同步配置
 
-详见 [云同步配置指南](./docs/cloud-sync-guide.md)。
+详见 [云同步配置指南](./docs/zh-CN/cloud-sync-guide.md)。
+
+## OCR 开发
+
+RapidOCR 运行时打包、安装链路和发布流程说明见 [RapidOCR 开发说明](./docs/zh-CN/rapidocr-development.md)。
 
 ## 捐赠
 

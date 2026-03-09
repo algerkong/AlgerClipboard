@@ -2,6 +2,7 @@ use crate::clipboard::file_meta;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
+use tauri::State;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FilePreview {
@@ -35,8 +36,7 @@ pub fn read_file_preview(path: String, max_bytes: Option<usize>) -> Result<FileP
     let size = metadata.len();
 
     let bytes = if size as usize > max {
-        let mut file =
-            fs::File::open(p).map_err(|e| format!("Failed to open file: {}", e))?;
+        let mut file = fs::File::open(p).map_err(|e| format!("Failed to open file: {}", e))?;
         let mut buf = vec![0u8; max];
         use std::io::Read;
         file.read_exact(&mut buf)
@@ -69,8 +69,8 @@ fn build_tree(path: &Path, current_depth: u32, max_depth: u32) -> Result<DirTree
 
     let children = if is_dir && current_depth < max_depth {
         let mut entries: Vec<DirTreeNode> = Vec::new();
-        let read_dir =
-            fs::read_dir(path).map_err(|e| format!("Failed to read directory {:?}: {}", path, e))?;
+        let read_dir = fs::read_dir(path)
+            .map_err(|e| format!("Failed to read directory {:?}: {}", path, e))?;
         for entry in read_dir {
             if let Ok(entry) = entry {
                 if let Ok(child) = build_tree(&entry.path(), current_depth + 1, max_depth) {
@@ -78,9 +78,7 @@ fn build_tree(path: &Path, current_depth: u32, max_depth: u32) -> Result<DirTree
                 }
             }
         }
-        entries.sort_by(|a, b| {
-            b.is_dir.cmp(&a.is_dir).then(a.name.cmp(&b.name))
-        });
+        entries.sort_by(|a, b| b.is_dir.cmp(&a.is_dir).then(a.name.cmp(&b.name)));
         Some(entries)
     } else if is_dir {
         // At max depth, indicate it's a directory but don't recurse
@@ -215,8 +213,12 @@ pub fn check_paths_exist(paths: Vec<String>) -> Vec<bool> {
 }
 
 #[tauri::command]
-pub async fn ocr_from_file_path(path: String) -> Result<crate::ocr::OcrResult, String> {
-    tokio::task::spawn_blocking(move || crate::ocr::extract_text(&path))
-        .await
-        .map_err(|e| format!("OCR task failed: {}", e))?
+pub async fn ocr_from_file_path(
+    app: tauri::AppHandle,
+    db: State<'_, crate::commands::clipboard_cmd::AppDatabase>,
+    path: String,
+) -> Result<crate::ocr::OcrResult, String> {
+    let image_data =
+        std::fs::read(&path).map_err(|e| format!("Failed to read file '{}': {}", path, e))?;
+    crate::commands::ocr_cmd::run_ocr_with_app(&app, &db, image_data, None).await
 }

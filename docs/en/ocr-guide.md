@@ -15,6 +15,7 @@
 - [Switching Engines](#switching-engines)
 - [Developer Guide](#developer-guide)
   - [Architecture Overview](#architecture-overview)
+  - [RapidOCR Development Guide](#rapidocr-development-guide)
   - [Adding a New Engine](#adding-a-new-engine)
   - [Key Types](#key-types)
   - [Coordinate System](#coordinate-system)
@@ -172,6 +173,13 @@ This section is for developers who want to extend the OCR functionality.
 - All engines implement the `OcrEngine` trait defined in `src-tauri/src/ocr/engine.rs`
 - Engine configurations are stored as JSON in the SQLite settings table (key: `ocr_engines`)
 - `ocr_cmd.rs` handles config loading, engine construction, and dispatch
+
+### RapidOCR Development Guide
+
+RapidOCR development and release details are consolidated into a single document:
+
+- [RapidOCR Development Guide](/Users/alger/code/Project/AlgerClipboard/docs/en/rapidocr-development.md)
+
 
 ### Adding a New Engine
 

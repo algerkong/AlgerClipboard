@@ -1,7 +1,7 @@
 {
   "name": "alger-clipboard",
   "private": true,
-  "version": "1.6.1",
+  "version": "1.6.2",
   "license": "GPL-3.0-only",
   "type": "module",
   "scripts": {
@@ -9,7 +9,11 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "rapidocr:manifest": "node scripts/rapidocr/generate-manifest.mjs",
+    "rapidocr:mock": "node scripts/rapidocr/build-mock-runtime.mjs",
+    "rapidocr:real": "bash scripts/rapidocr/build-real-runtime.sh",
+    "rapidocr:real:windows": "powershell -ExecutionPolicy Bypass -File scripts/rapidocr/build-real-runtime.ps1"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.1",

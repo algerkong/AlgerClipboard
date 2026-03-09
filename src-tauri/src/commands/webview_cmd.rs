@@ -63,8 +63,12 @@ pub async fn create_ask_ai_panel(
 
     // If window already exists, just show and focus it
     if let Some(existing) = app.get_window(label) {
-        existing.show().map_err(|e| format!("Failed to show: {}", e))?;
-        existing.set_focus().map_err(|e| format!("Failed to focus: {}", e))?;
+        existing
+            .show()
+            .map_err(|e| format!("Failed to show: {}", e))?;
+        existing
+            .set_focus()
+            .map_err(|e| format!("Failed to focus: {}", e))?;
         return Ok(());
     }
 
@@ -85,8 +89,12 @@ pub async fn create_ask_ai_panel(
     // Add the React tab bar as a child webview at the top
     let bar_h = if single_service { 0.0 } else { tab_bar_height };
     let top_inset = ask_ai_top_inset(single_service);
-    let win_size = window.inner_size().map_err(|e| format!("Failed to get size: {}", e))?;
-    let scale = window.scale_factor().map_err(|e| format!("Failed to get scale: {}", e))?;
+    let win_size = window
+        .inner_size()
+        .map_err(|e| format!("Failed to get size: {}", e))?;
+    let scale = window
+        .scale_factor()
+        .map_err(|e| format!("Failed to get scale: {}", e))?;
     let logical_w = win_size.width as f64 / scale;
     let logical_h = win_size.height as f64 / scale;
 
@@ -171,7 +179,9 @@ pub async fn create_ai_child_webview(
 
     // If webview already exists, just show it
     if let Some(existing) = app.get_webview(&label) {
-        existing.show().map_err(|e| format!("Failed to show webview: {}", e))?;
+        existing
+            .show()
+            .map_err(|e| format!("Failed to show webview: {}", e))?;
         return Ok(());
     }
 
@@ -181,10 +191,7 @@ pub async fn create_ai_child_webview(
 
     let parsed_url: tauri::Url = url.parse().map_err(|e| format!("Invalid URL: {}", e))?;
 
-    let mut builder = tauri::webview::WebviewBuilder::new(
-        &label,
-        WebviewUrl::External(parsed_url),
-    );
+    let mut builder = tauri::webview::WebviewBuilder::new(&label, WebviewUrl::External(parsed_url));
 
     // Session isolation: macOS uses dataStoreIdentifier, others use dataDirectory
     #[cfg(target_os = "macos")]
@@ -221,7 +228,9 @@ pub async fn resize_tab_bar(
         .get_webview("ask-ai-tab-bar")
         .ok_or_else(|| "Tab bar webview not found".to_string())?;
     webview
-        .set_position(tauri::Position::Logical(tauri::LogicalPosition::new(0.0, y)))
+        .set_position(tauri::Position::Logical(tauri::LogicalPosition::new(
+            0.0, y,
+        )))
         .map_err(|e| format!("Failed to reposition tab bar: {}", e))?;
     webview
         .set_size(tauri::Size::Logical(tauri::LogicalSize::new(width, height)))
@@ -239,10 +248,7 @@ pub async fn bring_tab_bar_to_front(app: tauri::AppHandle) -> Result<(), String>
 
 /// Show a child webview by service ID.
 #[tauri::command]
-pub async fn show_ai_webview(
-    app: tauri::AppHandle,
-    service_id: String,
-) -> Result<(), String> {
+pub async fn show_ai_webview(app: tauri::AppHandle, service_id: String) -> Result<(), String> {
     let label = format!("ask-ai-svc-{}", service_id);
     let webview = app
         .get_webview(&label)
@@ -256,10 +262,7 @@ pub async fn show_ai_webview(
 
 /// Hide a child webview by service ID.
 #[tauri::command]
-pub async fn hide_ai_webview(
-    app: tauri::AppHandle,
-    service_id: String,
-) -> Result<(), String> {
+pub async fn hide_ai_webview(app: tauri::AppHandle, service_id: String) -> Result<(), String> {
     let label = format!("ask-ai-svc-{}", service_id);
     let webview = app
         .get_webview(&label)

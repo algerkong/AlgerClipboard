@@ -123,9 +123,10 @@ impl OcrEngine for LocalModelEngine {
         // Write base64-encoded image to stdin.
         let b64 = base64::engine::general_purpose::STANDARD.encode(image_data);
         if let Some(mut stdin) = child.stdin.take() {
-            stdin.write_all(b64.as_bytes()).await.map_err(|e| {
-                format!("Failed to write to local model stdin: {}", e)
-            })?;
+            stdin
+                .write_all(b64.as_bytes())
+                .await
+                .map_err(|e| format!("Failed to write to local model stdin: {}", e))?;
             // Drop stdin to signal EOF.
         }
 

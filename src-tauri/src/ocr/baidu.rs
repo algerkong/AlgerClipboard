@@ -67,12 +67,7 @@ impl BaiduOcrEngine {
 
         let token = body["access_token"]
             .as_str()
-            .ok_or_else(|| {
-                format!(
-                    "Baidu token response missing access_token: {}",
-                    body
-                )
-            })?
+            .ok_or_else(|| format!("Baidu token response missing access_token: {}", body))?
             .to_string();
 
         // Cache it.

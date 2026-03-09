@@ -27,10 +27,7 @@ pub async fn fetch_favicon(
     }
 
     // Fetch from Google Favicon API
-    let url = format!(
-        "https://www.google.com/s2/favicons?domain={}&sz=64",
-        domain
-    );
+    let url = format!("https://www.google.com/s2/favicons?domain={}&sz=64", domain);
 
     let response = reqwest::get(&url)
         .await

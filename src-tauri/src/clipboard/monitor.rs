@@ -1602,13 +1602,23 @@ impl ClipboardMonitor {
                                     if let Some(meta) = file_metas.first() {
                                         if matches!(meta.file_type, file_meta::FileType::Image) {
                                             if let Ok(img_data) = std::fs::read(&paths[0]) {
-                                                if let Ok(img) = image::load_from_memory(&img_data) {
+                                                if let Ok(img) = image::load_from_memory(&img_data)
+                                                {
                                                     let thumb = img.thumbnail(200, 200);
                                                     let mut thumb_bytes = Vec::new();
                                                     let mut cursor = Cursor::new(&mut thumb_bytes);
-                                                    if thumb.write_to(&mut cursor, image::ImageFormat::Png).is_ok() {
-                                                        let thumb_id = uuid::Uuid::new_v4().to_string();
-                                                        if let Ok(rel) = blob_store.save_thumbnail(&thumb_id, &thumb_bytes) {
+                                                    if thumb
+                                                        .write_to(
+                                                            &mut cursor,
+                                                            image::ImageFormat::Png,
+                                                        )
+                                                        .is_ok()
+                                                    {
+                                                        let thumb_id =
+                                                            uuid::Uuid::new_v4().to_string();
+                                                        if let Ok(rel) = blob_store
+                                                            .save_thumbnail(&thumb_id, &thumb_bytes)
+                                                        {
                                                             thumb_path = Some(rel);
                                                         }
                                                     }

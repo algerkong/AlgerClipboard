@@ -438,6 +438,9 @@ pub fn run() {
             commands::ocr_cmd::get_default_ocr_engine,
             commands::ocr_cmd::set_default_ocr_engine,
             commands::ocr_cmd::get_enabled_ocr_engines,
+            commands::ocr_cmd::get_rapidocr_runtime_status,
+            commands::ocr_cmd::install_rapidocr_runtime,
+            commands::ocr_cmd::remove_rapidocr_runtime,
             commands::ocr_cmd::clear_ocr_cache,
         ])
         .run(tauri::generate_context!())

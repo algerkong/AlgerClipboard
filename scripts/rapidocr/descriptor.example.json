@@ -1,0 +1,38 @@
+{
+  "version": "0.1.0",
+  "artifacts": [
+    {
+      "target": "macos-aarch64",
+      "file": "../../artifacts/rapidocr/macos-aarch64/rapidocr-macos-aarch64.zip",
+      "urls": [
+        "https://github.com/algerkong/AlgerClipboard/releases/download/rapidocr-v0.1.0/rapidocr-macos-aarch64.zip",
+        "https://mirror.example.com/algerclipboard/rapidocr/rapidocr-macos-aarch64.zip"
+      ],
+      "executable_relpath": "bin/alger-rapidocr"
+    },
+    {
+      "target": "macos-x86_64",
+      "file": "../../artifacts/rapidocr/macos-x86_64/rapidocr-macos-x86_64.zip",
+      "urls": [
+        "https://github.com/algerkong/AlgerClipboard/releases/download/rapidocr-v0.1.0/rapidocr-macos-x86_64.zip"
+      ],
+      "executable_relpath": "bin/alger-rapidocr"
+    },
+    {
+      "target": "linux-x86_64",
+      "file": "../../artifacts/rapidocr/linux-x86_64/rapidocr-linux-x86_64.zip",
+      "urls": [
+        "https://github.com/algerkong/AlgerClipboard/releases/download/rapidocr-v0.1.0/rapidocr-linux-x86_64.zip"
+      ],
+      "executable_relpath": "bin/alger-rapidocr"
+    },
+    {
+      "target": "windows-x86_64",
+      "file": "../../artifacts/rapidocr/windows-x86_64/rapidocr-windows-x86_64.zip",
+      "urls": [
+        "https://github.com/algerkong/AlgerClipboard/releases/download/rapidocr-v0.1.0/rapidocr-windows-x86_64.zip"
+      ],
+      "executable_relpath": "bin/alger-rapidocr.exe"
+    }
+  ]
+}

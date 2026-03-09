@@ -117,9 +117,101 @@ jobs:
           prerelease: false
           args: --target ${{ matrix.target }}
 
+  rapidocr-build:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-latest
+            build_command: bash scripts/rapidocr/build-real-runtime.sh
+            artifact_path: artifacts/rapidocr-real/macos-aarch64/rapidocr-macos-aarch64.zip
+          - runner: windows-latest
+            build_command: powershell -ExecutionPolicy Bypass -File scripts/rapidocr/build-real-runtime.ps1
+            artifact_path: artifacts/rapidocr-real/windows-x86_64/rapidocr-windows-x86_64.zip
+    runs-on: ${{ matrix.runner }}
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build RapidOCR runtime
+        run: ${{ matrix.build_command }}
+
+      - name: Upload RapidOCR build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapidocr-${{ matrix.runner }}
+          path: ${{ matrix.artifact_path }}
+
+  rapidocr-assets:
+    needs: rapidocr-build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Download RapidOCR build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/rapidocr-real
+          pattern: rapidocr-*
+          merge-multiple: true
+
+      - name: Arrange RapidOCR artifacts
+        run: |
+          mkdir -p artifacts/rapidocr-real/macos-aarch64 artifacts/rapidocr-real/windows-x86_64
+          if [ -f artifacts/rapidocr-real/rapidocr-macos-aarch64.zip ]; then
+            mv artifacts/rapidocr-real/rapidocr-macos-aarch64.zip artifacts/rapidocr-real/macos-aarch64/
+          fi
+          if [ -f artifacts/rapidocr-real/rapidocr-windows-x86_64.zip ]; then
+            mv artifacts/rapidocr-real/rapidocr-windows-x86_64.zip artifacts/rapidocr-real/windows-x86_64/
+          fi
+
+      - name: Generate RapidOCR descriptor
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          BASE_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}"
+          node scripts/rapidocr/generate-release-descriptor.mjs \
+            --version "$VERSION" \
+            --base-url "$BASE_URL" \
+            --artifacts-root artifacts/rapidocr-real \
+            --output artifacts/rapidocr-real/descriptor.release.json
+
+      - name: Generate RapidOCR manifest
+        run: |
+          node scripts/rapidocr/generate-manifest.mjs \
+            artifacts/rapidocr-real/descriptor.release.json \
+            artifacts/rapidocr-real/rapidocr-manifest.json
+
+      - name: Upload RapidOCR assets to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            artifacts/rapidocr-real/rapidocr-manifest.json
+            artifacts/rapidocr-real/macos-aarch64/rapidocr-macos-aarch64.zip
+            artifacts/rapidocr-real/windows-x86_64/rapidocr-windows-x86_64.zip
+
   # Publish the draft release
   publish:
-    needs: build
+    needs: [build, rapidocr-assets]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     steps:

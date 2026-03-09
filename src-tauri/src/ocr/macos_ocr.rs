@@ -1,6 +1,16 @@
 use super::{OcrResult, OcrTextLine};
 use std::process::Command;
 
+fn simplify_swift_ocr_error(stderr: &str) -> String {
+    if stderr.contains("this SDK is not supported by the compiler")
+        || stderr.contains("redefinition of module 'SwiftBridging'")
+    {
+        return "macOS native OCR could not start because the active Apple developer tools are inconsistent. Reinstall Command Line Tools with `sudo rm -rf /Library/Developer/CommandLineTools && xcode-select --install`, or switch to a full Xcode toolchain with `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`.".to_string();
+    }
+
+    stderr.trim().to_string()
+}
+
 pub fn extract_text(image_path: &str) -> Result<OcrResult, String> {
     // Swift script that uses Vision framework and outputs JSON with bounding boxes.
     // Vision's boundingBox uses normalized coords with origin at bottom-left,
@@ -86,6 +96,11 @@ if let data = try? JSONSerialization.data(withJSONObject: result),
     let output = Command::new("swift")
         .arg("-")
         .arg(image_path)
+        .env_remove("SDKROOT")
+        .env_remove("DEVELOPER_DIR")
+        .env_remove("TOOLCHAINS")
+        .env_remove("CPATH")
+        .env_remove("C_INCLUDE_PATH")
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
@@ -101,7 +116,7 @@ if let data = try? JSONSerialization.data(withJSONObject: result),
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("OCR failed: {}", stderr));
+        return Err(format!("OCR failed: {}", simplify_swift_ocr_error(&stderr)));
     }
 
     let json_str = String::from_utf8_lossy(&output.stdout).trim().to_string();

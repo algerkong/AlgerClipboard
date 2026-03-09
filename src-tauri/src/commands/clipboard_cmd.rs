@@ -234,14 +234,15 @@ pub fn get_thumbnail_base64(
 
 #[tauri::command]
 pub async fn extract_text_from_image(
+    app: tauri::AppHandle,
+    db: State<'_, AppDatabase>,
     blob_store: State<'_, AppBlobStore>,
     relative_path: String,
 ) -> Result<crate::ocr::OcrResult, String> {
     let full_path = blob_store.0.get_blob_path(&relative_path);
-    let path_str = full_path.to_string_lossy().to_string();
-    tokio::task::spawn_blocking(move || crate::ocr::extract_text(&path_str))
-        .await
-        .map_err(|e| format!("OCR task failed: {}", e))?
+    let image_data = std::fs::read(&full_path)
+        .map_err(|e| format!("Failed to read image '{}': {}", relative_path, e))?;
+    crate::commands::ocr_cmd::run_ocr_with_app(&app, &db, image_data, None).await
 }
 
 #[tauri::command]

@@ -39,7 +39,11 @@ fn detect_mime(data: &[u8]) -> &'static str {
         "image/jpeg"
     } else if data.len() >= 3 && &data[0..3] == b"GIF" {
         "image/gif"
-    } else if data.len() >= 4 && &data[0..4] == b"RIFF" && data.len() >= 12 && &data[8..12] == b"WEBP" {
+    } else if data.len() >= 4
+        && &data[0..4] == b"RIFF"
+        && data.len() >= 12
+        && &data[8..12] == b"WEBP"
+    {
         "image/webp"
     } else {
         "image/png" // fallback
@@ -201,12 +205,8 @@ impl OcrEngine for AiVisionEngine {
             ));
         }
 
-        let chat_resp: ChatCompletionResponse = serde_json::from_str(&resp_body).map_err(|e| {
-            format!(
-                "Failed to parse AI Vision chat completion response: {}",
-                e
-            )
-        })?;
+        let chat_resp: ChatCompletionResponse = serde_json::from_str(&resp_body)
+            .map_err(|e| format!("Failed to parse AI Vision chat completion response: {}", e))?;
 
         let content = chat_resp
             .choices
