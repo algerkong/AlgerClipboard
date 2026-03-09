@@ -67,23 +67,24 @@ fn create_main_window<R: tauri::Runtime>(
 pub fn run() {
     env_logger::init();
 
-    tauri::Builder::default()
+    #[allow(unused_mut)]
+    let mut builder = tauri::Builder::default()
         .on_window_event(|window, event| {
             if window.label() == "main" {
                 if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                    api.prevent_close();
-                    let _ = window.hide();
+                    #[cfg(not(debug_assertions))]
+                    {
+                        api.prevent_close();
+                        let _ = window.hide();
+                    }
+
+                    #[cfg(debug_assertions)]
+                    {
+                        let _ = api;
+                    }
                 }
             }
         })
-        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-            if let Some(win) = app.get_webview_window("main") {
-                remember_current_foreground_window(app);
-                let _ = app.emit("main-window-opened", serde_json::json!({}));
-                let _ = win.show();
-                let _ = win.set_focus();
-            }
-        }))
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
             Some(vec!["--minimized"]),
@@ -94,7 +95,21 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_os::init());
+
+    #[cfg(not(debug_assertions))]
+    {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            if let Some(win) = app.get_webview_window("main") {
+                remember_current_foreground_window(app);
+                let _ = app.emit("main-window-opened", serde_json::json!({}));
+                let _ = win.show();
+                let _ = win.set_focus();
+            }
+        }));
+    }
+
+    builder
         .setup(|app| {
             let main_window = create_main_window(&app.handle())?;
 
@@ -406,6 +421,7 @@ pub fn run() {
             commands::webview_cmd::create_ask_ai_panel,
             commands::webview_cmd::resize_tab_bar,
             commands::webview_cmd::eval_webview_js,
+            commands::webview_cmd::webview_exists,
             commands::webview_cmd::create_ai_child_webview,
             commands::webview_cmd::show_ai_webview,
             commands::webview_cmd::hide_ai_webview,
