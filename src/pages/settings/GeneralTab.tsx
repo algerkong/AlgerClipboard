@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { getVersion } from "@tauri-apps/api/app";
 import {
   Sun,
   Moon,
@@ -68,6 +69,7 @@ export function GeneralTab() {
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [previewCloseShortcut, setPreviewCloseShortcutState] = useState("Escape");
   const [isRecordingCloseShortcut, setIsRecordingCloseShortcut] = useState(false);
+  const [appVersion, setAppVersion] = useState<string>("...");
 
   useEffect(() => {
     if (!isRecordingShortcut) {
@@ -108,6 +110,12 @@ export function GeneralTab() {
       window.removeEventListener("keydown", handleRecordShortcut, true);
     };
   }, [isRecordingShortcut, setToggleShortcut, t]);
+
+  useEffect(() => {
+    getVersion()
+      .then(setAppVersion)
+      .catch(() => setAppVersion("unknown"));
+  }, []);
 
   useEffect(() => {
     invoke<string | null>("get_settings", { key: "preview_close_shortcut" }).then((val) => {
@@ -567,6 +575,24 @@ export function GeneralTab() {
             {t("preview.resetConfirm")}
           </button>
         </div>
+      </section>
+
+      {/* Auto check update */}
+      <section>
+        <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
+          {t("settings.appVersion")}
+        </label>
+        <div className="mt-2 flex items-center justify-between gap-3 rounded-md border border-border/50 bg-muted/20 px-3 py-2">
+          <span className="text-sm font-medium text-foreground">
+            v{appVersion}
+          </span>
+          <span className="text-xs2 text-muted-foreground">
+            {platform}
+          </span>
+        </div>
+        <p className="mt-1 text-xs2 text-muted-foreground/70">
+          {t("settings.appVersionDesc")}
+        </p>
       </section>
 
       {/* Auto check update */}

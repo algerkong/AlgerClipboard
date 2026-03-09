@@ -1,5 +1,39 @@
 # Changelog
 
+## [1.6.2] - 2026-03-09
+
+### New Features
+
+- **RapidOCR Runtime Installer**: Added a downloadable RapidOCR runtime flow for macOS and Linux, including manifest-based installation, mirror fallback, SHA-256 verification, and runtime version management
+- **RapidOCR Runtime for Windows**: Added Windows RapidOCR runtime packaging and release support so Windows users can install the same downloadable OCR runtime from Settings
+- **RapidOCR Release Automation**: Added GitHub Actions and manifest tooling to build and publish RapidOCR runtime assets alongside tagged releases
+- **Settings Version Display**: Added current app version display in Settings → General for easier support and troubleshooting
+- **RapidOCR Development Docs**: Added a consolidated bilingual RapidOCR development guide and linked it from the project READMEs
+
+### Improvements
+
+- **OCR platform defaults**: macOS and Linux now use RapidOCR runtime distribution instead of relying on fragile native OCR environment setup, while Windows keeps native OCR as default and also supports RapidOCR runtime installation
+- **Documentation links**: Updated README documentation links to point at the actual bilingual docs structure
+
+---
+
+## [1.6.2] - 2026-03-09 (中文)
+
+### 新功能
+
+- **RapidOCR 运行时安装器**: 为 macOS 和 Linux 增加可下载的 RapidOCR 运行时安装流程，支持基于 manifest 的安装、镜像回退、SHA-256 校验和运行时版本管理
+- **Windows RapidOCR 支持**: 新增 Windows RapidOCR 运行时打包和发布支持，Windows 用户也可以在设置页安装同一套可下载 OCR 运行时
+- **RapidOCR 发布自动化**: 新增 GitHub Actions 和 manifest 工具链，在 tag 发版时自动构建并上传 RapidOCR 运行时资产
+- **设置页版本显示**: 在 设置 → 通用 中新增当前应用版本显示，便于排查问题和确认安装版本
+- **RapidOCR 开发文档**: 新增整合后的中英文 RapidOCR 开发说明，并在项目 README 中提供入口
+
+### 改进
+
+- **OCR 平台默认策略**: macOS 和 Linux 改为使用 RapidOCR 运行时分发，不再依赖脆弱的系统原生 OCR 环境；Windows 保留原生 OCR 为默认引擎，同时支持安装 RapidOCR 运行时
+- **文档链接**: 修正 README 中的文档链接，统一指向现有的中英文文档目录
+
+---
+
 ## [1.6.1] - 2026-03-09
 
 ### New Features

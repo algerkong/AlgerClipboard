@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import type { Platform } from "@/contexts/PlatformContext";
 
 export type Theme = "light" | "dark" | "system";
 
@@ -21,8 +22,9 @@ export const ENGINE_LIST = [
   { id: "google", label: "Google", hasSecret: false },
 ] as const;
 
-export const OCR_ENGINE_LIST = [
+export const ALL_OCR_ENGINES = [
   { id: "native", label: "Native OCR", fields: [] as const },
+  { id: "rapidocr", label: "RapidOCR", fields: [] as const },
   { id: "baidu", label: "Baidu OCR", fields: ["apiKey", "apiSecret"] as const },
   { id: "google", label: "Google Vision", fields: ["apiKey"] as const },
   { id: "tencent", label: "Tencent OCR", fields: ["apiKey", "apiSecret"] as const },
@@ -30,6 +32,15 @@ export const OCR_ENGINE_LIST = [
   { id: "online_model", label: "Online Model", fields: ["endpoint", "apiKey"] as const },
   { id: "ai_vision", label: "AI Vision", fields: ["endpoint", "apiKey", "model"] as const },
 ] as const;
+
+export function getOcrEngineList(platform: Platform) {
+  return ALL_OCR_ENGINES.filter((engine) => {
+    if (engine.id === "native") {
+      return platform === "windows";
+    }
+    return true;
+  });
+}
 
 export const MODIFIER_KEYS = new Set(["Shift", "Control", "Meta", "Alt"]);
 

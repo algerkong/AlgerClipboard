@@ -1,14 +1,19 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { Toggle, OCR_ENGINE_LIST } from "./shared";
+import { Toggle, getOcrEngineList } from "./shared";
 import {
   getOcrEngines,
   configureOcrEngine,
   getDefaultOcrEngine,
   setDefaultOcrEngine,
   clearOcrCache,
+  getRapidOcrRuntimeStatus,
+  installRapidOcrRuntime,
+  removeRapidOcrRuntime,
   type OcrEngineConfig,
+  type RapidOcrRuntimeStatus,
 } from "@/services/ocrService";
+import { usePlatform } from "@/contexts/PlatformContext";
 
 type FieldKey = "apiKey" | "apiSecret" | "endpoint" | "model" | "command";
 
@@ -19,6 +24,7 @@ interface EngineForm {
   endpoint: string;
   model: string;
   command: string;
+  extra: string;
 }
 
 const emptyForm = (): EngineForm => ({
@@ -28,15 +34,21 @@ const emptyForm = (): EngineForm => ({
   endpoint: "",
   model: "",
   command: "",
+  extra: "",
 });
 
 /* ─── OCR Tab ─── */
 export function OcrTab() {
   const { t } = useTranslation();
+  const platform = usePlatform();
+  const engineList = getOcrEngineList(platform);
 
   const [engineForms, setEngineForms] = useState<Record<string, EngineForm>>({});
   const [defaultEngine, setDefaultEngine] = useState("");
   const [cacheCleared, setCacheCleared] = useState(false);
+  const [rapidStatus, setRapidStatus] = useState<RapidOcrRuntimeStatus | null>(null);
+  const [rapidBusy, setRapidBusy] = useState(false);
+  const [rapidActionError, setRapidActionError] = useState<string | null>(null);
   const loadedRef = useRef(false);
   const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
@@ -45,7 +57,7 @@ export function OcrTab() {
     getOcrEngines()
       .then((configs) => {
         const forms: Record<string, EngineForm> = {};
-        for (const eng of OCR_ENGINE_LIST) {
+        for (const eng of engineList) {
           const existing = configs.find((c) => c.engine_type === eng.id);
           forms[eng.id] = existing
             ? {
@@ -55,6 +67,7 @@ export function OcrTab() {
                 endpoint: existing.endpoint,
                 model: existing.model,
                 command: existing.command,
+                extra: existing.extra,
               }
             : emptyForm();
         }
@@ -67,7 +80,11 @@ export function OcrTab() {
     getDefaultOcrEngine()
       .then(setDefaultEngine)
       .catch(() => {});
-  }, []);
+
+    getRapidOcrRuntimeStatus()
+      .then(setRapidStatus)
+      .catch(() => {});
+  }, [engineList]);
 
   const saveEngine = useCallback(async (engineId: string, form: EngineForm) => {
     const config: OcrEngineConfig = {
@@ -78,7 +95,7 @@ export function OcrTab() {
       endpoint: form.endpoint,
       model: form.model,
       command: form.command,
-      extra: "",
+      extra: form.extra,
     };
     await configureOcrEngine(config).catch(() => {});
   }, []);
@@ -133,6 +150,41 @@ export function OcrTab() {
     command: "text",
   };
 
+  const refreshRapidStatus = useCallback(async () => {
+    const status = await getRapidOcrRuntimeStatus().catch(() => null);
+    if (status) {
+      setRapidStatus(status);
+    }
+  }, []);
+
+  const handleInstallRapidOcr = useCallback(async () => {
+    setRapidBusy(true);
+    setRapidActionError(null);
+    try {
+      const status = await installRapidOcrRuntime();
+      setRapidStatus(status);
+    } catch (error) {
+      setRapidActionError(String(error));
+      await refreshRapidStatus();
+    } finally {
+      setRapidBusy(false);
+    }
+  }, [refreshRapidStatus]);
+
+  const handleRemoveRapidOcr = useCallback(async () => {
+    setRapidBusy(true);
+    setRapidActionError(null);
+    try {
+      const status = await removeRapidOcrRuntime();
+      setRapidStatus(status);
+    } catch (error) {
+      setRapidActionError(String(error));
+      await refreshRapidStatus();
+    } finally {
+      setRapidBusy(false);
+    }
+  }, [refreshRapidStatus]);
+
   return (
     <div className="space-y-3">
       {/* Default engine selector */}
@@ -145,7 +197,7 @@ export function OcrTab() {
           onChange={(e) => handleSetDefault(e.target.value)}
           className="w-full h-7 px-2 text-sm2 bg-background border border-border/50 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
         >
-          {OCR_ENGINE_LIST.map((eng) => (
+          {engineList.map((eng) => (
             <option key={eng.id} value={eng.id}>
               {eng.label}
             </option>
@@ -157,9 +209,13 @@ export function OcrTab() {
       <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
         {t("ocr.engineConfig")}
       </label>
-      {OCR_ENGINE_LIST.map((eng) => {
+      {engineList.map((eng) => {
         const form = engineForms[eng.id];
         if (!form) return null;
+        const isRapid = eng.id === "rapidocr";
+        const rapidInstalled = rapidStatus?.installed ?? false;
+        const rapidSupported = rapidStatus?.supported ?? true;
+        const rapidUnavailable = isRapid && (!rapidSupported || !rapidInstalled);
         return (
           <div key={eng.id} className="bg-muted/20 rounded-md p-2.5 space-y-2">
             <div className="flex items-center justify-between">
@@ -172,6 +228,55 @@ export function OcrTab() {
                 size="sm"
               />
             </div>
+            {isRapid && (
+              <div className="space-y-2">
+                <div className="text-xs2 text-muted-foreground">
+                  {rapidSupported
+                    ? rapidInstalled
+                      ? t("ocr.rapidInstalled", { version: rapidStatus?.version ?? "unknown" })
+                      : t("ocr.rapidNotInstalled")
+                    : t("ocr.rapidUnsupported")}
+                </div>
+                <textarea
+                  value={form.extra}
+                  onChange={(e) => updateField(eng.id, "extra", e.target.value)}
+                  placeholder={t("ocr.rapidSourcesPlaceholder")}
+                  rows={3}
+                  className="w-full px-2 py-1.5 text-sm2 bg-background border border-border/50 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30 resize-y"
+                />
+                <p className="text-xs2 text-muted-foreground">
+                  {t("ocr.rapidSourcesHint")}
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleInstallRapidOcr}
+                    disabled={rapidBusy || !rapidSupported}
+                    className="h-6 px-3 text-xs2 font-medium bg-primary/12 text-primary hover:bg-primary/18 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {rapidBusy ? t("ocr.rapidInstalling") : rapidInstalled ? t("ocr.rapidRepair") : t("ocr.rapidInstall")}
+                  </button>
+                  {rapidInstalled && (
+                    <button
+                      onClick={handleRemoveRapidOcr}
+                      disabled={rapidBusy}
+                      className="h-6 px-3 text-xs2 font-medium bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {t("ocr.rapidRemove")}
+                    </button>
+                  )}
+                </div>
+                {rapidStatus?.configured_urls?.length ? (
+                  <p className="text-xs2 text-muted-foreground break-all">
+                    {t("ocr.rapidUsingSources")}: {rapidStatus.configured_urls.join(" , ")}
+                  </p>
+                ) : null}
+                {(rapidActionError || rapidStatus?.last_error) && (
+                  <p className="text-xs2 text-red-400 break-words">
+                    {rapidActionError ?? rapidStatus?.last_error}
+                  </p>
+                )}
+              </div>
+            )}
             {eng.fields.map((field) => (
               <input
                 key={field}
@@ -182,6 +287,11 @@ export function OcrTab() {
                 className="w-full h-6 px-2 text-sm2 bg-background border border-border/50 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
               />
             ))}
+            {rapidUnavailable && (
+              <p className="text-xs2 text-amber-400">
+                {t("ocr.rapidInstallRequired")}
+              </p>
+            )}
             {eng.id === "local_model" && (
               <p className="text-xs2 text-muted-foreground">
                 {t("ocr.localModelHint")}

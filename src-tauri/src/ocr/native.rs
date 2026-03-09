@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+#[cfg(target_os = "windows")]
 use uuid::Uuid;
 
 use super::engine::OcrEngine;
@@ -27,38 +28,47 @@ impl OcrEngine for NativeOcrEngine {
     }
 
     async fn recognize(&self, image_data: &[u8]) -> Result<OcrResult, String> {
-        // Write image data to a temp file since the native API expects a file path.
-        let temp_dir = std::env::temp_dir();
-        let temp_file = temp_dir.join(format!("alger_ocr_{}.png", Uuid::new_v4()));
-        let temp_path = temp_file.clone();
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = image_data;
+            return Err("Native OCR is only supported on Windows in this build".to_string());
+        }
 
-        // Copy data into owned Vec so we can move it into the blocking task.
-        let data = image_data.to_vec();
+        #[cfg(target_os = "windows")]
+        {
+            // Write image data to a temp file since the native API expects a file path.
+            let temp_dir = std::env::temp_dir();
+            let temp_file = temp_dir.join(format!("alger_ocr_{}.png", Uuid::new_v4()));
+            let temp_path = temp_file.clone();
 
-        let result = tokio::task::spawn_blocking(move || {
-            // Write temp file
-            std::fs::write(&temp_path, &data)
-                .map_err(|e| format!("Failed to write temp image file: {}", e))?;
+            // Copy data into owned Vec so we can move it into the blocking task.
+            let data = image_data.to_vec();
 
-            // Call the existing platform-specific extract_text
-            let ocr_result = super::extract_text(
-                temp_path
-                    .to_str()
-                    .ok_or_else(|| "Invalid temp file path".to_string())?,
-            );
+            let result = tokio::task::spawn_blocking(move || {
+                // Write temp file
+                std::fs::write(&temp_path, &data)
+                    .map_err(|e| format!("Failed to write temp image file: {}", e))?;
 
-            // Clean up temp file (best effort)
-            let _ = std::fs::remove_file(&temp_path);
+                // Call the existing platform-specific extract_text
+                let ocr_result = super::extract_text(
+                    temp_path
+                        .to_str()
+                        .ok_or_else(|| "Invalid temp file path".to_string())?,
+                );
 
-            ocr_result
-        })
-        .await
-        .map_err(|e| format!("OCR task panicked: {}", e))?;
+                // Clean up temp file (best effort)
+                let _ = std::fs::remove_file(&temp_path);
 
-        // Clean up in case spawn_blocking succeeded but we still have the path
-        // (already cleaned inside the closure, this is a safety net)
-        let _ = std::fs::remove_file(&temp_file);
+                ocr_result
+            })
+            .await
+            .map_err(|e| format!("OCR task panicked: {}", e))?;
 
-        result
+            // Clean up in case spawn_blocking succeeded but we still have the path
+            // (already cleaned inside the closure, this is a safety net)
+            let _ = std::fs::remove_file(&temp_file);
+
+            result
+        }
     }
 }

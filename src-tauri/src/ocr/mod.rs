@@ -3,9 +3,13 @@ pub mod baidu;
 pub mod engine;
 pub mod google;
 pub mod local_model;
-pub mod native;
 pub mod online_model;
+pub mod rapidocr;
+pub mod runtime;
 pub mod tencent;
+
+#[cfg(target_os = "windows")]
+pub mod native;
 
 use serde::{Deserialize, Serialize};
 
@@ -35,13 +39,3 @@ pub struct OcrResult {
 mod windows_ocr;
 #[cfg(target_os = "windows")]
 pub use windows_ocr::extract_text;
-
-#[cfg(target_os = "macos")]
-mod macos_ocr;
-#[cfg(target_os = "macos")]
-pub use macos_ocr::extract_text;
-
-#[cfg(target_os = "linux")]
-mod linux_ocr;
-#[cfg(target_os = "linux")]
-pub use linux_ocr::extract_text;

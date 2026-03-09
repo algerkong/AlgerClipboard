@@ -42,9 +42,9 @@ pub fn classify_extension(ext: &str) -> FileType {
         // Archive
         "zip" | "rar" | "7z" | "tar" | "gz" | "bz2" | "xz" | "zst" => FileType::Archive,
         // Code
-        "rs" | "js" | "ts" | "tsx" | "jsx" | "py" | "java" | "c" | "cpp" | "h" | "hpp"
-        | "go" | "rb" | "php" | "swift" | "kt" | "cs" | "html" | "css" | "scss" | "less"
-        | "vue" | "svelte" | "sh" | "bash" | "zsh" | "ps1" | "bat" | "cmd" => FileType::Code,
+        "rs" | "js" | "ts" | "tsx" | "jsx" | "py" | "java" | "c" | "cpp" | "h" | "hpp" | "go"
+        | "rb" | "php" | "swift" | "kt" | "cs" | "html" | "css" | "scss" | "less" | "vue"
+        | "svelte" | "sh" | "bash" | "zsh" | "ps1" | "bat" | "cmd" => FileType::Code,
         // Executable
         "exe" | "msi" | "com" | "app" | "dmg" => FileType::Executable,
         // Font
@@ -66,9 +66,7 @@ pub fn collect_file_meta(path: &str) -> Option<FileMeta> {
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_default();
 
-    let extension = p
-        .extension()
-        .map(|e| e.to_string_lossy().to_string());
+    let extension = p.extension().map(|e| e.to_string_lossy().to_string());
 
     let size = metadata.len();
     let is_dir = metadata.is_dir();
@@ -89,7 +87,9 @@ pub fn collect_file_meta(path: &str) -> Option<FileMeta> {
     };
 
     let child_count = if is_dir {
-        std::fs::read_dir(p).ok().map(|entries| entries.count() as u32)
+        std::fs::read_dir(p)
+            .ok()
+            .map(|entries| entries.count() as u32)
     } else {
         None
     };

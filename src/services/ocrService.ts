@@ -18,6 +18,17 @@ export interface OcrEngineInfo {
   enabled: boolean;
 }
 
+export interface RapidOcrRuntimeStatus {
+  supported: boolean;
+  installed: boolean;
+  installing: boolean;
+  version: string | null;
+  executable_path: string | null;
+  install_dir: string | null;
+  configured_urls: string[];
+  last_error: string | null;
+}
+
 export async function ocrRecognize(relativePath: string, engine?: string): Promise<OcrResult> {
   return invoke("ocr_recognize", { relativePath, engine: engine ?? null });
 }
@@ -48,4 +59,16 @@ export async function getEnabledOcrEngines(): Promise<OcrEngineInfo[]> {
 
 export async function clearOcrCache(): Promise<void> {
   return invoke("clear_ocr_cache");
+}
+
+export async function getRapidOcrRuntimeStatus(): Promise<RapidOcrRuntimeStatus> {
+  return invoke("get_rapidocr_runtime_status");
+}
+
+export async function installRapidOcrRuntime(): Promise<RapidOcrRuntimeStatus> {
+  return invoke("install_rapidocr_runtime");
+}
+
+export async function removeRapidOcrRuntime(): Promise<RapidOcrRuntimeStatus> {
+  return invoke("remove_rapidocr_runtime");
 }

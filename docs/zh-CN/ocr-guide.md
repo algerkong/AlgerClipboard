@@ -15,6 +15,7 @@
 - [切换引擎](#切换引擎)
 - [开发者指南](#开发者指南)
   - [架构概述](#架构概述)
+  - [RapidOCR 开发说明](#rapidocr-开发说明)
   - [添加新引擎](#添加新引擎)
   - [关键类型](#关键类型)
   - [坐标系统](#坐标系统)
@@ -172,6 +173,12 @@ AI 视觉使用 AI 大模型（如 GPT-4o、Claude、Qwen-VL）通过 OpenAI 兼
 - 所有引擎实现 `src-tauri/src/ocr/engine.rs` 中定义的 `OcrEngine` trait
 - 引擎配置以 JSON 形式存储在 SQLite settings 表中（key: `ocr_engines`）
 - `ocr_cmd.rs` 负责配置加载、引擎构建和调度分发
+
+### RapidOCR 开发说明
+
+RapidOCR 的开发和发布说明已经收敛到单独文档：
+
+- [RapidOCR 开发说明](/Users/alger/code/Project/AlgerClipboard/docs/zh-CN/rapidocr-development.md)
 
 ### 添加新引擎
 
