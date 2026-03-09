@@ -46,6 +46,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 5. 2D Canvas mouse trail
     initMouseTrail();
+
+    // 6. Gallery mouse parallax
+    initGalleryParallax();
 });
 
 /* =========================================================
@@ -70,9 +73,9 @@ function initHeroRotator() {
     const wrapper = document.getElementById('hero-typewriter');
     if (!wrapper) return;
 
-    const staticLine = wrapper.querySelector('.hero-line-static');
-    const typedText = wrapper.querySelector('.hero-typed-text');
-    const cursor = wrapper.querySelector('.hero-typed-cursor');
+    const staticLine = wrapper.querySelector('.hero-tw-static');
+    const typedText = wrapper.querySelector('.hero-tw-dynamic');
+    const cursor = wrapper.querySelector('.hero-tw-cursor');
 
     const TYPE_SPEED = 90;
     const DELETE_SPEED = 45;
@@ -91,8 +94,8 @@ function initHeroRotator() {
 
     function setColor(index) {
         const ci = index % 8;
-        typedText.className = 'hero-typed-text hero-color-' + ci;
-        cursor.className = 'hero-typed-cursor hero-cursor-' + ci;
+        typedText.className = 'hero-tw-dynamic hero-color-' + ci;
+        cursor.className = 'hero-tw-cursor hero-cursor-' + ci;
     }
 
     function sleep(ms) {
@@ -354,4 +357,44 @@ function initMouseTrail() {
     }
 
     draw();
+}
+
+/* =========================================================
+ *  Gallery Mouse Parallax
+ *  Cards shift subtly based on mouse position for depth feel.
+ * ========================================================= */
+function initGalleryParallax() {
+    const gallery = document.querySelector('.app-gallery');
+    if (!gallery) return;
+
+    const cards = gallery.querySelectorAll('.app-card');
+    const depths = [0.03, 0.05, 0.05, 0.02]; // parallax intensity per card
+
+    let targetX = 0, targetY = 0;
+    let currentX = 0, currentY = 0;
+
+    document.addEventListener('mousemove', (e) => {
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+        targetX = (e.clientX - centerX) / centerX; // -1 to 1
+        targetY = (e.clientY - centerY) / centerY;
+    });
+
+    function animate() {
+        requestAnimationFrame(animate);
+
+        // Smooth lerp
+        currentX += (targetX - currentX) * 0.08;
+        currentY += (targetY - currentY) * 0.08;
+
+        cards.forEach((card, i) => {
+            const depth = depths[i] || 0.03;
+            const moveX = currentX * depth * 40;
+            const moveY = currentY * depth * 20;
+            card.style.setProperty('--parallax-x', moveX + 'px');
+            card.style.setProperty('--parallax-y', moveY + 'px');
+        });
+    }
+
+    animate();
 }
