@@ -38,12 +38,139 @@ document.addEventListener('DOMContentLoaded', () => {
         revealOnScroll.observe(el);
     });
 
-    // 3. WebGL particle background
+    // 3. Hero title rotator
+    initHeroRotator();
+
+    // 4. WebGL particle background
     initWebGLBackground();
 
-    // 4. 2D Canvas mouse trail
+    // 5. 2D Canvas mouse trail
     initMouseTrail();
 });
+
+/* =========================================================
+ *  Hero Typewriter
+ *  Cycles through slogans with typing / deleting animation.
+ *  Each slogan has [staticPart, dynamicPart].
+ *  The static part appears instantly, the dynamic part is
+ *  typed out character by character with a colored gradient,
+ *  then after a pause the dynamic part is deleted and the
+ *  next slogan begins.
+ * ========================================================= */
+function initHeroRotator() {
+    const container = document.getElementById('hero-typewriter');
+    if (!container) return;
+
+    const staticEl = container.querySelector('.hero-typewriter-static');
+    const dynamicEl = container.querySelector('.hero-typewriter-dynamic');
+    const cursorEl = container.querySelector('.hero-typewriter-cursor');
+
+    const TYPE_SPEED = 80;      // ms per character typing
+    const DELETE_SPEED = 40;    // ms per character deleting
+    const PAUSE_AFTER = 2200;   // ms to hold after fully typed
+    const PAUSE_BETWEEN = 400;  // ms pause between delete and next type
+
+    let slogans = [];
+    let currentIndex = 0;
+    let rafId = null;
+    let running = false;
+
+    function getSlogans() {
+        const lang = (window.i18n && window.i18n.currentLang) || 'zh-CN';
+        const dict = (typeof translations !== 'undefined') && translations[lang];
+        return (dict && dict.heroSlogans) || [];
+    }
+
+    function setColor(index) {
+        const ci = index % 8;
+        // Update dynamic text color class
+        dynamicEl.className = 'hero-typewriter-dynamic hero-color-' + ci;
+        cursorEl.className = 'hero-typewriter-cursor hero-cursor-' + ci;
+    }
+
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // Render full text but hide untyped characters to prevent layout jumps
+    function renderPartial(text, visibleCount) {
+        const visible = text.slice(0, visibleCount);
+        const hidden = text.slice(visibleCount);
+        dynamicEl.innerHTML = visible +
+            (hidden ? '<span style="visibility:hidden">' + hidden + '</span>' : '');
+    }
+
+    async function typeText(text) {
+        for (let i = 0; i <= text.length; i++) {
+            if (!running) return;
+            renderPartial(text, i);
+            await sleep(TYPE_SPEED);
+        }
+    }
+
+    async function deleteText(text) {
+        for (let i = text.length; i >= 0; i--) {
+            if (!running) return;
+            renderPartial(text, i);
+            await sleep(DELETE_SPEED);
+        }
+    }
+
+    async function loop() {
+        running = true;
+        while (running) {
+            const slogan = slogans[currentIndex];
+            const staticText = slogan[0];
+            const dynamicText = slogan[1];
+
+            setColor(currentIndex);
+            staticEl.textContent = staticText;
+            dynamicEl.textContent = '';
+
+            // Type the dynamic part
+            await typeText(dynamicText);
+            if (!running) return;
+
+            // Hold
+            await sleep(PAUSE_AFTER);
+            if (!running) return;
+
+            // Delete dynamic part
+            await deleteText(dynamicText);
+            if (!running) return;
+
+            // Brief pause, then clear static and move on
+            await sleep(PAUSE_BETWEEN);
+            if (!running) return;
+
+            staticEl.textContent = '';
+            currentIndex = (currentIndex + 1) % slogans.length;
+        }
+    }
+
+    function start() {
+        stop();
+        slogans = getSlogans();
+        if (!slogans.length) return;
+        currentIndex = 0;
+        loop();
+    }
+
+    function stop() {
+        running = false;
+    }
+
+    // Public API for language switching
+    window.heroRotator = {
+        setLang() {
+            stop();
+            // Small delay to let the async loop exit
+            setTimeout(start, 100);
+        }
+    };
+
+    start();
+}
 
 /* =========================================================
  *  Three.js Particle Starfield Background

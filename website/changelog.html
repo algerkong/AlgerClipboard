@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Changelog - AlgerClipboard</title>
+  <meta name="description" content="AlgerClipboard changelog and release history.">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.loli.net">
+  <link rel="preconnect" href="https://gstatic.loli.net" crossorigin>
+  <link
+    href="https://fonts.loli.net/css2?family=JetBrains+Mono:wght@400;700&family=Manrope:wght@400;500;600&family=Outfit:wght@700;800&display=swap"
+    rel="stylesheet">
+
+  <!-- marked.js for Markdown rendering -->
+  <script src="https://cdn.staticfile.net/marked/15.0.7/marked.min.js"></script>
+
+  <link rel="icon" type="image/png" href="./assets/logo.png">
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+
+<body>
+  <div id="webgl-canvas-container"></div>
+  <div class="noise"></div>
+  <div class="grid-bg"></div>
+
+  <nav class="navbar scrolled">
+    <div class="container nav-content">
+      <a href="./index.html" class="logo" style="text-decoration:none;color:inherit">
+        <img src="./assets/logo.png" alt="AlgerClipboard Logo" width="32" height="32" class="logo-img">
+        <span>AlgerClipboard</span>
+      </a>
+      <div class="nav-links">
+        <a href="./index.html#features" class="nav-link" data-i18n="navFeatures">Features</a>
+        <a href="./index.html#downloads" class="nav-link" data-i18n="navDownload">Download</a>
+        <a href="./changelog.html" class="nav-link" style="color:var(--text-primary)" data-i18n="navChangelog">Changelog</a>
+        <a href="https://github.com/algerkong/AlgerClipboard" target="_blank" class="nav-link">GitHub</a>
+        <button id="lang-toggle" class="lang-btn" aria-label="Toggle language">EN</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="changelog-page container">
+    <a href="./index.html" class="back-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      <span data-i18n="backToHome">Back to Home</span>
+    </a>
+
+    <h1 class="section-title" data-i18n="changelogTitle">Changelog</h1>
+
+    <div id="changelog-content" class="changelog-markdown">
+      <p style="color:var(--text-secondary)">Loading...</p>
+    </div>
+  </main>
+
+  <footer class="footer container">
+    <div class="footer-content">
+      <p data-i18n="footerText">AlgerClipboard is open source software licensed under GPL-3.0.</p>
+      <div class="footer-links">
+        <a href="https://github.com/algerkong/AlgerClipboard" target="_blank">Source Code</a>
+        <a href="https://donate.alger.fun/donate" target="_blank" data-i18n="footerDonate">Donate</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="./js/i18n.js"></script>
+  <script src="./js/main.js"></script>
+  <script>
+    /**
+     * Changelog renderer: fetches CHANGELOG.md, splits by language, renders with marked.js
+     *
+     * The CHANGELOG.md has paired sections:
+     *   ## [1.6.0] - 2026-03-09        (English)
+     *   ## [1.6.0] - 2026-03-09 (中文)  (Chinese)
+     *
+     * We split at `## ` boundaries and filter by language.
+     */
+    class ChangelogRenderer {
+      constructor() {
+        this.raw = '';
+        this.lang = (window.i18n && window.i18n.currentLang) || 'zh-CN';
+        this.container = document.getElementById('changelog-content');
+        this.load();
+      }
+
+      async load() {
+        try {
+          const res = await fetch('./CHANGELOG.md');
+          if (!res.ok) throw new Error(res.status);
+          this.raw = await res.text();
+          this.render();
+        } catch (e) {
+          this.container.innerHTML = '<p style="color:var(--text-secondary)">Failed to load changelog.</p>';
+        }
+      }
+
+      setLang(lang) {
+        this.lang = lang;
+        if (this.raw) this.render();
+      }
+
+      render() {
+        const isZh = this.lang === 'zh-CN';
+
+        // Split into sections by ## headings (keep the heading with the content)
+        const sections = this.raw.split(/(?=^## )/gm);
+
+        // Filter: keep the top-level title line, then for each version keep only the matching language
+        const filtered = sections.filter(section => {
+          const trimmed = section.trim();
+          // Keep the top "# Changelog" line
+          if (trimmed.startsWith('# ') && !trimmed.startsWith('## ')) return false;
+          // Separator lines
+          if (trimmed === '---') return false;
+          if (!trimmed) return false;
+
+          // Check if this is a Chinese section
+          const firstLine = trimmed.split('\n')[0];
+          const isChinese = /\(中文\)/.test(firstLine);
+
+          return isZh ? isChinese : !isChinese;
+        });
+
+        // Clean up: remove the "(中文)" tag from Chinese section headers for cleaner display
+        const cleaned = filtered.map(s => {
+          if (isZh) {
+            return s.replace(/^(## \[.*?\] - [\d-]+)\s*\(中文\)/m, '$1');
+          }
+          return s;
+        }).join('\n\n---\n\n');
+
+        this.container.innerHTML = marked.parse(cleaned);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      window.changelogRenderer = new ChangelogRenderer();
+    });
+  </script>
+</body>
+
+</html>
