@@ -103,7 +103,7 @@ fn normalize_window_title(title: &str, app_name: Option<&str>) -> Option<String>
     Some(trimmed.to_string())
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn run_command(program: &str, args: &[&str]) -> Option<String> {
     let output = std::process::Command::new(program)
         .args(args)
