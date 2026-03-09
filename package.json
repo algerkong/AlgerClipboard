@@ -2,6 +2,7 @@
   "name": "alger-clipboard",
   "private": true,
   "version": "1.5.2",
+  "license": "GPL-3.0-only",
   "type": "module",
   "scripts": {
     "dev": "vite",
