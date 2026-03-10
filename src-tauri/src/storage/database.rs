@@ -73,6 +73,30 @@ impl Database {
             conn: Mutex::new(conn),
         };
         db.create_tables()?;
+
+        // Initialize FTS5 and REGEXP
+        {
+            let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+            crate::search::fts::init_fts(&conn)?;
+            crate::search::fts::register_regexp(&conn)?;
+
+            // Rebuild FTS index if empty but entries exist
+            let fts_count: i64 = conn
+                .query_row("SELECT COUNT(*) FROM entries_fts", [], |row| row.get(0))
+                .unwrap_or(0);
+            let entry_count: i64 = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM entries WHERE deleted = 0",
+                    [],
+                    |row| row.get(0),
+                )
+                .unwrap_or(0);
+            if fts_count == 0 && entry_count > 0 {
+                log::info!("Rebuilding FTS index for {} entries...", entry_count);
+                crate::search::fts::rebuild_index(&conn)?;
+            }
+        }
+
         Ok(db)
     }
 
@@ -241,6 +265,10 @@ impl Database {
             .map_err(|e| format!("Failed to insert tag: {}", e))?;
         }
 
+        // Sync to FTS index
+        crate::search::fts::index_entry(&conn, entry, &entry.tags)
+            .unwrap_or_else(|e| log::error!("FTS index error: {}", e));
+
         Ok(())
     }
 
@@ -362,6 +390,10 @@ impl Database {
         let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
         for id in ids {
+            // Remove from FTS index before marking as deleted
+            crate::search::fts::remove_entry(&conn, id)
+                .unwrap_or_else(|e| log::error!("FTS remove error: {}", e));
+
             conn.execute(
                 "UPDATE entries SET deleted = 1, updated_at = ?1 WHERE id = ?2",
                 params![now_iso(), id],
@@ -439,6 +471,11 @@ impl Database {
             params![summary, id],
         )
         .map_err(|e| format!("Failed to update summary: {}", e))?;
+
+        // Update FTS summary
+        crate::search::fts::update_summary(&conn, id, summary)
+            .unwrap_or_else(|e| log::error!("FTS update summary error: {}", e));
+
         Ok(())
     }
 
@@ -747,6 +784,11 @@ impl Database {
         )
         .map_err(|e| format!("Failed to add tag: {}", e))?;
 
+        // Update FTS tags
+        let tags = self.get_tags_for_entry_with_conn(&conn, entry_id)?;
+        crate::search::fts::update_tags(&conn, entry_id, &tags)
+            .unwrap_or_else(|e| log::error!("FTS update tags error: {}", e));
+
         Ok(())
     }
 
@@ -758,6 +800,11 @@ impl Database {
             params![entry_id, tag],
         )
         .map_err(|e| format!("Failed to remove tag: {}", e))?;
+
+        // Update FTS tags
+        let tags = self.get_tags_for_entry_with_conn(&conn, entry_id)?;
+        crate::search::fts::update_tags(&conn, entry_id, &tags)
+            .unwrap_or_else(|e| log::error!("FTS update tags error: {}", e));
 
         Ok(())
     }

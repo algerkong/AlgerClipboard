@@ -373,6 +373,7 @@ pub fn rebuild_index(conn: &Connection) -> Result<usize, String> {
             "SELECT e.id, e.content_type, e.text_content, e.ai_summary, e.source_app,
                     e.file_meta, e.created_at
              FROM entries e
+             WHERE e.deleted = 0
              ORDER BY e.created_at DESC",
         )
         .map_err(|e| format!("Failed to prepare rebuild query: {}", e))?;
@@ -399,7 +400,7 @@ pub fn rebuild_index(conn: &Connection) -> Result<usize, String> {
     {
         // Get tags for this entry
         let tags: Vec<String> = conn
-            .prepare("SELECT t.name FROM tags t INNER JOIN entry_tags et ON t.id = et.tag_id WHERE et.entry_id = ?1")
+            .prepare("SELECT tag FROM tags WHERE entry_id = ?1")
             .and_then(|mut s| {
                 s.query_map(params![id], |row| row.get::<_, String>(0))
                     .map(|rows| rows.filter_map(|r| r.ok()).collect())
