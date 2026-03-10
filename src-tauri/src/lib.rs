@@ -6,6 +6,7 @@ mod paste;
 mod storage;
 mod sync;
 mod translate;
+mod search;
 
 use clipboard::monitor::ClipboardMonitor;
 use commands::clipboard_cmd::AppDatabase;
