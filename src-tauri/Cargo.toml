@@ -1,6 +1,6 @@
 [package]
 name = "alger-clipboard"
-version = "1.6.2"
+version = "1.6.3"
 description = "AlgerClipboard - A smart clipboard manager"
 authors = ["you"]
 license = "GPL-3.0-only"

@@ -1,5 +1,89 @@
 # Changelog
 
+## [1.6.3] - 2026-03-10
+
+### New Features
+
+- **FTS5 Full-Text Search**: Completely replaced simple SQL LIKE search with SQLite FTS5 full-text search engine
+  - **Multi-field search**: Searches across text content, AI summaries, file names, source app, tags, and OCR text simultaneously
+  - **Pinyin matching**: Automatically indexes Chinese text as pinyin (full spelling + initials) for phonetic search (e.g. "nihao" matches "你好")
+  - **Regex search**: Wrap search pattern in `/pattern/` for regex matching across all fields, with visual `.*` indicator
+  - **Advanced query syntax**: Multi-keyword AND (`foo bar`), exact phrase (`"exact phrase"`), exclusion (`-word`), prefix matching (`token*`)
+  - **Time range filter**: Hover-reveal calendar icon to filter by Today / 3 Days / Week / Month / 3 Months
+  - **Search history**: Hover-reveal recent search dropdown with delete and clear all
+  - **Fuzzy prefix matching**: Tokens automatically use prefix matching for broader results
+- **Image OCR Text Search**: OCR-extracted text is now indexed in FTS5 for image search
+  - Auto-OCR writes extracted text to entries for indexing
+  - Image thumbnails show OCR text snippet with keyword highlighting when matched
+- **Context-Aware Search Snippets**: Search result previews now show text around the match position instead of always showing the beginning of the text
+- **Search Result Highlighting**: Keywords highlighted in text previews, AI summaries, file names, and OCR text with `<mark>` tags
+- **Search Guide Documentation**: Added bilingual (Chinese/English) search usage guide at `docs/en/search-guide.md` and `docs/zh-CN/search-guide.md`
+
+### Improvements
+
+- **Main window UI redesign**: Redesigned clipboard main window layout and styling
+- **Image viewer enhancements**: Added background mode toggle and fit/actual size toggle
+- **Auto-update improvements**: Added system notification, confirmation dialog, and periodic check for auto-update
+- **UI flash prevention**: Eliminated UI scale and font flash on window open by caching in localStorage
+- **Theme flash prevention**: Eliminated theme flash on window open by caching theme in localStorage
+- **i18n modularization**: Split i18n locale files into modular per-feature JSON files
+- **Settings UI optimization**: Optimized settings page UI layout with shared components; replaced native select with custom StyledSelect
+- **Detail page optimization**: Optimized detail page UI with custom StyledSelect component
+
+### Bug Fixes
+
+- **Single-instance windows**: Enforced single instance for settings, tag-manager, and template-manager windows
+- **Window capabilities**: Added fixed window labels to capabilities for single-instance windows
+- **Main window shortcut**: Prevented main window from auto-closing on shortcut invocation
+- **Settings window**: Removed always-on-top and simplified pin button
+- **Dark theme contrast**: Optimized dark theme contrast and throttle color picker during drag
+- **OCR runtime unpacking**: Fixed backslash directory entries in OCR runtime archive unpacking
+- **PowerShell compatibility**: Support PowerShell 5.1 in RapidOCR build script
+
+---
+
+## [1.6.3] - 2026-03-10 (中文)
+
+### 新功能
+
+- **FTS5 全文搜索**: 完全替换简单 SQL LIKE 搜索，升级为 SQLite FTS5 全文搜索引擎
+  - **多字段搜索**: 同时搜索文本内容、AI 摘要、文件名、来源应用、标签和 OCR 文字
+  - **拼音匹配**: 自动为中文文本建立拼音索引（全拼 + 首字母），支持拼音搜索（如输入 "nihao" 匹配 "你好"）
+  - **正则搜索**: 用 `/pattern/` 包裹搜索模式进行正则匹配，搜索图标变为 `.*` 视觉提示
+  - **高级查询语法**: 多关键词 AND（`foo bar`）、精确短语（`"exact phrase"`）、排除词（`-word`）、前缀匹配（`token*`）
+  - **时间范围筛选**: 悬停搜索栏显示日历图标，可按今天 / 3天 / 本周 / 本月 / 3个月筛选
+  - **搜索历史**: 悬停搜索栏显示最近搜索记录下拉框，支持单条删除和全部清除
+  - **模糊前缀匹配**: 搜索词自动使用前缀匹配以获取更广泛的结果
+- **图片 OCR 文字搜索**: OCR 提取的文字现已建立 FTS5 索引，支持搜索图片中的文字
+  - 自动 OCR 完成后将文字写入条目以建立索引
+  - 搜索匹配时在图片缩略图下方显示 OCR 文字片段并高亮关键词
+- **上下文感知搜索预览**: 搜索结果预览现在显示匹配位置附近的文本上下文，而不是总显示文本开头
+- **搜索结果高亮**: 关键词在文本预览、AI 摘要、文件名和 OCR 文字中以 `<mark>` 标签高亮
+- **搜索指南文档**: 新增中英双语搜索使用指南，位于 `docs/en/search-guide.md` 和 `docs/zh-CN/search-guide.md`
+
+### 改进
+
+- **主窗口 UI 重设计**: 重新设计剪贴板主窗口布局和样式
+- **图片查看器增强**: 新增背景模式切换和适应/实际尺寸切换
+- **自动更新改进**: 新增系统通知、确认对话框和定期检查功能
+- **UI 闪烁消除**: 通过 localStorage 缓存消除窗口打开时的 UI 缩放和字体闪烁
+- **主题闪烁消除**: 通过 localStorage 缓存消除窗口打开时的主题闪烁
+- **i18n 模块化**: 将国际化翻译文件按功能模块拆分为独立 JSON 文件
+- **设置页 UI 优化**: 优化设置页面布局，使用共享组件；用自定义 StyledSelect 替换原生下拉框
+- **详情页优化**: 优化详情页 UI，新增自定义 StyledSelect 组件
+
+### Bug 修复
+
+- **单实例窗口**: 强制设置、标签管理器、模板管理器窗口为单实例
+- **窗口权限**: 为单实例窗口添加固定窗口标签到 capabilities
+- **主窗口快捷键**: 修复快捷键触发时主窗口自动关闭的问题
+- **设置窗口**: 移除置顶行为，简化固定按钮
+- **暗色主题对比度**: 优化暗色主题对比度，拖拽时节流颜色选择器
+- **OCR 运行时解压**: 修复 OCR 运行时归档解压时的反斜杠目录条目问题
+- **PowerShell 兼容性**: 支持 PowerShell 5.1 运行 RapidOCR 构建脚本
+
+---
+
 ## [1.6.2] - 2026-03-09
 
 ### New Features
