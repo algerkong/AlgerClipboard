@@ -9,7 +9,16 @@ import {
 import { useAiStore, DEFAULT_SUMMARY_PROMPT, DEFAULT_TRANSLATE_PROMPT } from "@/stores/aiStore";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
-import { Toggle } from "./shared";
+import {
+  SettingsButton,
+  SettingsField,
+  SettingsInput,
+  SettingsRow,
+  SettingsSection,
+  SettingsSelect,
+  SettingsSubsection,
+  Toggle,
+} from "./shared";
 
 /* ─── AI Tab ─── */
 export function AiTab() {
@@ -35,7 +44,6 @@ export function AiTab() {
     loadConfig();
   }, [loadProviders, loadConfig]);
 
-  // Auto-fetch models when provider + api_key + base_url are ready
   useEffect(() => {
     if (config.provider && (config.api_key || config.provider === "ollama")) {
       loadModels();
@@ -51,338 +59,303 @@ export function AiTab() {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Enable AI */}
-      <div className="flex items-center justify-between">
-        <span className="text-sm2">{t("settings.ai.enable")}</span>
-        <button
-          onClick={() => updateConfig({ enabled: !config.enabled })}
-          className={cn(
-            "w-9 h-5 rounded-full transition-colors relative",
-            config.enabled ? "bg-primary" : "bg-muted"
-          )}
-        >
-          <span
-            className={cn(
-              "absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform",
-              config.enabled ? "left-[18px]" : "left-0.5"
-            )}
-          />
-        </button>
-      </div>
-
-      {/* Provider */}
-      <div className="space-y-1.5">
-        <label className="text-sm2 text-muted-foreground">
-          {t("settings.ai.provider")}
-        </label>
-        <select
-          value={config.provider}
-          onChange={(e) => {
-            const preset = providers.find((p) => p.id === e.target.value);
-            updateConfig({
-              provider: e.target.value,
-              model: preset?.default_model || "",
-              base_url: preset?.base_url || "",
-            });
-          }}
-          className="w-full h-8 px-2 rounded-md border border-border bg-background text-sm2"
-        >
-          <option value="">{t("settings.ai.selectProvider")}</option>
-          {groupedProviders.international.length > 0 && (
-            <optgroup label={t("settings.ai.international")}>
-              {groupedProviders.international.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </optgroup>
-          )}
-          {groupedProviders.domestic.length > 0 && (
-            <optgroup label={t("settings.ai.domestic")}>
-              {groupedProviders.domestic.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </optgroup>
-          )}
-          {groupedProviders.local.length > 0 && (
-            <optgroup label={t("settings.ai.local")}>
-              {groupedProviders.local.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </optgroup>
-          )}
-          {groupedProviders.custom.length > 0 && (
-            <optgroup label={t("settings.ai.custom")}>
-              {groupedProviders.custom.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </optgroup>
-          )}
-        </select>
-      </div>
-
-      {/* API Key */}
-      <div className="space-y-1.5">
-        <label className="text-sm2 text-muted-foreground">
-          {t("settings.ai.apiKey")}
-        </label>
-        <div className="relative">
-          <input
-            type={showApiKey ? "text" : "password"}
-            value={config.api_key}
-            onChange={(e) => updateConfig({ api_key: e.target.value })}
-            placeholder={t("settings.ai.apiKeyPlaceholder")}
-            className="w-full h-8 px-2 pr-8 rounded-md border border-border bg-background text-sm2"
-          />
-          <button
-            onClick={() => setShowApiKey(!showApiKey)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          >
-            {showApiKey ? (
-              <EyeOff className="w-3.5 h-3.5" />
-            ) : (
-              <Eye className="w-3.5 h-3.5" />
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Model */}
-      {config.provider && (
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <label className="text-sm2 text-muted-foreground">
-              {t("settings.ai.model")}
-            </label>
-            {config.provider && (config.api_key || config.provider === "ollama") && (
-              <button
-                onClick={() => loadModels()}
-                disabled={isFetchingModels}
-                className="flex items-center gap-1 text-xs2 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <RefreshCw className={cn("w-3 h-3", isFetchingModels && "animate-spin")} />
-                {t("settings.ai.fetchModels")}
-              </button>
-            )}
-          </div>
-          {models.length > 0 && !fetchModelsError ? (
-            <select
-              value={config.model}
-              onChange={(e) => updateConfig({ model: e.target.value })}
-              className="w-full h-8 px-2 rounded-md border border-border bg-background text-sm2"
-            >
-              {!models.find((m) => m.id === config.model) && config.model && (
-                <option value={config.model}>{config.model}</option>
-              )}
-              {models.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name || m.id}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <input
-              type="text"
-              value={config.model}
-              onChange={(e) => updateConfig({ model: e.target.value })}
-              placeholder={selectedProvider?.default_model || "model-name"}
-              className="w-full h-8 px-2 rounded-md border border-border bg-background text-sm2"
+    <div className="space-y-5">
+      {/* ─── Provider Configuration ─── */}
+      <SettingsSection
+        title={t("settings.ai.provider")}
+        description={t("settings.ai.selectProvider")}
+      >
+        <SettingsRow
+          title={t("settings.ai.enable")}
+          description={t("settings.ai.enable")}
+          control={
+            <Toggle
+              value={config.enabled}
+              onChange={(v) => updateConfig({ enabled: v })}
             />
-          )}
-          {fetchModelsError && (
-            <p className="text-xs2 text-muted-foreground">
-              {t("settings.ai.fetchModelsFailed")}
-            </p>
-          )}
-        </div>
-      )}
+          }
+        />
 
-      {/* Base URL */}
-      {config.provider && (
-        <div className="space-y-1.5">
-          <label className="text-sm2 text-muted-foreground">
-            {t("settings.ai.baseUrl")}
-          </label>
-          <input
-            type="text"
-            value={config.base_url}
-            onChange={(e) => updateConfig({ base_url: e.target.value })}
-            placeholder={
-              selectedProvider?.base_url || "https://api.example.com/v1"
+        <SettingsRow
+          title={t("settings.ai.provider")}
+          control={
+            <SettingsField className="w-[15rem]">
+              <SettingsSelect
+                value={config.provider}
+                onChange={(e) => {
+                  const preset = providers.find((p) => p.id === e.target.value);
+                  updateConfig({
+                    provider: e.target.value,
+                    model: preset?.default_model || "",
+                    base_url: preset?.base_url || "",
+                  });
+                }}
+              >
+                <option value="">{t("settings.ai.selectProvider")}</option>
+                {groupedProviders.international.length > 0 && (
+                  <optgroup label={t("settings.ai.international")}>
+                    {groupedProviders.international.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {groupedProviders.domestic.length > 0 && (
+                  <optgroup label={t("settings.ai.domestic")}>
+                    {groupedProviders.domestic.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {groupedProviders.local.length > 0 && (
+                  <optgroup label={t("settings.ai.local")}>
+                    {groupedProviders.local.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {groupedProviders.custom.length > 0 && (
+                  <optgroup label={t("settings.ai.custom")}>
+                    {groupedProviders.custom.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </optgroup>
+                )}
+              </SettingsSelect>
+            </SettingsField>
+          }
+        />
+
+        <SettingsRow
+          title={t("settings.ai.apiKey")}
+          description={t("settings.ai.apiKeyPlaceholder")}
+          control={
+            <SettingsField className="w-[15rem]">
+              <div className="relative flex items-center">
+                <SettingsInput
+                  type={showApiKey ? "text" : "password"}
+                  value={config.api_key}
+                  onChange={(e) => updateConfig({ api_key: e.target.value })}
+                  placeholder={t("settings.ai.apiKeyPlaceholder")}
+                  className="pr-8"
+                />
+                <button
+                  onClick={() => setShowApiKey(!showApiKey)}
+                  className="absolute right-0 flex h-full items-center px-2 text-muted-foreground hover:text-foreground"
+                >
+                  {showApiKey ? (
+                    <EyeOff className="h-3.5 w-3.5" />
+                  ) : (
+                    <Eye className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              </div>
+            </SettingsField>
+          }
+        />
+
+        {config.provider && (
+          <SettingsRow
+            title={t("settings.ai.model")}
+            control={
+              <div className="flex items-center gap-2">
+                <SettingsField className="w-[15rem]">
+                  {models.length > 0 && !fetchModelsError ? (
+                    <SettingsSelect
+                      value={config.model}
+                      onChange={(e) => updateConfig({ model: e.target.value })}
+                    >
+                      {!models.find((m) => m.id === config.model) && config.model && (
+                        <option value={config.model}>{config.model}</option>
+                      )}
+                      {models.map((m) => (
+                        <option key={m.id} value={m.id}>{m.name || m.id}</option>
+                      ))}
+                    </SettingsSelect>
+                  ) : (
+                    <SettingsInput
+                      type="text"
+                      value={config.model}
+                      onChange={(e) => updateConfig({ model: e.target.value })}
+                      placeholder={selectedProvider?.default_model || "model-name"}
+                    />
+                  )}
+                </SettingsField>
+                {config.provider && (config.api_key || config.provider === "ollama") && (
+                  <button
+                    onClick={() => loadModels()}
+                    disabled={isFetchingModels}
+                    className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    <RefreshCw className={cn("h-3 w-3", isFetchingModels && "animate-spin")} />
+                  </button>
+                )}
+              </div>
             }
-            className="w-full h-8 px-2 rounded-md border border-border bg-background text-sm2"
           />
-        </div>
-      )}
-
-      {/* Test Connection */}
-      <div className="space-y-2">
-        <button
-          onClick={() => testConnection()}
-          disabled={isTesting || !config.provider || !config.api_key}
-          className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm2 font-medium transition-colors",
-            "bg-primary text-primary-foreground hover:bg-primary/90",
-            "disabled:opacity-50 disabled:cursor-not-allowed"
-          )}
-        >
-          {isTesting ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Check className="w-3.5 h-3.5" />
-          )}
-          {t("settings.ai.testConnection")}
-        </button>
-        {testResult && (
-          <div
-            className={cn(
-              "text-sm2 p-2 rounded-md",
-              testResult.startsWith("Error")
-                ? "bg-destructive/10 text-destructive"
-                : "bg-green-500/10 text-green-500"
-            )}
-          >
-            {testResult.length > 100
-              ? testResult.substring(0, 100) + "..."
-              : testResult}
-          </div>
         )}
-      </div>
+
+        {config.provider && (
+          <SettingsRow
+            title={t("settings.ai.baseUrl")}
+            control={
+              <SettingsField className="w-[15rem]">
+                <SettingsInput
+                  type="text"
+                  value={config.base_url}
+                  onChange={(e) => updateConfig({ base_url: e.target.value })}
+                  placeholder={selectedProvider?.base_url || "https://api.example.com/v1"}
+                />
+              </SettingsField>
+            }
+          />
+        )}
+
+        <div className="flex items-center gap-3 px-5 py-3">
+          <SettingsButton
+            tone="primary"
+            onClick={() => testConnection()}
+            disabled={isTesting || !config.provider || !config.api_key}
+          >
+            {isTesting ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <Check className="h-3 w-3" />
+            )}
+            {t("settings.ai.testConnection")}
+          </SettingsButton>
+          {testResult && (
+            <span
+              className={cn(
+                "text-sm",
+                testResult.startsWith("Error") ? "text-destructive" : "text-green-500",
+              )}
+            >
+              {testResult.length > 60 ? testResult.substring(0, 60) + "..." : testResult}
+            </span>
+          )}
+        </div>
+      </SettingsSection>
 
       {/* ─── Summary Settings ─── */}
-      <div className="border-t border-border/30 pt-4 space-y-3">
-        {/* Auto Summary toggle */}
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-sm2">{t("settings.ai.autoSummary")}</span>
-            <p className="text-xs2 text-muted-foreground mt-0.5">
-              {t("settings.ai.autoSummaryDesc")}
-            </p>
-          </div>
-          <Toggle
-            value={config.auto_summary}
-            onChange={(v) => updateConfig({ auto_summary: v })}
-          />
-        </div>
+      <SettingsSection
+        title={t("settings.ai.autoSummary")}
+        description={t("settings.ai.autoSummaryDesc")}
+      >
+        <SettingsRow
+          title={t("settings.ai.autoSummary")}
+          description={t("settings.ai.autoSummaryDesc")}
+          control={
+            <Toggle
+              value={config.auto_summary}
+              onChange={(v) => updateConfig({ auto_summary: v })}
+            />
+          }
+        />
 
-        {/* Min length */}
-        <div className="space-y-1.5">
-          <label className="text-sm2 text-muted-foreground">
-            {t("settings.ai.summaryMinLength")}
-          </label>
-          <p className="text-xs2 text-muted-foreground/70">
-            {t("settings.ai.summaryMinLengthDesc")}
-          </p>
-          <input
-            type="number"
-            min={50}
-            max={10000}
-            step={50}
-            value={config.summary_min_length}
-            onChange={(e) =>
-              updateConfig({ summary_min_length: Math.max(50, parseInt(e.target.value) || 200) })
-            }
-            className="w-full h-8 px-2 rounded-md border border-border bg-background text-sm2"
-          />
-        </div>
+        <SettingsRow
+          title={t("settings.ai.summaryMinLength")}
+          description={t("settings.ai.summaryMinLengthDesc")}
+          control={
+            <SettingsField className="w-[8rem]">
+              <SettingsInput
+                type="number"
+                min={50}
+                max={10000}
+                step={50}
+                value={config.summary_min_length}
+                onChange={(e) =>
+                  updateConfig({ summary_min_length: Math.max(50, parseInt(e.target.value) || 200) })
+                }
+              />
+            </SettingsField>
+          }
+        />
 
-        {/* Max summary length */}
-        <div className="space-y-1.5">
-          <label className="text-sm2 text-muted-foreground">
-            {t("settings.ai.summaryMaxLength")}
-          </label>
-          <p className="text-xs2 text-muted-foreground/70">
-            {t("settings.ai.summaryMaxLengthDesc")}
-          </p>
-          <input
-            type="number"
-            min={20}
-            max={1000}
-            step={10}
-            value={config.summary_max_length}
-            onChange={(e) =>
-              updateConfig({ summary_max_length: Math.max(20, parseInt(e.target.value) || 100) })
-            }
-            className="w-full h-8 px-2 rounded-md border border-border bg-background text-sm2"
-          />
-        </div>
+        <SettingsRow
+          title={t("settings.ai.summaryMaxLength")}
+          description={t("settings.ai.summaryMaxLengthDesc")}
+          control={
+            <SettingsField className="w-[8rem]">
+              <SettingsInput
+                type="number"
+                min={20}
+                max={1000}
+                step={10}
+                value={config.summary_max_length}
+                onChange={(e) =>
+                  updateConfig({ summary_max_length: Math.max(20, parseInt(e.target.value) || 100) })
+                }
+              />
+            </SettingsField>
+          }
+        />
 
-        {/* Summary language */}
-        <div className="space-y-1.5">
-          <label className="text-sm2 text-muted-foreground">
-            {t("settings.ai.summaryLanguage")}
-          </label>
-          <select
-            value={config.summary_language}
-            onChange={(e) => updateConfig({ summary_language: e.target.value })}
-            className="w-full h-8 px-2 rounded-md border border-border bg-background text-sm2"
-          >
-            <option value="same">{t("settings.ai.summaryLangSame")}</option>
-            <option value="zh-CN">{t("settings.ai.summaryLangZh")}</option>
-            <option value="en">{t("settings.ai.summaryLangEn")}</option>
-          </select>
-        </div>
-      </div>
+        <SettingsRow
+          title={t("settings.ai.summaryLanguage")}
+          control={
+            <SettingsField className="w-[15rem]">
+              <SettingsSelect
+                value={config.summary_language}
+                onChange={(e) => updateConfig({ summary_language: e.target.value })}
+              >
+                <option value="same">{t("settings.ai.summaryLangSame")}</option>
+                <option value="zh-CN">{t("settings.ai.summaryLangZh")}</option>
+                <option value="en">{t("settings.ai.summaryLangEn")}</option>
+              </SettingsSelect>
+            </SettingsField>
+          }
+        />
+      </SettingsSection>
 
       {/* ─── Prompt Settings ─── */}
-      <div className="border-t border-border/30 pt-4 space-y-3">
-        <span className="text-sm2 font-medium">{t("settings.ai.prompts")}</span>
-
-        {/* Summary prompt */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <label className="text-sm2 text-muted-foreground">
-              {t("settings.ai.summaryPrompt")}
-            </label>
-            <button
-              onClick={() => updateConfig({ summary_prompt: DEFAULT_SUMMARY_PROMPT })}
-              className="text-xs2 text-muted-foreground hover:text-primary transition-colors"
-            >
-              {t("settings.ai.resetPrompt")}
-            </button>
+      <SettingsSection
+        title={t("settings.ai.prompts")}
+        description={t("settings.ai.summaryPromptVars")}
+      >
+        <SettingsSubsection
+          title={t("settings.ai.summaryPrompt")}
+          description={t("settings.ai.summaryPromptVars")}
+        >
+          <div className="space-y-2 py-2">
+            <textarea
+              value={config.summary_prompt}
+              onChange={(e) => updateConfig({ summary_prompt: e.target.value })}
+              rows={3}
+              className="settings-textarea"
+            />
+            <div className="flex justify-end">
+              <SettingsButton
+                tone="ghost"
+                onClick={() => updateConfig({ summary_prompt: DEFAULT_SUMMARY_PROMPT })}
+              >
+                {t("settings.ai.resetPrompt")}
+              </SettingsButton>
+            </div>
           </div>
-          <p className="text-xs2 text-muted-foreground/70">
-            {t("settings.ai.summaryPromptVars")}
-          </p>
-          <textarea
-            value={config.summary_prompt}
-            onChange={(e) => updateConfig({ summary_prompt: e.target.value })}
-            rows={3}
-            className="w-full px-2 py-1.5 rounded-md border border-border bg-background text-sm2 resize-none focus:outline-none focus:ring-1 focus:ring-ring/30"
-          />
-        </div>
+        </SettingsSubsection>
 
-        {/* Translate prompt */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <label className="text-sm2 text-muted-foreground">
-              {t("settings.ai.translatePrompt")}
-            </label>
-            <button
-              onClick={() => updateConfig({ translate_prompt: DEFAULT_TRANSLATE_PROMPT })}
-              className="text-xs2 text-muted-foreground hover:text-primary transition-colors"
-            >
-              {t("settings.ai.resetPrompt")}
-            </button>
+        <SettingsSubsection
+          title={t("settings.ai.translatePrompt")}
+          description={t("settings.ai.translatePromptVars")}
+        >
+          <div className="space-y-2 py-2">
+            <textarea
+              value={config.translate_prompt}
+              onChange={(e) => updateConfig({ translate_prompt: e.target.value })}
+              rows={3}
+              className="settings-textarea"
+            />
+            <div className="flex justify-end">
+              <SettingsButton
+                tone="ghost"
+                onClick={() => updateConfig({ translate_prompt: DEFAULT_TRANSLATE_PROMPT })}
+              >
+                {t("settings.ai.resetPrompt")}
+              </SettingsButton>
+            </div>
           </div>
-          <p className="text-xs2 text-muted-foreground/70">
-            {t("settings.ai.translatePromptVars")}
-          </p>
-          <textarea
-            value={config.translate_prompt}
-            onChange={(e) => updateConfig({ translate_prompt: e.target.value })}
-            rows={3}
-            className="w-full px-2 py-1.5 rounded-md border border-border bg-background text-sm2 resize-none focus:outline-none focus:ring-1 focus:ring-ring/30"
-          />
-        </div>
-      </div>
+        </SettingsSubsection>
+      </SettingsSection>
     </div>
   );
 }

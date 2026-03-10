@@ -20,7 +20,12 @@ import {
   PRESET_ICON_OPTIONS,
 } from "@/constants/askAiPresets";
 import { ICON_MAP } from "@/components/PresetSelector";
-import { Toggle } from "./shared";
+import {
+  Toggle,
+  SettingsButton,
+  SettingsRow,
+  SettingsSection,
+} from "./shared";
 import { cn } from "@/lib/utils";
 
 /* --- Ask AI Tab --- */
@@ -31,7 +36,6 @@ export function AskAiTab() {
     loadEnabledServices,
     toggleService,
     loadFavicons,
-    getFavicon,
     presets,
     loadPresets,
     addPreset,
@@ -100,43 +104,29 @@ export function AskAiTab() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* AI Services Section */}
-      <div className="space-y-2">
-        <p className="text-xs2 text-muted-foreground">
-          {t("settings.askAi.description")}
-        </p>
-
-        <div className="space-y-2">
-          {AI_WEB_SERVICES.map((service) => {
-            const enabled = enabledServiceIds.includes(service.id);
-            const faviconUrl = getFavicon(service.id);
-            return (
-              <div
-                key={service.id}
-                className="flex items-center justify-between py-1.5"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <FaviconImg url={faviconUrl} name={service.name} size="w-4 h-4" />
-                  <div className="min-w-0">
-                    <span className="text-sm2 block truncate">
-                      {service.name}
-                    </span>
-                    <span className="text-xs2 text-muted-foreground block truncate">
-                      {service.url}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
+    <div className="space-y-5">
+      {/* ─── AI Web Services ─── */}
+      <SettingsSection
+        title={t("settings.askAi.title") || "AI Services"}
+        description={t("settings.askAi.description")}
+      >
+        {AI_WEB_SERVICES.map((service) => {
+          const enabled = enabledServiceIds.includes(service.id);
+          return (
+            <SettingsRow
+              key={service.id}
+              title={service.name}
+              description={service.url}
+              control={
+                <div className="flex items-center gap-2.5">
                   {enabled && (
                     <button
                       type="button"
-                      className="text-xs2 text-muted-foreground hover:text-primary transition-colors"
+                      className="text-muted-foreground hover:text-primary"
                       onClick={() => openAiWebView(service)}
                       title={t("settings.askAi.open")}
                     >
-                      <ExternalLink className="w-3.5 h-3.5" />
+                      <ExternalLink className="h-3.5 w-3.5" />
                     </button>
                   )}
                   <Toggle
@@ -144,123 +134,118 @@ export function AskAiTab() {
                     onChange={() => toggleService(service.id)}
                   />
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+              }
+            />
+          );
+        })}
+      </SettingsSection>
 
-      {/* Preset Management Section */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-sm2 font-medium">
-            {t("settings.askAi.presetTitle")}
-          </span>
+      {/* ─── Preset Management ─── */}
+      <SettingsSection
+        title={t("settings.askAi.presetTitle")}
+        description={t("settings.askAi.presetDesc")}
+        aside={
           <div className="flex items-center gap-1.5">
-            <button
-              type="button"
+            <SettingsButton
+              tone="ghost"
               onClick={() => { setIsAdding(!isAdding); setEditingId(null); }}
-              className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs2 text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
             >
-              <Plus className="w-3 h-3" />
+              <Plus className="h-3 w-3" />
               {t("settings.askAi.addPreset")}
-            </button>
-            <button
-              type="button"
+            </SettingsButton>
+            <SettingsButton
+              tone="ghost"
               onClick={() => { void resetPresets(); }}
-              className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs2 text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
-              title={t("settings.askAi.resetPresets")}
             >
-              <RotateCcw className="w-3 h-3" />
-            </button>
+              <RotateCcw className="h-3 w-3" />
+            </SettingsButton>
           </div>
-        </div>
-
-        <p className="text-xs2 text-muted-foreground">
-          {t("settings.askAi.presetDesc")}
-        </p>
-
+        }
+      >
         {/* Add new preset form */}
         {isAdding && (
-          <PresetForm
-            form={newForm}
-            onChange={setNewForm}
-            onSave={handleAdd}
-            onCancel={() => setIsAdding(false)}
-            t={t}
-          />
+          <div className="px-5 py-4">
+            <PresetForm
+              form={newForm}
+              onChange={setNewForm}
+              onSave={handleAdd}
+              onCancel={() => setIsAdding(false)}
+              t={t}
+            />
+          </div>
         )}
 
         {/* Preset list */}
-        <div className="space-y-1">
-          {presets.map((preset, index) => {
-            const Icon = ICON_MAP[preset.iconName];
-            const isEditing = editingId === preset.id;
+        {presets.map((preset, index) => {
+          const Icon = ICON_MAP[preset.iconName];
+          const isEditing = editingId === preset.id;
 
-            if (isEditing) {
-              return (
+          if (isEditing) {
+            return (
+              <div key={preset.id} className="px-5 py-4">
                 <PresetForm
-                  key={preset.id}
                   form={editForm}
                   onChange={setEditForm}
                   onSave={saveEdit}
                   onCancel={cancelEdit}
                   t={t}
                 />
-              );
-            }
-
-            return (
-              <div
-                key={preset.id}
-                className="group flex items-center gap-2 rounded-xl px-2 py-2 hover:bg-accent/30 transition-colors"
-              >
-                <GripVertical className="w-3 h-3 text-muted-foreground/40 shrink-0" />
-                {Icon && <Icon className="w-4 h-4 text-muted-foreground shrink-0" />}
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm2 block truncate">{preset.labelKey ? t(preset.labelKey) : preset.label}</span>
-                  <span className="text-xs2 text-muted-foreground block truncate">
-                    {preset.promptTemplate.slice(0, 60)}
-                    {preset.promptTemplate.length > 60 ? "..." : ""}
-                  </span>
-                </div>
-                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => handleMove(index, "up")}
-                    disabled={index === 0}
-                    className="p-1 rounded text-muted-foreground hover:text-foreground disabled:opacity-20"
-                  >
-                    <ChevronUp className="w-3 h-3" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleMove(index, "down")}
-                    disabled={index === presets.length - 1}
-                    className="p-1 rounded text-muted-foreground hover:text-foreground disabled:opacity-20"
-                  >
-                    <ChevronDown className="w-3 h-3" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => startEdit(preset)}
-                    className="p-1 rounded text-muted-foreground hover:text-foreground"
-                  >
-                    <Pencil className="w-3 h-3" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void removePreset(preset.id)}
-                    className="p-1 rounded text-muted-foreground hover:text-destructive"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </div>
               </div>
             );
-          })}
-        </div>
-      </div>
+          }
+
+          return (
+            <div
+              key={preset.id}
+              className="group flex items-center gap-3 border-b border-[color-mix(in_oklab,var(--border)_76%,transparent)] px-5 py-3 last:border-b-0"
+            >
+              <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40" />
+              {Icon && <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />}
+              <div className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium">
+                  {preset.labelKey ? t(preset.labelKey) : preset.label}
+                </span>
+                <span className="block truncate text-xs text-muted-foreground">
+                  {preset.promptTemplate.slice(0, 60)}
+                  {preset.promptTemplate.length > 60 ? "..." : ""}
+                </span>
+              </div>
+              <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                <button
+                  type="button"
+                  onClick={() => handleMove(index, "up")}
+                  disabled={index === 0}
+                  className="rounded p-1 text-muted-foreground hover:text-foreground disabled:opacity-20"
+                >
+                  <ChevronUp className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleMove(index, "down")}
+                  disabled={index === presets.length - 1}
+                  className="rounded p-1 text-muted-foreground hover:text-foreground disabled:opacity-20"
+                >
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => startEdit(preset)}
+                  className="rounded p-1 text-muted-foreground hover:text-foreground"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void removePreset(preset.id)}
+                  className="rounded p-1 text-muted-foreground hover:text-destructive"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </SettingsSection>
     </div>
   );
 }
@@ -280,15 +265,18 @@ function PresetForm({
   t: (key: string) => string;
 }) {
   return (
-    <div className="rounded-xl border border-border/50 bg-accent/20 p-3 space-y-2">
-      {/* Name + Icon row */}
-      <div className="flex gap-2">
+    <div className="settings-inline-panel space-y-3">
+      {/* Name */}
+      <div>
+        <span className="settings-subsection-title mb-1.5 block">
+          {t("settings.askAi.presetNamePlaceholder")}
+        </span>
         <input
           autoFocus
           value={form.label || ""}
           onChange={(e) => onChange({ ...form, label: e.target.value })}
           placeholder={t("settings.askAi.presetNamePlaceholder")}
-          className="flex-1 rounded-lg border border-border/60 bg-background/80 px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ring/20"
+          className="settings-input h-9 rounded-lg border border-[color-mix(in_oklab,var(--border)_60%,transparent)] bg-[color-mix(in_oklab,var(--background)_80%,var(--card)_20%)] px-3 text-sm"
           onKeyDown={(e) => {
             if (e.key === "Enter") onSave();
             if (e.key === "Escape") onCancel();
@@ -298,7 +286,7 @@ function PresetForm({
 
       {/* Icon selector */}
       <div>
-        <span className="text-xs2 text-muted-foreground mb-1 block">
+        <span className="settings-subsection-title mb-1.5 block">
           {t("settings.askAi.presetIcon")}
         </span>
         <div className="flex flex-wrap gap-1">
@@ -311,13 +299,13 @@ function PresetForm({
                 type="button"
                 onClick={() => onChange({ ...form, iconName })}
                 className={cn(
-                  "p-1.5 rounded-lg transition-colors",
+                  "rounded-lg p-1.5 transition-colors",
                   form.iconName === iconName
                     ? "bg-primary/15 text-primary"
                     : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
                 )}
               >
-                <Icon className="w-3.5 h-3.5" />
+                <Icon className="h-4 w-4" />
               </button>
             );
           })}
@@ -326,40 +314,35 @@ function PresetForm({
 
       {/* Prompt template */}
       <div>
-        <span className="text-xs2 text-muted-foreground mb-1 block">
+        <span className="settings-subsection-title mb-1.5 block">
           {t("settings.askAi.presetPrompt")}
         </span>
         <textarea
           value={form.promptTemplate || ""}
           onChange={(e) => onChange({ ...form, promptTemplate: e.target.value })}
           placeholder={t("settings.askAi.presetPromptPlaceholder")}
-          className="w-full resize-none rounded-lg border border-border/60 bg-background/80 p-2 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ring/20"
+          className="settings-textarea"
           rows={3}
         />
-        <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+        <p className="mt-1 text-xs text-muted-foreground/60">
           {t("settings.askAi.presetPromptHint")}
         </p>
       </div>
 
       {/* Actions */}
-      <div className="flex justify-end gap-1.5">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs2 text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
-        >
-          <X className="w-3 h-3" />
+      <div className="flex justify-end gap-2">
+        <SettingsButton tone="ghost" onClick={onCancel}>
+          <X className="h-3 w-3" />
           {t("settings.askAi.cancel")}
-        </button>
-        <button
-          type="button"
+        </SettingsButton>
+        <SettingsButton
+          tone="primary"
           onClick={onSave}
           disabled={!form.label?.trim()}
-          className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs2 font-medium bg-primary/15 text-primary hover:bg-primary/25 transition-colors disabled:opacity-40"
         >
-          <Check className="w-3 h-3" />
+          <Check className="h-3 w-3" />
           {t("settings.askAi.save")}
-        </button>
+        </SettingsButton>
       </div>
     </div>
   );

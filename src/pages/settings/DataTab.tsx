@@ -27,7 +27,14 @@ import type { ClipboardStats } from "@/types";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { toast } from "@/lib/toast";
-import { formatBytes } from "./shared";
+import {
+  formatBytes,
+  SettingsButton,
+  SettingsField,
+  SettingsRow,
+  SettingsSection,
+  SettingsSelect,
+} from "./shared";
 
 /* ─── Stats Mini Chart Components ─── */
 
@@ -49,8 +56,7 @@ function TypePieChart({ typeCounts, total }: { typeCounts: ClipboardStats["type_
   if (total === 0) return null;
   return (
     <div className="space-y-1.5">
-      {/* Stacked bar */}
-      <div className="flex h-2 rounded-full overflow-hidden bg-muted/30">
+      <div className="flex h-2 overflow-hidden rounded-full bg-muted/30">
         {typeCounts.map((tc) => (
           <div
             key={tc.content_type}
@@ -59,13 +65,12 @@ function TypePieChart({ typeCounts, total }: { typeCounts: ClipboardStats["type_
           />
         ))}
       </div>
-      {/* Legend */}
       <div className="flex flex-wrap gap-x-3 gap-y-0.5">
         {typeCounts.map((tc) => (
-          <div key={tc.content_type} className="flex items-center gap-1 text-xs2 text-muted-foreground">
-            <span className={cn("w-2 h-2 rounded-full", TYPE_COLORS[tc.content_type] ?? "bg-gray-400")} />
+          <div key={tc.content_type} className="flex items-center gap-1 text-xs text-muted-foreground">
+            <span className={cn("h-2 w-2 rounded-full", TYPE_COLORS[tc.content_type] ?? "bg-gray-400")} />
             <span>{TYPE_LABELS[tc.content_type] ?? tc.content_type}</span>
-            <span className="text-foreground font-medium">{tc.count}</span>
+            <span className="font-medium text-foreground">{tc.count}</span>
           </div>
         ))}
       </div>
@@ -77,15 +82,15 @@ function DailyTrendChart({ dailyTrend }: { dailyTrend: ClipboardStats["daily_tre
   if (dailyTrend.length === 0) return null;
   const maxCount = Math.max(...dailyTrend.map((d) => d.count), 1);
   return (
-    <div className="flex items-end gap-1 h-12">
+    <div className="flex h-12 items-end gap-1">
       {dailyTrend.map((d) => (
-        <div key={d.date} className="flex-1 flex flex-col items-center gap-0.5">
+        <div key={d.date} className="flex flex-1 flex-col items-center gap-0.5">
           <div
-            className="w-full bg-primary/40 rounded-t transition-all min-h-[2px]"
+            className="w-full min-h-[2px] rounded-t bg-primary/40 transition-all"
             style={{ height: `${(d.count / maxCount) * 100}%` }}
             title={`${d.date}: ${d.count}`}
           />
-          <span className="text-2xs text-muted-foreground/70">
+          <span className="text-[10px] text-muted-foreground/70">
             {d.date.slice(5)}
           </span>
         </div>
@@ -167,100 +172,92 @@ export function DataTab() {
 
   return (
     <div className="space-y-5">
-      {/* Statistics */}
+      {/* ─── Statistics ─── */}
       {stats && (
-        <section>
-          <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-            {t("settings.statistics")}
-          </label>
-          <div className="mt-2 space-y-3">
-            {/* Summary row */}
-            <div className="flex gap-2">
-              <div className="flex-1 bg-muted/20 rounded-md px-2.5 py-2 text-center">
-                <div className="text-lg font-semibold text-foreground">{stats.total}</div>
-                <div className="text-2xs text-muted-foreground">{t("settings.statsTotal")}</div>
-              </div>
-              <div className="flex-1 bg-muted/20 rounded-md px-2.5 py-2 text-center">
-                <div className="text-lg font-semibold text-yellow-400">{stats.favorites}</div>
-                <div className="text-2xs text-muted-foreground">{t("settings.statsFavorites")}</div>
-              </div>
-              <div className="flex-1 bg-muted/20 rounded-md px-2.5 py-2 text-center">
-                <div className="text-lg font-semibold text-primary">{stats.pinned}</div>
-                <div className="text-2xs text-muted-foreground">{t("settings.statsPinned")}</div>
-              </div>
+        <SettingsSection title={t("settings.statistics")}>
+          <div className="grid gap-3 px-5 py-4 md:grid-cols-3">
+            <div className="settings-stat-card">
+              <div className="settings-stat-value">{stats.total}</div>
+              <div className="settings-stat-label">{t("settings.statsTotal")}</div>
             </div>
+            <div className="settings-stat-card">
+              <div className="settings-stat-value text-yellow-500 dark:text-yellow-300">{stats.favorites}</div>
+              <div className="settings-stat-label">{t("settings.statsFavorites")}</div>
+            </div>
+            <div className="settings-stat-card">
+              <div className="settings-stat-value text-primary">{stats.pinned}</div>
+              <div className="settings-stat-label">{t("settings.statsPinned")}</div>
+            </div>
+          </div>
 
-            {/* Type distribution */}
+          <div className="space-y-4 border-t border-[color-mix(in_oklab,var(--border)_76%,transparent)] px-5 py-4">
             <div>
-              <div className="text-xs2 text-muted-foreground mb-1">{t("settings.statsTypeDistribution")}</div>
+              <div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground/75">
+                {t("settings.statsTypeDistribution")}
+              </div>
               <TypePieChart typeCounts={stats.type_counts} total={stats.total} />
             </div>
 
-            {/* Daily trend */}
             {stats.daily_trend.length > 0 && (
               <div>
-                <div className="text-xs2 text-muted-foreground mb-1">{t("settings.statsDailyTrend")}</div>
+                <div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground/75">
+                  {t("settings.statsDailyTrend")}
+                </div>
                 <DailyTrendChart dailyTrend={stats.daily_trend} />
               </div>
             )}
           </div>
-        </section>
+        </SettingsSection>
       )}
 
-      {/* Data management */}
-      <section>
-        <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-          {t("settings.dataManagement")}
-        </label>
-        <div className="flex flex-col gap-2 mt-2">
-          <div className="flex gap-2">
-            <button
-              onClick={async () => {
+      {/* ─── Data Management ─── */}
+      <SettingsSection title={t("settings.dataManagement")}>
+        <div className="flex flex-wrap gap-2 px-5 py-3">
+          <SettingsButton
+            onClick={async () => {
+              try {
+                const json = await exportData();
+                const blob = new Blob([json], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `alger-clipboard-backup-${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                toast.success(t("toast.exported"));
+              } catch {
+                toast.error(t("toast.exportFailed"));
+              }
+            }}
+          >
+            <Download className="h-3 w-3" />
+            {t("settings.export")}
+          </SettingsButton>
+          <SettingsButton
+            onClick={() => {
+              const input = document.createElement("input");
+              input.type = "file";
+              input.accept = ".json";
+              input.onchange = async (e) => {
+                const file = (e.target as HTMLInputElement).files?.[0];
+                if (!file) return;
                 try {
-                  const json = await exportData();
-                  const blob = new Blob([json], { type: "application/json" });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = `alger-clipboard-backup-${new Date().toISOString().slice(0, 10)}.json`;
-                  a.click();
-                  URL.revokeObjectURL(url);
-                  toast.success(t("toast.exported"));
+                  const text = await file.text();
+                  const count = await importData(text);
+                  toast.success(t("toast.imported", { count }));
+                  useClipboardStore.getState().fetchHistory();
                 } catch {
-                  toast.error(t("toast.exportFailed"));
+                  toast.error(t("toast.importFailed"));
                 }
-              }}
-              className="flex items-center gap-1.5 h-7 px-3 text-sm2 font-medium bg-muted/30 hover:bg-muted/50 rounded-md transition-colors"
-            >
-              <Download className="w-3 h-3" />
-              {t("settings.export")}
-            </button>
-            <button
-              onClick={() => {
-                const input = document.createElement("input");
-                input.type = "file";
-                input.accept = ".json";
-                input.onchange = async (e) => {
-                  const file = (e.target as HTMLInputElement).files?.[0];
-                  if (!file) return;
-                  try {
-                    const text = await file.text();
-                    const count = await importData(text);
-                    toast.success(t("toast.imported", { count }));
-                    useClipboardStore.getState().fetchHistory();
-                  } catch {
-                    toast.error(t("toast.importFailed"));
-                  }
-                };
-                input.click();
-              }}
-              className="flex items-center gap-1.5 h-7 px-3 text-sm2 font-medium bg-muted/30 hover:bg-muted/50 rounded-md transition-colors"
-            >
-              <Upload className="w-3 h-3" />
-              {t("settings.import")}
-            </button>
-          </div>
-          <button
+              };
+              input.click();
+            }}
+          >
+            <Upload className="h-3 w-3" />
+            {t("settings.import")}
+          </SettingsButton>
+          <SettingsButton
+            tone="danger"
             onClick={async () => {
               try {
                 await clearHistory(true);
@@ -270,123 +267,107 @@ export function DataTab() {
                 toast.error(t("toast.clearFailed"));
               }
             }}
-            className="flex items-center gap-1.5 h-7 px-3 text-sm2 font-medium text-destructive bg-destructive/10 hover:bg-destructive/20 rounded-md transition-colors w-fit"
           >
-            <Trash2 className="w-3 h-3" />
+            <Trash2 className="h-3 w-3" />
             {t("settings.clearHistory")}
-          </button>
-          <p className="text-xs2 text-muted-foreground/70">
-            {t("settings.clearHistoryDesc")}
-          </p>
+          </SettingsButton>
         </div>
-      </section>
+      </SettingsSection>
 
-      {/* Cache management */}
-      <section>
-        <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-          {t("settings.cache")}
-        </label>
+      {/* ─── Cache ─── */}
+      <SettingsSection title={t("settings.cache")}>
         {cacheInfo && (
-          <div className="mt-2 space-y-2">
-            <div className="flex items-center gap-2 text-sm2">
-              <FolderOpen className="w-3 h-3 text-muted-foreground shrink-0" />
+          <>
+            <div className="flex flex-wrap items-center gap-2 px-5 py-3 text-sm">
+              <FolderOpen className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               <span
-                className="text-muted-foreground truncate text-xs2 flex-1"
+                className="flex-1 truncate text-xs text-muted-foreground"
                 title={cacheInfo.cache_dir}
               >
                 {cacheInfo.cache_dir}
               </span>
-              <button
+              <SettingsButton
+                tone="ghost"
                 onClick={() => openInExplorer(cacheInfo.cache_dir).catch(() => {})}
-                className="text-xs2 text-muted-foreground hover:text-foreground shrink-0"
                 title={t("settings.openCacheDir")}
               >
                 {t("settings.openCacheDir")}
-              </button>
-              <button
+              </SettingsButton>
+              <SettingsButton
                 onClick={handleCacheDirChange}
                 disabled={migrating}
-                className="text-xs2 text-primary hover:text-primary/80 shrink-0 disabled:opacity-50"
               >
                 {migrating ? (
-                  <Loader2 className="w-2.5 h-2.5 animate-spin inline" />
+                  <Loader2 className="inline h-3 w-3 animate-spin" />
                 ) : (
                   t("settings.changeCacheDir")
                 )}
-              </button>
+              </SettingsButton>
             </div>
 
-            {/* Migrate dialog */}
             {showMigrateDialog && (
-              <div className="bg-muted/30 rounded-md p-2.5 space-y-2">
-                <p className="text-sm2 font-medium">{t("settings.migrateCacheTitle")}</p>
-                <p className="text-xs2 text-muted-foreground">{t("settings.migrateCacheDesc")}</p>
-                <div className="flex gap-1.5">
-                  <button
-                    onClick={() => handleMigrate(true)}
-                    className="h-6 px-2 text-xs2 font-medium bg-primary/15 text-primary hover:bg-primary/25 rounded transition-colors"
-                  >
+              <div className="settings-inline-panel mx-5 space-y-3">
+                <p className="settings-row-title">{t("settings.migrateCacheTitle")}</p>
+                <p className="settings-row-description">{t("settings.migrateCacheDesc")}</p>
+                <div className="flex gap-2">
+                  <SettingsButton onClick={() => handleMigrate(true)}>
                     {t("settings.migrateCacheYes")}
-                  </button>
-                  <button
-                    onClick={() => handleMigrate(false)}
-                    className="h-6 px-2 text-xs2 font-medium bg-muted/30 hover:bg-muted/50 rounded transition-colors"
-                  >
+                  </SettingsButton>
+                  <SettingsButton tone="ghost" onClick={() => handleMigrate(false)}>
                     {t("settings.migrateCacheNo")}
-                  </button>
+                  </SettingsButton>
                 </div>
               </div>
             )}
 
-            <div className="flex items-center gap-3 text-sm2">
-              <span className="text-muted-foreground">
-                {t("settings.cacheSize")}:{" "}
-                <span className="text-foreground font-medium">
+            <SettingsRow
+              title={t("settings.cacheSize")}
+              description={t("settings.cacheFiles", { count: cacheInfo.file_count })}
+              control={
+                <div className="text-sm font-semibold text-foreground">
                   {formatBytes(cacheInfo.total_size_bytes)}
-                </span>
-              </span>
-              <span className="text-muted-foreground">
-                {t("settings.cacheFiles", { count: cacheInfo.file_count })}
-              </span>
-            </div>
+                </div>
+              }
+            />
 
-            {/* Cache size limit */}
-            <div className="flex items-center justify-between">
-              <span className="text-sm2 text-muted-foreground">
-                {t("settings.cacheMaxSize")}
-              </span>
-              <select
-                value={cacheMaxSize}
-                onChange={(e) => handleCacheMaxSizeChange(Number(e.target.value))}
-                className="h-6 px-1.5 text-xs2 bg-muted/30 border border-border/50 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+            <SettingsRow
+              title={t("settings.cacheMaxSize")}
+              control={
+                <SettingsField className="w-[11rem]">
+                  <SettingsSelect
+                    value={cacheMaxSize}
+                    onChange={(e) => handleCacheMaxSizeChange(Number(e.target.value))}
+                  >
+                    {cacheSizeOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </SettingsSelect>
+                </SettingsField>
+              }
+            />
+
+            <div className="px-5 py-3">
+              <SettingsButton
+                onClick={async () => {
+                  try {
+                    await cleanupCache();
+                    const info = await getCacheInfo();
+                    setCacheInfo(info);
+                    toast.success(t("settings.cacheCleanedUp"));
+                  } catch {
+                    toast.error("Cleanup failed");
+                  }
+                }}
               >
-                {cacheSizeOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+                <Trash2 className="h-3 w-3" />
+                {t("settings.cleanupCache")}
+              </SettingsButton>
             </div>
-
-            <button
-              onClick={async () => {
-                try {
-                  await cleanupCache();
-                  const info = await getCacheInfo();
-                  setCacheInfo(info);
-                  toast.success(t("settings.cacheCleanedUp"));
-                } catch {
-                  toast.error("Cleanup failed");
-                }
-              }}
-              className="flex items-center gap-1.5 h-7 px-3 text-sm2 font-medium bg-muted/30 hover:bg-muted/50 rounded-md transition-colors"
-            >
-              <Trash2 className="w-3 h-3" />
-              {t("settings.cleanupCache")}
-            </button>
-          </div>
+          </>
         )}
-      </section>
+      </SettingsSection>
     </div>
   );
 }
