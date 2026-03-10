@@ -113,5 +113,18 @@
     "resetConfirm": "重置确认提示",
     "resetConfirmDesc": "重新显示首次关闭确认对话框",
     "resetDone": "已重置"
+  },
+  "search": {
+    "timeAll": "全部时间",
+    "timeToday": "今天",
+    "time3Days": "最近3天",
+    "timeWeek": "本周",
+    "timeMonth": "本月",
+    "time3Months": "最近3个月",
+    "timeFilter": "时间筛选",
+    "recentSearches": "最近搜索",
+    "clearHistory": "清除全部历史",
+    "regexMode": "正则模式",
+    "noHistory": "暂无搜索历史"
   }
 }
