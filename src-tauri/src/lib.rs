@@ -246,6 +246,7 @@ pub fn run() {
                         let blob = blob_for_ocr.clone();
                         let handle = app_handle.clone();
                         let blob_path = blob_path.clone();
+                        let entry_id = entry.id.clone();
 
                         tauri::async_runtime::spawn(async move {
                             let trigger_mode = db
@@ -266,10 +267,15 @@ pub fn run() {
                                 }
                             };
 
-                            let app_db = AppDatabase(db);
+                            let app_db = AppDatabase(db.clone());
                             match commands::ocr_cmd::run_ocr_with_app(&handle, &app_db, image_data, None).await {
-                                Ok(_) => {
+                                Ok(result) => {
                                     log::info!("Auto-OCR completed for {}", blob_path);
+                                    // Save OCR text to entry for FTS indexing
+                                    let ocr_text: String = result.lines.iter().map(|l| l.text.as_str()).collect::<Vec<_>>().join("\n");
+                                    if !ocr_text.is_empty() {
+                                        let _ = db.update_ocr_text(&entry_id, &ocr_text);
+                                    }
                                 }
                                 Err(e) => {
                                     log::warn!("Auto-OCR failed for {}: {}", blob_path, e);

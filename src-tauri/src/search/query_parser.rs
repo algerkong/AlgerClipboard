@@ -95,10 +95,17 @@ pub fn build_fts_expression(input: &str) -> String {
             continue;
         }
 
-        // Regular token
+        // Regular token — use prefix matching (token*) for fuzzy search
         let token = consume_token_with_first(ch, &mut chars);
         if !token.is_empty() {
-            parts.push(format!("\"{}\"", escape_fts_token(&token)));
+            let escaped = escape_fts_token(&token);
+            // FTS5 prefix syntax: unquoted token followed by *
+            // Only use prefix for tokens without special chars
+            if token.chars().all(|c| c.is_alphanumeric() || c > '\x7f') {
+                parts.push(format!("{}*", escaped));
+            } else {
+                parts.push(format!("\"{}\"", escaped));
+            }
         }
     }
 
@@ -149,7 +156,7 @@ mod tests {
     #[test]
     fn test_simple_words() {
         let expr = build_fts_expression("foo bar");
-        assert_eq!(expr, "\"foo\" AND \"bar\"");
+        assert_eq!(expr, "foo* AND bar*");
     }
 
     #[test]
@@ -161,7 +168,13 @@ mod tests {
     #[test]
     fn test_negation() {
         let expr = build_fts_expression("foo -bar");
-        assert_eq!(expr, "\"foo\" AND NOT \"bar\"");
+        assert_eq!(expr, "foo* AND NOT \"bar\"");
+    }
+
+    #[test]
+    fn test_chinese_prefix() {
+        let expr = build_fts_expression("你好");
+        assert_eq!(expr, "你好*");
     }
 
     #[test]
@@ -184,7 +197,7 @@ mod tests {
                 type_filter,
                 ..
             } => {
-                assert_eq!(match_expr, "\"hello\" AND \"world\"");
+                assert_eq!(match_expr, "hello* AND world*");
                 assert_eq!(type_filter, Some("PlainText".into()));
             }
             _ => panic!("Expected FTS mode"),

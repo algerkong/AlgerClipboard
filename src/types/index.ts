@@ -25,6 +25,7 @@ export interface ClipboardEntry {
   content_category: string | null;
   detected_language: string | null;
   file_meta: string | null;
+  ocr_text: string | null;
 }
 
 export interface HistoryQuery {

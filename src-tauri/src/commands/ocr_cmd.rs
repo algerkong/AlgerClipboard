@@ -222,11 +222,22 @@ pub async fn ocr_recognize(
     blob_store: State<'_, AppBlobStore>,
     relative_path: String,
     engine: Option<String>,
+    entry_id: Option<String>,
 ) -> Result<OcrResult, String> {
     let path = blob_store.0.get_blob_path(&relative_path);
     let image_data = std::fs::read(&path)
         .map_err(|e| format!("Failed to read blob '{}': {}", relative_path, e))?;
-    run_ocr_with_app(&app, &db, image_data, engine).await
+    let result = run_ocr_with_app(&app, &db, image_data, engine).await?;
+
+    // Save OCR text to entry for FTS indexing
+    if let Some(ref eid) = entry_id {
+        let ocr_text: String = result.lines.iter().map(|l| l.text.as_str()).collect::<Vec<_>>().join("\n");
+        if !ocr_text.is_empty() {
+            let _ = db.0.update_ocr_text(eid, &ocr_text);
+        }
+    }
+
+    Ok(result)
 }
 
 #[tauri::command]

@@ -82,4 +82,5 @@ pub struct ClipboardEntry {
     pub content_category: Option<String>,
     pub detected_language: Option<String>,
     pub file_meta: Option<String>,
+    pub ocr_text: Option<String>,
 }

@@ -15,7 +15,6 @@ import {
   renameTag as renameTagApi,
   deleteTagEverywhere as deleteTagEverywhereApi,
   searchEntries,
-  addSearchHistory,
 } from "@/services/clipboardService";
 
 interface ClipboardState {
@@ -118,9 +117,6 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
   setKeyword: (keyword: string) => {
     set({ keyword });
     get().fetchHistory();
-    if (keyword.trim()) {
-      addSearchHistory(keyword.trim()).catch(() => {});
-    }
   },
 
   setShowFavoritesOnly: (show: boolean) => {

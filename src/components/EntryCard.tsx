@@ -10,7 +10,7 @@ import type { ClipboardEntry, FileMeta } from "@/types";
 import { openFileViewer } from "@/services/fileViewerService";
 import { openInFileExplorer, openFileDefault } from "@/services/clipboardService";
 import { cn } from "@/lib/utils";
-import { highlightText } from "@/lib/highlightText";
+import { highlightText, getSearchSnippet } from "@/lib/highlightText";
 import { useTranslation } from "react-i18next";
 import { openImageViewer } from "@/services/imageViewerService";
 import { openDetailWindow } from "@/services/detailWindowService";
@@ -513,13 +513,20 @@ export const EntryCard = memo(function EntryCard({
     // Image with thumbnail
     if (isImage && imageSrc) {
       return (
-        <img
-          src={imageSrc}
-          alt=""
-          className="max-h-[82px] max-w-full rounded-lg border border-border/30 object-cover cursor-zoom-in"
-          draggable={false}
-          onClick={(e) => { e.stopPropagation(); handleOpenImageViewer(); }}
-        />
+        <div>
+          <img
+            src={imageSrc}
+            alt=""
+            className="max-h-[82px] max-w-full rounded-lg border border-border/30 object-cover cursor-zoom-in"
+            draggable={false}
+            onClick={(e) => { e.stopPropagation(); handleOpenImageViewer(); }}
+          />
+          {keyword && entry.ocr_text && (
+            <p className="mt-1 line-clamp-2 text-xs text-muted-foreground break-all">
+              {getSearchSnippet(entry.ocr_text, keyword, 100)}
+            </p>
+          )}
+        </div>
       );
     }
     // File paths (non-image) — file info block
@@ -566,7 +573,9 @@ export const EntryCard = memo(function EntryCard({
     // Plain text preview
     return (
       <p className="line-clamp-3 text-base2 leading-relaxed text-foreground break-all">
-        {keyword ? highlightText(getPreview(entry, t, fileMetas), keyword) : getPreview(entry, t, fileMetas)}
+        {keyword && entry.text_content
+          ? getSearchSnippet(entry.text_content, keyword, 120)
+          : getPreview(entry, t, fileMetas)}
       </p>
     );
   };

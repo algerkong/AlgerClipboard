@@ -29,8 +29,8 @@ export interface RapidOcrRuntimeStatus {
   last_error: string | null;
 }
 
-export async function ocrRecognize(relativePath: string, engine?: string): Promise<OcrResult> {
-  return invoke("ocr_recognize", { relativePath, engine: engine ?? null });
+export async function ocrRecognize(relativePath: string, engine?: string, entryId?: string): Promise<OcrResult> {
+  return invoke("ocr_recognize", { relativePath, engine: engine ?? null, entryId: entryId ?? null });
 }
 
 export async function ocrRecognizeFile(path: string, engine?: string): Promise<OcrResult> {
