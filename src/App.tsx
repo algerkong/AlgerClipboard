@@ -164,10 +164,6 @@ function TemplateManagerWindow() {
   const loadSettings = useSettingsStore((s) => s.loadSettings);
 
   useEffect(() => {
-    document.documentElement.classList.add("dark");
-  }, []);
-
-  useEffect(() => {
     loadSettings();
   }, [loadSettings]);
 
@@ -210,10 +206,6 @@ function SettingsWindow() {
   const theme = useSettingsStore((s) => s.theme);
   const locale = useSettingsStore((s) => s.locale);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
-
-  useEffect(() => {
-    document.documentElement.classList.add("dark");
-  }, []);
 
   useEffect(() => {
     loadSettings();
@@ -264,10 +256,6 @@ function DetailWindow() {
   const loadSettings = useSettingsStore((s) => s.loadSettings);
 
   useEffect(() => {
-    document.documentElement.classList.add("dark");
-  }, []);
-
-  useEffect(() => {
     loadSettings();
   }, [loadSettings]);
 
@@ -305,10 +293,6 @@ function TagManagerWindow() {
   const theme = useSettingsStore((s) => s.theme);
   const locale = useSettingsStore((s) => s.locale);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
-
-  useEffect(() => {
-    document.documentElement.classList.add("dark");
-  }, []);
 
   useEffect(() => {
     loadSettings();
@@ -359,10 +343,6 @@ function AskAiWindow() {
   const loadSettings = useSettingsStore((s) => s.loadSettings);
 
   useEffect(() => {
-    document.documentElement.classList.add("dark");
-  }, []);
-
-  useEffect(() => {
     loadSettings();
   }, [loadSettings]);
 
@@ -395,10 +375,6 @@ function FileViewerWindow() {
   const theme = useSettingsStore((s) => s.theme);
   const locale = useSettingsStore((s) => s.locale);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
-
-  useEffect(() => {
-    document.documentElement.classList.add("dark");
-  }, []);
 
   useEffect(() => {
     loadSettings();
@@ -443,11 +419,6 @@ function MainApp() {
   const theme = useSettingsStore((s) => s.theme);
   const locale = useSettingsStore((s) => s.locale);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
-
-  // Apply dark theme immediately on first render (before settings load)
-  useEffect(() => {
-    document.documentElement.classList.add("dark");
-  }, []);
 
   // Restore saved window size and track future resizes
   useEffect(() => {
