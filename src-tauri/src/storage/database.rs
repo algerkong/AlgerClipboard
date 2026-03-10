@@ -57,6 +57,14 @@ pub struct TagSummary {
     pub count: i64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchHistoryItem {
+    pub id: i64,
+    pub keyword: String,
+    pub search_count: i64,
+    pub last_used_at: String,
+}
+
 pub struct Database {
     conn: Mutex<Connection>,
 }
@@ -191,6 +199,17 @@ impl Database {
             );",
         )
         .map_err(|e| format!("Failed to create ocr_cache table: {}", e))?;
+
+        // Search history table
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS search_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                keyword TEXT NOT NULL UNIQUE,
+                search_count INTEGER DEFAULT 1,
+                last_used_at TEXT NOT NULL
+            );",
+        )
+        .map_err(|e| format!("Failed to create search_history table: {}", e))?;
 
         // Sync accounts table
         conn.execute_batch(
@@ -1380,6 +1399,111 @@ impl Database {
             )
             .map_err(|e| format!("Query error: {}", e))?;
         Ok(count > 0)
+    }
+
+    pub fn add_search_history(&self, keyword: &str) -> Result<(), String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        let now = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
+        conn.execute(
+            "INSERT INTO search_history (keyword, search_count, last_used_at) VALUES (?1, 1, ?2)
+             ON CONFLICT(keyword) DO UPDATE SET search_count = search_count + 1, last_used_at = ?2",
+            params![keyword, now],
+        ).map_err(|e| format!("Failed to add search history: {}", e))?;
+        // Keep only latest 50
+        conn.execute(
+            "DELETE FROM search_history WHERE id NOT IN (SELECT id FROM search_history ORDER BY last_used_at DESC LIMIT 50)",
+            [],
+        ).map_err(|e| format!("Failed to trim search history: {}", e))?;
+        Ok(())
+    }
+
+    pub fn get_search_history(&self, limit: i64) -> Result<Vec<SearchHistoryItem>, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        let mut stmt = conn.prepare(
+            "SELECT id, keyword, search_count, last_used_at FROM search_history ORDER BY last_used_at DESC LIMIT ?1"
+        ).map_err(|e| format!("Prepare error: {}", e))?;
+        let items = stmt.query_map(params![limit], |row| {
+            Ok(SearchHistoryItem {
+                id: row.get(0)?,
+                keyword: row.get(1)?,
+                search_count: row.get(2)?,
+                last_used_at: row.get(3)?,
+            })
+        }).map_err(|e| format!("Query error: {}", e))?
+        .filter_map(|r| r.ok())
+        .collect();
+        Ok(items)
+    }
+
+    pub fn delete_search_history(&self, id: i64) -> Result<(), String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        conn.execute("DELETE FROM search_history WHERE id = ?1", params![id])
+            .map_err(|e| format!("Failed to delete: {}", e))?;
+        Ok(())
+    }
+
+    pub fn clear_search_history(&self) -> Result<(), String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        conn.execute("DELETE FROM search_history", [])
+            .map_err(|e| format!("Failed to clear: {}", e))?;
+        Ok(())
+    }
+
+    pub fn search_entries(
+        &self,
+        keyword: &str,
+        limit: i64,
+        offset: i64,
+        type_filter: Option<String>,
+        time_range: Option<String>,
+        tag_filter: Option<String>,
+        tagged_only: bool,
+    ) -> Result<Vec<ClipboardEntry>, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+        let ids = crate::search::fts::search(
+            &conn,
+            keyword,
+            time_range.as_deref(),
+            type_filter.as_deref(),
+            tag_filter.as_deref(),
+            tagged_only,
+            limit as usize,
+            offset as usize,
+        )?;
+
+        if ids.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // Fetch full entries preserving FTS result order
+        let placeholders: String = ids.iter().enumerate().map(|(i, _)| format!("?{}", i + 1)).collect::<Vec<_>>().join(",");
+        let sql = format!(
+            "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, source_icon, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language, file_meta
+             FROM entries WHERE id IN ({}) AND deleted = 0",
+            placeholders
+        );
+
+        let mut stmt = conn.prepare(&sql).map_err(|e| format!("Prepare error: {}", e))?;
+        let params: Vec<&dyn rusqlite::types::ToSql> = ids.iter().map(|id| id as &dyn rusqlite::types::ToSql).collect();
+
+        let entries_map: std::collections::HashMap<String, ClipboardEntry> = stmt
+            .query_map(params.as_slice(), |row| Ok(row_to_entry_inner(row)))
+            .map_err(|e| format!("Query error: {}", e))?
+            .filter_map(|r| r.ok())
+            .map(|e| (e.id.clone(), e))
+            .collect();
+
+        let mut result = Vec::new();
+        for id in &ids {
+            if let Some(mut entry) = entries_map.get(id).cloned() {
+                let tags = self.get_tags_for_entry_with_conn(&conn, &entry.id)?;
+                entry.tags = tags;
+                result.push(entry);
+            }
+        }
+
+        Ok(result)
     }
 }
 
