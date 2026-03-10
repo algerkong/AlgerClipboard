@@ -33,6 +33,7 @@ import { useCapabilityStore } from "@/stores/capabilityStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { openUrl } from "@/services/settingsService";
 import { SourceBadge } from "@/components/SourceBadge";
+import { StyledSelect, type SelectOption } from "@/components/ui/styled-select";
 import type { ClipboardEntry } from "@/types";
 import { sanitizeDetailHtml, type RichTextDetailMode } from "@/lib/richText";
 import { CodeEditor } from "@/components/editor/CodeEditor";
@@ -67,18 +68,6 @@ function applyTheme(theme: "light" | "dark" | "system") {
   }
 }
 
-const LANGUAGES = [
-  { value: "auto", labelKey: "translate.auto" },
-  { value: "zh", label: "中文" },
-  { value: "en", label: "English" },
-  { value: "ja", label: "日本語" },
-  { value: "ko", label: "한국어" },
-  { value: "fr", label: "Français" },
-  { value: "de", label: "Deutsch" },
-  { value: "es", label: "Español" },
-  { value: "ru", label: "Русский" },
-];
-
 function HintIconButton({
   label,
   className,
@@ -95,9 +84,6 @@ function HintIconButton({
       title={label}
     >
       {children}
-      <span className="pointer-events-none absolute right-0 top-full z-20 mt-1.5 hidden whitespace-nowrap rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1 text-[11px] leading-none text-white shadow-lg group-hover:block group-focus-visible:block dark:border-zinc-300 dark:bg-zinc-50 dark:text-zinc-950">
-        {label}
-      </span>
     </button>
   );
 }
@@ -139,7 +125,6 @@ export function DetailPage() {
     document.documentElement.classList.add("dark");
   }, []);
 
-  // Save window size on resize
   useEffect(() => trackWindowSize(DETAIL_SIZE_KEY), []);
 
   useEffect(() => {
@@ -156,7 +141,6 @@ export function DetailPage() {
     applyTheme(theme);
   }, [theme]);
 
-  // Fetch entry
   useEffect(() => {
     if (!entryId) return;
     getEntry(entryId).then((e) => {
@@ -235,10 +219,11 @@ export function DetailPage() {
 
   return (
     <div className="app-shell flex h-full flex-col overflow-hidden bg-background">
-      <div className="tab-shell shrink-0 px-3 py-2">
-        <div className="flex items-center justify-between gap-2">
+      {/* ── Top bar: tabs + actions ── */}
+      <div className="shrink-0 px-2.5 py-1.5" style={{ borderBottom: "1px solid var(--border)" }}>
+        <div className="flex items-center justify-between gap-1.5">
           <div className="tab-scroll-area min-w-0 overflow-x-auto">
-            <div className="flex w-max items-center gap-1">
+            <div className="flex w-max items-center gap-0.5">
               {(["view", "translate", "ai"] as const).map((t2) => (
                 <button
                   key={t2}
@@ -260,37 +245,37 @@ export function DetailPage() {
               ))}
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-1">
             <SourceBadge
               sourceApp={entry.source_app}
               sourceUrl={entry.source_url}
               sourceIcon={entry.source_icon}
-              className="meta-pill min-w-0 max-w-[200px] px-2.5 py-1"
-              textClassName="text-xs2"
-              iconClassName="!h-[18px] !w-[18px]"
+              className="meta-pill min-w-0 max-w-[180px] px-2 py-0.5"
+              textClassName="text-2xs"
+              iconClassName="!h-[16px] !w-[16px]"
             />
             {hasText && (
-              <div className="surface-panel flex items-center gap-0.5 rounded-full px-1 py-0.5">
+              <div className="detail-action-group">
                 <HintIconButton
                   onClick={handleCopy}
                   label={copied ? t("detail.copied") : t("detail.copy")}
                   className={cn(
-                    "filter-pill min-h-0 p-1.5 transition-colors text-muted-foreground hover:text-foreground",
+                    "filter-pill min-h-0 p-1 transition-colors text-muted-foreground hover:text-foreground",
                     copied && "text-green-400",
                   )}
                 >
                   {copied ? (
-                    <Check className="w-3 h-3" />
+                    <Check className="w-2.5 h-2.5" />
                   ) : (
-                    <Copy className="w-3 h-3" />
+                    <Copy className="w-2.5 h-2.5" />
                   )}
                 </HintIconButton>
                 <HintIconButton
                   onClick={handlePaste}
                   label={t("detail.paste")}
-                  className="filter-pill min-h-0 p-1.5 transition-colors text-muted-foreground hover:text-foreground"
+                  className="filter-pill min-h-0 p-1 transition-colors text-muted-foreground hover:text-foreground"
                 >
-                  <ClipboardPaste className="w-3 h-3" />
+                  <ClipboardPaste className="w-2.5 h-2.5" />
                 </HintIconButton>
               </div>
             )}
@@ -298,8 +283,9 @@ export function DetailPage() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-hidden px-3 pb-3 pt-2">
-        <div className="surface-panel h-full overflow-hidden rounded-[1.2rem]">
+      {/* ── Content area ── */}
+      <div className="flex-1 min-h-0 overflow-hidden px-2 pb-1.5 pt-1.5">
+        <div className="surface-panel h-full overflow-hidden rounded-[1rem]">
           {tab === "view" && (
             <ViewTab
               key={`${entry.id}-${richTextDetailMode}`}
@@ -341,6 +327,30 @@ export function DetailPage() {
           )}
         </div>
       </div>
+
+      {/* ── Status bar ── */}
+      <div className="detail-status-bar shrink-0">
+        <span className="detail-status-pill">{entry.content_type}</span>
+        {entry.content_category && entry.content_category !== "General" && (
+          <span className="detail-status-pill text-blue-400/80">
+            {entry.content_category}
+          </span>
+        )}
+        {entry.detected_language && (
+          <span className="detail-status-pill text-emerald-400/80">
+            {entry.detected_language}
+          </span>
+        )}
+        {entry.text_content && (
+          <span className="detail-status-pill">
+            {entry.text_content.length} chars
+          </span>
+        )}
+        <span className="detail-status-pill">
+          {new Date(entry.created_at).toLocaleString()}
+        </span>
+      </div>
+
       {showConfirm && (
         <CloseConfirmDialog
           shortcutKey={closeKey}
@@ -431,7 +441,7 @@ function ViewTab({
       return (
         <div
           className={cn(
-            "rich-text-content h-full overflow-y-auto p-4 text-sm2 leading-relaxed text-foreground",
+            "rich-text-content h-full overflow-y-auto p-3 text-sm2 leading-relaxed text-foreground",
             renderMode === "full"
               ? "rich-text-content--detail-full"
               : "rich-text-content--detail-clean",
@@ -451,12 +461,11 @@ function ViewTab({
     }
     if (contentMode === "markdown") {
       return (
-        <div className="h-full overflow-y-auto p-4">
+        <div className="h-full overflow-y-auto p-3">
           <MarkdownPreview content={entry.text_content || ""} />
         </div>
       );
     }
-    // code or plaintext — read-only CodeMirror
     return (
       <CodeEditor
         value={entry.text_content || ""}
@@ -495,7 +504,7 @@ function ViewTab({
       return (
         <div
           className={cn(
-            "rich-text-content h-full overflow-y-auto p-4 text-sm2 leading-relaxed text-foreground",
+            "rich-text-content h-full overflow-y-auto p-3 text-sm2 leading-relaxed text-foreground",
             renderMode === "full"
               ? "rich-text-content--detail-full"
               : "rich-text-content--detail-clean",
@@ -506,7 +515,7 @@ function ViewTab({
     }
     if (contentMode === "markdown") {
       return (
-        <div className="h-full overflow-y-auto p-4">
+        <div className="h-full overflow-y-auto p-3">
           <MarkdownPreview content={editText} />
         </div>
       );
@@ -553,24 +562,23 @@ function ViewTab({
   return (
     <div className="flex flex-col h-full">
       {hasText && (
-        <div className="tab-shell flex items-center justify-between px-3 py-1.5 shrink-0">
-          <div className="flex items-center gap-1.5">
-            {/* Content mode badge */}
-            <span className="meta-pill inline-flex items-center px-2.5 py-1 text-xs2 font-medium text-muted-foreground/70">
+        <div className="detail-toolbar">
+          <div className="flex items-center gap-1">
+            <span className="detail-status-pill px-2 py-0.5 text-2xs">
               {contentModeLabel}
             </span>
 
             {/* RichText render mode toggle (clean/full) */}
             {contentMode === "richtext" &&
               !(isEditing && layout === "editor") && (
-                <div className="surface-panel flex items-center gap-0.5 rounded-full px-1 py-0.5">
+                <div className="detail-action-group">
                   {(["clean", "full"] as const).map((mode) => (
                     <button
                       key={mode}
                       onClick={() => setRenderMode(mode)}
                       data-active={renderMode === mode}
                       className={cn(
-                        "filter-pill min-h-0 px-2.5 py-1 text-2xs font-medium transition-colors",
+                        "filter-pill min-h-0 px-2 py-0.5 text-2xs font-medium transition-colors",
                         renderMode === mode
                           ? "text-foreground"
                           : "hover:border-primary/20 hover:bg-accent/50 hover:text-foreground",
@@ -586,7 +594,7 @@ function ViewTab({
           <div className="flex items-center gap-1">
             {/* Layout toggle — only when editing non-code content */}
             {isEditing && contentMode !== "code" && (
-              <div className="surface-panel flex items-center gap-0.5 rounded-full px-1 py-0.5 mr-1">
+              <div className="detail-action-group mr-0.5">
                 {[
                   {
                     key: "editor" as ViewLayout,
@@ -610,7 +618,7 @@ function ViewTab({
                     data-active={layout === key}
                     title={label}
                     className={cn(
-                      "filter-pill min-h-0 p-1.5 transition-colors",
+                      "filter-pill min-h-0 p-1 transition-colors",
                       layout === key
                         ? "text-foreground"
                         : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
@@ -626,20 +634,20 @@ function ViewTab({
               <>
                 <button
                   onClick={onCancelEdit}
-                  className="filter-pill flex items-center gap-1 px-3 text-2xs font-medium text-muted-foreground transition-colors hover:border-primary/20 hover:bg-accent/50 hover:text-foreground"
+                  className="filter-pill flex items-center gap-1 px-2.5 text-2xs font-medium text-muted-foreground transition-colors hover:border-primary/20 hover:bg-accent/50 hover:text-foreground"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-2.5 h-2.5" />
                   {t("detail.cancel")}
                 </button>
                 <button
                   onClick={onSave}
                   disabled={saving}
-                  className="filter-pill flex items-center gap-1 border-primary/60 bg-primary px-3 text-2xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                  className="filter-pill flex items-center gap-1 border-primary/60 bg-primary px-2.5 text-2xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
                 >
                   {saving ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <Loader2 className="w-2.5 h-2.5 animate-spin" />
                   ) : (
-                    <Save className="w-3 h-3" />
+                    <Save className="w-2.5 h-2.5" />
                   )}
                   {t("detail.save")}
                 </button>
@@ -647,9 +655,9 @@ function ViewTab({
             ) : (
               <button
                 onClick={onStartEdit}
-                className="filter-pill flex items-center gap-1 px-3 text-2xs font-medium text-muted-foreground transition-colors hover:border-primary/20 hover:bg-accent/50 hover:text-foreground"
+                className="filter-pill flex items-center gap-1 px-2.5 text-2xs font-medium text-muted-foreground transition-colors hover:border-primary/20 hover:bg-accent/50 hover:text-foreground"
               >
-                <Pencil className="w-3 h-3" />
+                <Pencil className="w-2.5 h-2.5" />
                 {t("detail.edit")}
               </button>
             )}
@@ -661,40 +669,32 @@ function ViewTab({
         {hasText ? (
           renderContent()
         ) : (
-          <div className="flex items-center justify-center h-full p-4 text-sm2 text-muted-foreground">
+          <div className="flex items-center justify-center h-full p-3 text-sm2 text-muted-foreground">
             {entry.content_type === "Image"
               ? "Image content"
               : entry.content_type}
           </div>
         )}
       </div>
-
-      <div className="tab-shell flex items-center gap-2 px-3 py-2 text-2xs text-muted-foreground/70 shrink-0">
-        <span className="meta-pill px-2 py-0.5">{entry.content_type}</span>
-        {entry.content_category && entry.content_category !== "General" && (
-          <span className="meta-pill px-2 py-0.5 text-blue-400">
-            {entry.content_category}
-          </span>
-        )}
-        {entry.detected_language && (
-          <span className="meta-pill px-2 py-0.5 text-emerald-400">
-            {entry.detected_language}
-          </span>
-        )}
-        {entry.text_content && (
-          <span className="meta-pill px-2 py-0.5">
-            {entry.text_content.length} chars
-          </span>
-        )}
-        <span className="meta-pill px-2 py-0.5">
-          {new Date(entry.created_at).toLocaleString()}
-        </span>
-      </div>
     </div>
   );
 }
 
 /* ─── Translate Tab ─── */
+
+const LANGUAGES: SelectOption[] = [
+  { value: "auto", label: "Auto" },
+  { value: "zh", label: "中文" },
+  { value: "en", label: "English" },
+  { value: "ja", label: "日本語" },
+  { value: "ko", label: "한국어" },
+  { value: "fr", label: "Français" },
+  { value: "de", label: "Deutsch" },
+  { value: "es", label: "Español" },
+  { value: "ru", label: "Русский" },
+];
+
+const TARGET_LANGUAGES = LANGUAGES.filter((l) => l.value !== "auto");
 
 function SettingsHintPanel({
   title,
@@ -708,9 +708,9 @@ function SettingsHintPanel({
   onOpenSettings: () => void;
 }) {
   return (
-    <div className="flex h-full items-center justify-center p-4">
-      <div className="surface-panel w-full max-w-sm rounded-[1.2rem] px-5 py-6 text-center">
-        <div className="space-y-1.5">
+    <div className="flex h-full items-center justify-center p-3">
+      <div className="surface-panel w-full max-w-sm rounded-[1rem] px-4 py-5 text-center">
+        <div className="space-y-1">
           <p className="text-sm2 font-medium text-foreground">{title}</p>
           <p className="text-xs2 leading-relaxed text-muted-foreground">
             {description}
@@ -718,7 +718,7 @@ function SettingsHintPanel({
         </div>
         <button
           onClick={onOpenSettings}
-          className="filter-pill mt-4 px-3 text-xs2 font-medium text-primary transition-colors hover:bg-primary/25"
+          className="filter-pill mt-3 px-3 text-xs2 font-medium text-primary transition-colors hover:bg-primary/25"
         >
           {buttonLabel}
         </button>
@@ -757,6 +757,13 @@ function TranslateTab({
 
   const autoTranslated = useRef(false);
   const [copied, setCopied] = useState(false);
+
+  // Localized source language options
+  const sourceLanguages = useMemo<SelectOption[]>(() => {
+    return LANGUAGES.map((l) =>
+      l.value === "auto" ? { ...l, label: t("translate.auto") } : l,
+    );
+  }, [t]);
 
   useEffect(() => {
     if (!canTranslate || !text || autoTranslated.current) return;
@@ -829,99 +836,96 @@ function TranslateTab({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="tab-shell flex items-center gap-1.5 px-3 py-2 shrink-0">
-        <select
-          value={fromLang}
-          onChange={(e) => setFromLang(e.target.value)}
-          className="h-8 flex-1 rounded-xl border border-border/50 bg-card/80 px-2 text-xs2 text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
-        >
-          {LANGUAGES.map((l) => (
-            <option key={l.value} value={l.value}>
-              {l.labelKey ? t(l.labelKey) : l.label}
-            </option>
-          ))}
-        </select>
+      {/* Language selector bar */}
+      <div className="detail-toolbar">
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <StyledSelect
+            value={fromLang}
+            onChange={setFromLang}
+            options={sourceLanguages}
+            className="flex-1 min-w-0"
+          />
 
-        <button
-          onClick={handleSwapLangs}
-          disabled={fromLang === "auto"}
-          className={cn(
-            "entry-action shrink-0 p-0 transition-colors",
-            fromLang === "auto"
-              ? "text-muted-foreground/30 cursor-not-allowed"
-              : "text-muted-foreground hover:text-primary hover:bg-primary/10",
-          )}
-        >
-          <ArrowRightLeft className="w-3 h-3" />
-        </button>
-
-        <select
-          value={toLang}
-          onChange={(e) => setToLang(e.target.value)}
-          className="h-8 flex-1 rounded-xl border border-border/50 bg-card/80 px-2 text-xs2 text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
-        >
-          {LANGUAGES.filter((l) => l.value !== "auto").map((l) => (
-            <option key={l.value} value={l.value}>
-              {l.label}
-            </option>
-          ))}
-        </select>
-
-        <button
-          onClick={handleTranslate}
-          disabled={loading}
-          className={cn(
-            "filter-pill shrink-0 flex items-center gap-1 px-3 text-xs2 font-medium transition-colors",
-            loading
-              ? "bg-muted/50 text-muted-foreground cursor-not-allowed"
-              : "bg-primary/15 text-primary hover:bg-primary/25",
-          )}
-        >
-          <RotateCcw className={cn("w-2.5 h-2.5", loading && "animate-spin")} />
-        </button>
-
-        {hasTranslateEngine && hasAi && (
           <button
-            onClick={() => setUseAi(!useAi)}
+            onClick={handleSwapLangs}
+            disabled={fromLang === "auto"}
             className={cn(
-              "filter-pill shrink-0 flex items-center gap-1 px-3 text-xs2 font-medium transition-colors",
-              useAi
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted/30 text-muted-foreground hover:bg-muted/50",
+              "shrink-0 p-1 rounded transition-colors",
+              fromLang === "auto"
+                ? "text-muted-foreground/30 cursor-not-allowed"
+                : "text-muted-foreground hover:text-primary hover:bg-primary/10",
             )}
-            title="AI"
           >
-            <Brain className="w-2.5 h-2.5" />
-            AI
+            <ArrowRightLeft className="w-3 h-3" />
           </button>
-        )}
+
+          <StyledSelect
+            value={toLang}
+            onChange={setToLang}
+            options={TARGET_LANGUAGES}
+            className="flex-1 min-w-0"
+          />
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0 ml-1.5">
+          <button
+            onClick={handleTranslate}
+            disabled={loading}
+            className={cn(
+              "filter-pill shrink-0 flex items-center gap-1 px-2.5 text-2xs font-medium transition-colors",
+              loading
+                ? "bg-muted/50 text-muted-foreground cursor-not-allowed"
+                : "bg-primary/15 text-primary hover:bg-primary/25",
+            )}
+          >
+            <RotateCcw className={cn("w-2.5 h-2.5", loading && "animate-spin")} />
+          </button>
+
+          {hasTranslateEngine && hasAi && (
+            <button
+              onClick={() => setUseAi(!useAi)}
+              className={cn(
+                "filter-pill shrink-0 flex items-center gap-1 px-2.5 text-2xs font-medium transition-colors",
+                useAi
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted/30 text-muted-foreground hover:bg-muted/50",
+              )}
+              title="AI"
+            >
+              <Brain className="w-2.5 h-2.5" />
+              AI
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="px-4 pt-4 shrink-0">
+      {/* Source text */}
+      <div className="px-3 pt-3 shrink-0">
         {translateUsesAiByDefault && (
-          <span className="meta-pill mb-2 inline-flex px-2 py-0.5 text-2xs font-medium text-primary">
+          <span className="detail-status-pill mb-1.5 inline-flex text-primary">
             {t("translate.defaultAi")}
           </span>
         )}
-        <p className="text-2xs text-muted-foreground/60 uppercase tracking-wider mb-1">
+        <p className="text-2xs text-muted-foreground/60 uppercase tracking-wider mb-0.5">
           {t("translate.sourceText")}
         </p>
-        <p className="surface-panel max-h-[120px] overflow-y-auto rounded-[1rem] px-3 py-3 text-sm2 leading-relaxed break-words text-muted-foreground select-text">
+        <p className="surface-panel max-h-[100px] overflow-y-auto rounded-[0.75rem] px-2.5 py-2 text-sm2 leading-relaxed break-words text-muted-foreground select-text">
           {text.length > 800 ? text.substring(0, 800) + "\u2026" : text}
         </p>
       </div>
 
-      <div className="flex-1 min-h-0 px-4 pb-4 pt-3 flex flex-col overflow-y-auto">
+      {/* Result area */}
+      <div className="flex-1 min-h-0 px-3 pb-3 pt-2 flex flex-col overflow-y-auto">
         {loading && (
-          <div className="surface-panel flex items-center justify-center gap-1.5 rounded-[1rem] py-8 text-muted-foreground">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="text-sm2">{t("translate.translating")}</span>
+          <div className="surface-panel flex items-center justify-center gap-1.5 rounded-[0.75rem] py-6 text-muted-foreground">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <span className="text-xs2">{t("translate.translating")}</span>
           </div>
         )}
 
         {error && (
-          <div className="py-2">
-            <p className="rounded-[1rem] border border-red-400/20 bg-red-400/10 px-3 py-3 text-xs2 text-red-400">
+          <div className="py-1.5">
+            <p className="rounded-[0.75rem] border border-red-400/20 bg-red-400/10 px-2.5 py-2 text-xs2 text-red-400">
               {t("translate.error")}: {error}
             </p>
           </div>
@@ -929,7 +933,7 @@ function TranslateTab({
 
         {result && (
           <div className="flex flex-col flex-1 min-h-0">
-            <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center justify-between mb-0.5">
               <p className="text-2xs text-muted-foreground/60 uppercase tracking-wider">
                 {t("translate.result")}
                 {result.engine && (
@@ -939,15 +943,15 @@ function TranslateTab({
                 )}
               </p>
             </div>
-            <p className="surface-panel flex-1 overflow-y-auto rounded-[1rem] border-primary/15 bg-primary/5 px-3 py-3 text-sm2 leading-relaxed break-words text-foreground select-text">
+            <p className="surface-panel flex-1 overflow-y-auto rounded-[0.75rem] border-primary/15 bg-primary/5 px-2.5 py-2 text-sm2 leading-relaxed break-words text-foreground select-text">
               {result.translated}
             </p>
 
-            <div className="flex items-center gap-1.5 mt-2 shrink-0">
+            <div className="flex items-center gap-1 mt-1.5 shrink-0">
               <button
                 onClick={handleCopyResult}
                 className={cn(
-                  "filter-pill flex items-center gap-1 px-3 text-xs2 font-medium transition-all",
+                  "filter-pill flex items-center gap-1 px-2.5 text-2xs font-medium transition-all",
                   copied
                     ? "bg-green-500/15 text-green-400"
                     : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -962,7 +966,7 @@ function TranslateTab({
               </button>
               <button
                 onClick={handleUseTranslation}
-                className="filter-pill flex items-center gap-1 px-3 text-xs2 font-medium bg-primary/15 text-primary transition-colors hover:bg-primary/25"
+                className="filter-pill flex items-center gap-1 px-2.5 text-2xs font-medium bg-primary/15 text-primary transition-colors hover:bg-primary/25"
               >
                 <ClipboardPaste className="w-2.5 h-2.5" />
                 {t("translate.useTranslation")}
@@ -972,7 +976,7 @@ function TranslateTab({
         )}
 
         {!loading && !error && !result && (
-          <div className="surface-panel flex items-center justify-center rounded-[1rem] py-8 text-muted-foreground/40">
+          <div className="surface-panel flex items-center justify-center rounded-[0.75rem] py-6 text-muted-foreground/40">
             <span className="text-xs2">{t("translate.noResult")}</span>
           </div>
         )}
@@ -1010,25 +1014,25 @@ function AiTab({
   }
 
   return (
-    <div className="flex h-full flex-col gap-3 p-4">
-      <div className="space-y-2">
+    <div className="flex h-full flex-col gap-2 p-3">
+      <div className="space-y-1.5">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-foreground">
+          <span className="text-xs2 font-medium text-foreground">
             {t("detail.summary")}
           </span>
           <button
             onClick={onSummarize}
             disabled={summarizing || !entry.text_content}
             className={cn(
-              "filter-pill flex items-center gap-1 px-3 text-2xs font-medium transition-colors",
+              "filter-pill flex items-center gap-1 px-2.5 text-2xs font-medium transition-colors",
               "bg-primary/15 text-primary hover:bg-primary/25",
               "disabled:opacity-50 disabled:cursor-not-allowed",
             )}
           >
             {summarizing ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
+              <Loader2 className="w-2.5 h-2.5 animate-spin" />
             ) : (
-              <Brain className="w-3 h-3" />
+              <Brain className="w-2.5 h-2.5" />
             )}
             {summarizing
               ? t("detail.generating")
@@ -1039,11 +1043,11 @@ function AiTab({
         </div>
 
         {entry.ai_summary ? (
-          <div className="surface-panel rounded-[1rem] border-primary/15 bg-primary/5 px-3 py-3 text-sm2 leading-relaxed text-foreground select-text">
+          <div className="surface-panel rounded-[0.75rem] border-primary/15 bg-primary/5 px-2.5 py-2 text-sm2 leading-relaxed text-foreground select-text">
             {entry.ai_summary}
           </div>
         ) : (
-          <div className="surface-panel rounded-[1rem] px-3 py-3 text-sm2 italic text-muted-foreground/50">
+          <div className="surface-panel rounded-[0.75rem] px-2.5 py-2 text-sm2 italic text-muted-foreground/50">
             {t("detail.noSummary")}
           </div>
         )}
@@ -1051,10 +1055,10 @@ function AiTab({
 
       {entry.text_content && (
         <div className="flex-1 min-h-0 flex flex-col">
-          <span className="text-2xs text-muted-foreground/60 uppercase tracking-wider mb-1 shrink-0">
+          <span className="text-2xs text-muted-foreground/60 uppercase tracking-wider mb-0.5 shrink-0">
             {t("translate.sourceText")}
           </span>
-          <pre className="surface-panel flex-1 overflow-y-auto rounded-[1rem] px-3 py-3 text-sm2 leading-relaxed break-words whitespace-pre-wrap text-muted-foreground select-text">
+          <pre className="surface-panel flex-1 overflow-y-auto rounded-[0.75rem] px-2.5 py-2 text-sm2 leading-relaxed break-words whitespace-pre-wrap text-muted-foreground select-text">
             {entry.text_content}
           </pre>
         </div>
