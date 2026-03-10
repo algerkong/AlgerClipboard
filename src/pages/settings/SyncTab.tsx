@@ -15,7 +15,16 @@ import { useSyncStore } from "@/stores/syncStore";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { toast } from "@/lib/toast";
-import { Toggle } from "./shared";
+import {
+  SettingsButton,
+  SettingsField,
+  SettingsInput,
+  SettingsRow,
+  SettingsSection,
+  SettingsSelect,
+  SettingsSubsection,
+  Toggle,
+} from "./shared";
 
 /* ─── Sync Tab ─── */
 export function SyncTab() {
@@ -199,19 +208,19 @@ export function SyncTab() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Existing accounts list */}
       {accounts.length > 0 && !showAddForm && (
-        <div className="space-y-2">
+        <SettingsSection title={t("sync.accounts") || "Accounts"}>
           {accounts.map((acc) => (
             <div
               key={acc.id}
-              className="bg-muted/20 rounded-md p-2.5 space-y-1.5"
+              className="border-b border-[color-mix(in_oklab,var(--border)_76%,transparent)] px-5 py-3 last:border-b-0"
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Cloud className="w-3 h-3 text-muted-foreground" />
-                  <span className="text-sm2 font-medium text-foreground capitalize">
+                <div className="flex items-center gap-2">
+                  <Cloud className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-sm font-medium capitalize text-foreground">
                     {acc.provider === "google_drive"
                       ? "Google Drive"
                       : acc.provider === "onedrive"
@@ -219,20 +228,18 @@ export function SyncTab() {
                         : "WebDAV"}
                   </span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <span
-                    className={cn(
-                      "text-2xs px-1.5 py-0.5 rounded-full",
-                      acc.enabled
-                        ? "bg-green-500/15 text-green-400"
-                        : "bg-muted/30 text-muted-foreground",
-                    )}
-                  >
-                    {acc.enabled ? t("sync.enabled") : "Off"}
-                  </span>
-                </div>
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-xs",
+                    acc.enabled
+                      ? "bg-green-500/15 text-green-400"
+                      : "bg-muted/30 text-muted-foreground",
+                  )}
+                >
+                  {acc.enabled ? t("sync.enabled") : "Off"}
+                </span>
               </div>
-              <div className="flex items-center gap-2 text-xs2 text-muted-foreground">
+              <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                 <span>{acc.sync_frequency}</span>
                 {acc.last_sync_at && (
                   <>
@@ -246,55 +253,52 @@ export function SyncTab() {
                 {acc.encryption_enabled && (
                   <>
                     <span>·</span>
-                    <Lock className="w-2.5 h-2.5" />
+                    <Lock className="h-3 w-3" />
                   </>
                 )}
               </div>
-              <div className="flex gap-1.5 mt-1">
-                <button
+              <div className="mt-2 flex gap-2">
+                <SettingsButton
+                  tone="primary"
                   onClick={() => triggerSync(acc.id)}
                   disabled={syncStatus === "syncing"}
-                  className="flex items-center gap-1 h-6 px-2 text-xs2 font-medium bg-primary/15 text-primary hover:bg-primary/25 rounded transition-colors disabled:opacity-50"
                 >
                   {syncStatus === "syncing" ? (
-                    <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                    <Loader2 className="h-3 w-3 animate-spin" />
                   ) : (
-                    <RefreshCw className="w-2.5 h-2.5" />
+                    <RefreshCw className="h-3 w-3" />
                   )}
                   {t("sync.syncNow")}
-                </button>
-                <button
-                  onClick={() => handleEdit(acc)}
-                  className="flex items-center gap-1 h-6 px-2 text-xs2 font-medium bg-muted/30 hover:bg-muted/50 rounded transition-colors"
-                >
-                  <Pencil className="w-2.5 h-2.5" />
+                </SettingsButton>
+                <SettingsButton onClick={() => handleEdit(acc)}>
+                  <Pencil className="h-3 w-3" />
                   {t("sync.edit")}
-                </button>
-                <button
+                </SettingsButton>
+                <SettingsButton
+                  tone="danger"
                   onClick={async () => {
                     await removeAccount(acc.id);
                     toast.success(t("sync.delete"));
                   }}
-                  className="flex items-center gap-1 h-6 px-2 text-xs2 font-medium text-destructive bg-destructive/10 hover:bg-destructive/20 rounded transition-colors"
                 >
-                  <Trash2 className="w-2.5 h-2.5" />
+                  <Trash2 className="h-3 w-3" />
                   {t("sync.delete")}
-                </button>
+                </SettingsButton>
               </div>
             </div>
           ))}
 
           {/* Sync status bar */}
-          <div className="flex items-center justify-between text-xs2 text-muted-foreground px-1">
-            <div className="flex items-center gap-1">
+          <div className="flex items-center justify-between px-5 py-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5">
               {syncStatus === "syncing" && (
-                <Loader2 className="w-2.5 h-2.5 animate-spin text-blue-400" />
+                <Loader2 className="h-3 w-3 animate-spin text-blue-400" />
               )}
               {syncStatus === "synced" && (
-                <Cloud className="w-2.5 h-2.5 text-green-400" />
+                <Cloud className="h-3 w-3 text-green-400" />
               )}
               {syncStatus === "error" && (
-                <CloudOff className="w-2.5 h-2.5 text-red-400" />
+                <CloudOff className="h-3 w-3 text-red-400" />
               )}
               <span>
                 {syncStatus === "syncing"
@@ -311,266 +315,195 @@ export function SyncTab() {
             )}
           </div>
 
-          {/* Add more button */}
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-1.5 h-7 px-3 text-sm2 font-medium bg-muted/30 hover:bg-muted/50 rounded-md transition-colors"
-          >
-            <Plus className="w-3 h-3" />
-            {t("sync.addAccount")}
-          </button>
-
-          {/* Settings sync toggle */}
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/30">
-            <div>
-              <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-                {t("sync.settingsSync")}
-              </label>
-              <p className="text-xs2 text-muted-foreground/70">
-                {t("sync.settingsSyncDesc")}
-              </p>
-            </div>
-            <Toggle value={settingsSyncEnabled} onChange={setSettingsSyncEnabled} size="sm" />
+          <div className="px-5 py-3">
+            <SettingsButton onClick={() => setShowAddForm(true)}>
+              <Plus className="h-3 w-3" />
+              {t("sync.addAccount")}
+            </SettingsButton>
           </div>
+        </SettingsSection>
+      )}
 
-          {/* File sync size limit */}
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-                {t("sync.syncMaxFileSize")}
-              </label>
-              <p className="text-xs2 text-muted-foreground/70">
-                {t("sync.syncMaxFileSizeDesc")}
-              </p>
-            </div>
-            <select
-              value={syncMaxFileSize}
-              onChange={(e) => setSyncMaxFileSize(Number(e.target.value))}
-              className="h-6 px-1.5 text-xs2 bg-muted/30 border border-border/50 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
-            >
-              <option value={0}>{t("sync.syncMaxFileSizeUnlimited")}</option>
-              <option value={1}>1 MB</option>
-              <option value={5}>5 MB</option>
-              <option value={10}>10 MB</option>
-              <option value={50}>50 MB</option>
-              <option value={100}>100 MB</option>
-            </select>
-          </div>
-        </div>
+      {/* Sync options */}
+      {accounts.length > 0 && !showAddForm && (
+        <SettingsSection title={t("sync.settingsSync")}>
+          <SettingsRow
+            title={t("sync.settingsSync")}
+            description={t("sync.settingsSyncDesc")}
+            control={<Toggle value={settingsSyncEnabled} onChange={setSettingsSyncEnabled} size="sm" />}
+          />
+          <SettingsRow
+            title={t("sync.syncMaxFileSize")}
+            description={t("sync.syncMaxFileSizeDesc")}
+            control={
+              <SettingsField className="w-[12rem]">
+                <SettingsSelect
+                  value={syncMaxFileSize}
+                  onChange={(e) => setSyncMaxFileSize(Number(e.target.value))}
+                >
+                  <option value={0}>{t("sync.syncMaxFileSizeUnlimited")}</option>
+                  <option value={1}>1 MB</option>
+                  <option value={5}>5 MB</option>
+                  <option value={10}>10 MB</option>
+                  <option value={50}>50 MB</option>
+                  <option value={100}>100 MB</option>
+                </SettingsSelect>
+              </SettingsField>
+            }
+          />
+        </SettingsSection>
       )}
 
       {/* Empty state */}
       {accounts.length === 0 && !showAddForm && (
-        <div className="flex flex-col items-center justify-center py-6 gap-3 text-muted-foreground/70">
-          <Cloud className="w-8 h-8 text-muted-foreground/40" />
-          <p className="text-xs">{t("sync.noAccounts")}</p>
-          <p className="text-xs2">{t("sync.noAccountsDesc")}</p>
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-1.5 h-7 px-3 text-sm2 font-medium bg-primary/15 text-primary hover:bg-primary/25 rounded-md transition-colors mt-1"
-          >
-            <Plus className="w-3 h-3" />
+        <div className="flex flex-col items-center justify-center gap-3 py-8 text-muted-foreground/70">
+          <Cloud className="h-8 w-8 text-muted-foreground/40" />
+          <p className="text-sm">{t("sync.noAccounts")}</p>
+          <p className="text-xs">{t("sync.noAccountsDesc")}</p>
+          <SettingsButton tone="primary" onClick={() => setShowAddForm(true)}>
+            <Plus className="h-3 w-3" />
             {t("sync.addAccount")}
-          </button>
+          </SettingsButton>
         </div>
       )}
 
       {showAddForm && (
-        <div className="space-y-4">
-          {/* Provider selector */}
-          <section>
-            <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-              {t("sync.provider")}
-            </label>
-            <div className="flex gap-1.5 mt-2">
-              {providers.map((p) => (
-                <button
-                  key={p.key}
-                  onClick={() => {
+        <SettingsSection title={editingAccountId ? t("sync.edit") : t("sync.addAccount")}>
+          <SettingsRow
+            title={t("sync.provider")}
+            control={
+              <SettingsField className="w-[15rem]">
+                <SettingsSelect
+                  value={provider}
+                  onChange={(e) => {
                     if (!editingAccountId) {
-                      setProvider(p.key);
+                      setProvider(e.target.value as "webdav" | "google_drive" | "onedrive");
                       setOauthTokens(null);
                     }
                   }}
                   disabled={!!editingAccountId}
-                  className={cn(
-                    "flex-1 flex items-center justify-center py-1.5 rounded-md text-xs font-medium transition-colors",
-                    provider === p.key
-                      ? "bg-primary/15 text-primary ring-1 ring-primary/30"
-                      : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-                    editingAccountId && "opacity-60 cursor-not-allowed",
-                  )}
                 >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          </section>
+                  {providers.map((p) => (
+                    <option key={p.key} value={p.key}>
+                      {p.label}
+                    </option>
+                  ))}
+                </SettingsSelect>
+              </SettingsField>
+            }
+          />
 
-          {/* Provider-specific config */}
-          {provider === "webdav" && (
-            <section className="space-y-2">
-              <input
-                type="text"
-                placeholder={t("sync.url")}
-                value={webdavUrl}
-                onChange={(e) => setWebdavUrl(e.target.value)}
-                className="w-full h-7 px-2 text-sm2 bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
-              />
-              <input
-                type="text"
-                placeholder={t("sync.username")}
-                value={webdavUser}
-                onChange={(e) => setWebdavUser(e.target.value)}
-                className="w-full h-7 px-2 text-sm2 bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
-              />
-              <input
-                type="password"
-                placeholder={t("sync.password")}
-                value={webdavPass}
-                onChange={(e) => setWebdavPass(e.target.value)}
-                className="w-full h-7 px-2 text-sm2 bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
-              />
-            </section>
-          )}
-
-          {(provider === "google_drive" || provider === "onedrive") && (
-            <section className="space-y-2">
-              <input
-                type="text"
-                placeholder={t("sync.clientId")}
-                value={oauthClientId}
-                onChange={(e) => setOauthClientId(e.target.value)}
-                className="w-full h-7 px-2 text-sm2 bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
-              />
-              {provider === "google_drive" && (
-                <input
-                  type="password"
-                  placeholder={t("sync.clientSecret")}
-                  value={oauthClientSecret}
-                  onChange={(e) => setOauthClientSecret(e.target.value)}
-                  className="w-full h-7 px-2 text-sm2 bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
-                />
-              )}
-              <button
-                onClick={handleOAuth}
-                disabled={authorizing || !oauthClientId}
-                className="flex items-center gap-1.5 h-7 px-3 text-sm2 font-medium bg-primary/15 text-primary hover:bg-primary/25 rounded-md transition-colors disabled:opacity-50"
-              >
-                {authorizing && <Loader2 className="w-3 h-3 animate-spin" />}
-                {oauthTokens ? t("sync.authorized") : t("sync.authorize")}
-              </button>
-            </section>
-          )}
-
-          {/* Sync frequency */}
-          <section>
-            <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-              {t("sync.syncFrequency")}
-            </label>
-            <div className="flex gap-1.5 mt-2">
-              {freqOptions.map((f) => (
-                <button
-                  key={f.key}
-                  onClick={() => setSyncFreq(f.key)}
-                  className={cn(
-                    "flex-1 flex items-center justify-center py-1.5 rounded-md text-xs font-medium transition-colors",
-                    syncFreq === f.key
-                      ? "bg-primary/15 text-primary ring-1 ring-primary/30"
-                      : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-                  )}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-            {syncFreq === "interval" && (
-              <div className="mt-2 flex items-center gap-2">
-                <input
-                  type="number"
-                  min={1}
-                  max={1440}
-                  value={intervalMin}
-                  onChange={(e) =>
-                    setIntervalMin(parseInt(e.target.value, 10) || 15)
-                  }
-                  className="w-20 h-7 px-2 text-xs bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
-                />
-                <span className="text-xs2 text-muted-foreground">
-                  {t("sync.intervalMinutes")}
-                </span>
+          <SettingsSubsection title={provider === "webdav" ? "WebDAV" : provider === "google_drive" ? "Google Drive" : "OneDrive"}>
+            {provider === "webdav" && (
+              <div className="space-y-2 py-2">
+                <SettingsInput type="text" placeholder={t("sync.url")} value={webdavUrl} onChange={(e) => setWebdavUrl(e.target.value)} className="settings-input-standalone" />
+                <SettingsInput type="text" placeholder={t("sync.username")} value={webdavUser} onChange={(e) => setWebdavUser(e.target.value)} className="settings-input-standalone" />
+                <SettingsInput type="password" placeholder={t("sync.password")} value={webdavPass} onChange={(e) => setWebdavPass(e.target.value)} className="settings-input-standalone" />
               </div>
             )}
-          </section>
 
-          {/* Encryption */}
-          <section>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <Lock className="w-3 h-3 text-muted-foreground" />
-                <div>
-                  <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-                    {t("sync.encryption")}
-                  </label>
-                  <p className="text-xs2 text-muted-foreground/70">
-                    {t("sync.encryptionDesc")}
-                  </p>
-                </div>
+            {(provider === "google_drive" || provider === "onedrive") && (
+              <div className="space-y-2 py-2">
+                <SettingsInput type="text" placeholder={t("sync.clientId")} value={oauthClientId} onChange={(e) => setOauthClientId(e.target.value)} className="settings-input-standalone" />
+                {provider === "google_drive" && (
+                  <SettingsInput type="password" placeholder={t("sync.clientSecret")} value={oauthClientSecret} onChange={(e) => setOauthClientSecret(e.target.value)} className="settings-input-standalone" />
+                )}
+                <SettingsButton onClick={handleOAuth} disabled={authorizing || !oauthClientId}>
+                  {authorizing && <Loader2 className="h-3 w-3 animate-spin" />}
+                  {oauthTokens ? t("sync.authorized") : t("sync.authorize")}
+                </SettingsButton>
               </div>
-              <Toggle value={encEnabled} onChange={setEncEnabled} size="sm" />
-            </div>
-            {encEnabled && (
-              <input
+            )}
+          </SettingsSubsection>
+
+          <SettingsRow
+            title={t("sync.syncFrequency")}
+            control={
+              <SettingsField className="w-[15rem]">
+                <SettingsSelect value={syncFreq} onChange={(e) => setSyncFreq(e.target.value as "realtime" | "interval" | "manual")}>
+                  {freqOptions.map((f) => (
+                    <option key={f.key} value={f.key}>
+                      {f.label}
+                    </option>
+                  ))}
+                </SettingsSelect>
+              </SettingsField>
+            }
+          />
+          {syncFreq === "interval" && (
+            <SettingsRow
+              title={t("sync.interval")}
+              description={t("sync.intervalMinutes")}
+              control={
+                <SettingsField className="w-[8rem]">
+                  <SettingsInput
+                    type="number"
+                    min={1}
+                    max={1440}
+                    value={intervalMin}
+                    onChange={(e) => setIntervalMin(parseInt(e.target.value, 10) || 15)}
+                  />
+                </SettingsField>
+              }
+            />
+          )}
+
+          <SettingsRow
+            title={t("sync.encryption")}
+            description={t("sync.encryptionDesc")}
+            control={<Toggle value={encEnabled} onChange={setEncEnabled} size="sm" />}
+          />
+          {encEnabled && (
+            <div className="px-5 py-2">
+              <SettingsInput
                 type="password"
                 placeholder={t("sync.passphrase")}
                 value={passphraseVal}
                 onChange={(e) => setPassphraseVal(e.target.value)}
-                className="mt-2 w-full h-7 px-2 text-sm2 bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+                className="settings-input-standalone"
               />
-            )}
-          </section>
+            </div>
+          )}
 
-          {/* Action buttons */}
-          <div className="flex gap-2">
-            <button
+          <div className="flex gap-2 px-5 py-3">
+            <SettingsButton
+              tone="ghost"
               onClick={() => {
                 setShowAddForm(false);
                 setEditingAccountId(null);
                 resetForm();
               }}
-              className="flex items-center gap-1.5 h-7 px-3 text-sm2 font-medium bg-muted/30 hover:bg-muted/50 rounded-md transition-colors"
             >
-              <X className="w-3 h-3" />
+              <X className="h-3 w-3" />
               {t("template.cancel")}
-            </button>
-            <button
+            </SettingsButton>
+            <SettingsButton
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center gap-1.5 h-7 px-3 text-sm2 font-medium bg-primary/15 text-primary hover:bg-primary/25 rounded-md transition-colors disabled:opacity-50"
             >
               {saving ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
+                <Loader2 className="h-3 w-3 animate-spin" />
               ) : (
-                <Check className="w-3 h-3" />
+                <Check className="h-3 w-3" />
               )}
               {t("sync.save")}
-            </button>
+            </SettingsButton>
             {provider === "webdav" && (
-              <button
+              <SettingsButton
                 onClick={handleTest}
                 disabled={testing}
-                className="flex items-center gap-1.5 h-7 px-3 text-sm2 font-medium bg-muted/30 hover:bg-muted/50 rounded-md transition-colors ml-auto disabled:opacity-50"
+                className="ml-auto"
               >
                 {testing ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <Loader2 className="h-3 w-3 animate-spin" />
                 ) : (
-                  <RefreshCw className="w-3 h-3" />
+                  <RefreshCw className="h-3 w-3" />
                 )}
                 {t("sync.testConnection")}
-              </button>
+              </SettingsButton>
             )}
           </div>
-        </div>
+        </SettingsSection>
       )}
     </div>
   );

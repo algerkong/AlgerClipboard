@@ -373,6 +373,16 @@
     "syncMaxFileSizeDesc": "Files exceeding this size will skip sync",
     "syncMaxFileSizeUnlimited": "Unlimited"
   },
+  "settingsLayout": {
+    "generalDesc": "Manage the app appearance, language, shortcuts, and baseline behavior.",
+    "richTextDesc": "Control how rich text is rendered in the list and detail views.",
+    "syncDesc": "Connect cloud accounts and tune sync frequency, encryption, and settings sync.",
+    "translateDesc": "Configure translation providers, credentials, and availability.",
+    "ocrDesc": "Manage OCR engines, default recognition flow, and local runtimes.",
+    "dataDesc": "Review clipboard stats, import or export history, and maintain cache storage.",
+    "aiDesc": "Choose AI providers, models, summaries, and prompt behavior.",
+    "askAiDesc": "Organize Ask AI services and the preset actions shown in the menu."
+  },
   "translate": {
     "title": "Translate",
     "translate": "Translate",

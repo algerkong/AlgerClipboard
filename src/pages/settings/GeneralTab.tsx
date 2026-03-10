@@ -1,35 +1,33 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { getVersion } from "@tauri-apps/api/app";
-import {
-  Sun,
-  Moon,
-  Monitor,
-} from "lucide-react";
+import { Moon, Monitor, Sun } from "lucide-react";
 import {
   useSettingsStore,
-  type UIScale,
-  type FontFamily,
   type ButtonPosition,
+  type FontFamily,
   type ThemeColorPreset,
+  type UIScale,
 } from "@/stores/settingsStore";
-import {
-  checkForUpdates,
-  downloadAndInstall,
-} from "@/services/updateService";
+import { checkForUpdates, downloadAndInstall } from "@/services/updateService";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { toast } from "@/lib/toast";
 import { usePlatform } from "@/contexts/PlatformContext";
 import { invoke } from "@tauri-apps/api/core";
 import {
-  Toggle,
-  MODIFIER_KEYS,
   buildShortcutFromKeyboardEvent,
   languages,
+  MODIFIER_KEYS,
+  SettingsButton,
+  SettingsField,
+  SettingsInput,
+  SettingsRow,
+  SettingsSection,
+  SettingsSelect,
+  Toggle,
   type Theme,
 } from "./shared";
 
-/* ─── General Tab ─── */
 export function GeneralTab() {
   const { t, i18n } = useTranslation();
   const theme = useSettingsStore((s) => s.theme);
@@ -46,6 +44,8 @@ export function GeneralTab() {
   const autoCheckUpdate = useSettingsStore((s) => s.autoCheckUpdate);
   const autoDownloadUpdate = useSettingsStore((s) => s.autoDownloadUpdate);
   const systemNotificationsEnabled = useSettingsStore((s) => s.systemNotificationsEnabled);
+  const buttonPosition = useSettingsStore((s) => s.buttonPosition);
+  const defaultBrowser = useSettingsStore((s) => s.defaultBrowser);
   const setTheme = useSettingsStore((s) => s.setTheme);
   const setMaxHistory = useSettingsStore((s) => s.setMaxHistory);
   const setExpireDays = useSettingsStore((s) => s.setExpireDays);
@@ -60,16 +60,15 @@ export function GeneralTab() {
   const setAutoCheckUpdate = useSettingsStore((s) => s.setAutoCheckUpdate);
   const setAutoDownloadUpdate = useSettingsStore((s) => s.setAutoDownloadUpdate);
   const setSystemNotificationsEnabled = useSettingsStore((s) => s.setSystemNotificationsEnabled);
-  const buttonPosition = useSettingsStore((s) => s.buttonPosition);
   const setButtonPosition = useSettingsStore((s) => s.setButtonPosition);
-  const defaultBrowser = useSettingsStore((s) => s.defaultBrowser);
   const setDefaultBrowser = useSettingsStore((s) => s.setDefaultBrowser);
   const platform = usePlatform();
+
   const [isRecordingShortcut, setIsRecordingShortcut] = useState(false);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [previewCloseShortcut, setPreviewCloseShortcutState] = useState("Escape");
   const [isRecordingCloseShortcut, setIsRecordingCloseShortcut] = useState(false);
-  const [appVersion, setAppVersion] = useState<string>("...");
+  const [appVersion, setAppVersion] = useState("...");
 
   useEffect(() => {
     if (!isRecordingShortcut) {
@@ -118,60 +117,54 @@ export function GeneralTab() {
   }, []);
 
   useEffect(() => {
-    invoke<string | null>("get_settings", { key: "preview_close_shortcut" }).then((val) => {
-      if (val && val !== " " && !(val.length === 1 && /[a-zA-Z0-9]/.test(val))) {
-        setPreviewCloseShortcutState(val);
-      } else if (val) {
-        // Invalid saved key, reset to Escape
-        invoke("update_settings", { key: "preview_close_shortcut", value: "Escape" }).catch(() => {});
-      }
-    }).catch(() => {});
+    invoke<string | null>("get_settings", { key: "preview_close_shortcut" })
+      .then((val) => {
+        if (val && val !== " " && !(val.length === 1 && /[a-zA-Z0-9]/.test(val))) {
+          setPreviewCloseShortcutState(val);
+        } else if (val) {
+          invoke("update_settings", { key: "preview_close_shortcut", value: "Escape" }).catch(() => {});
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
-    if (!isRecordingCloseShortcut) return;
-    const handler = (e: KeyboardEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      // Allow Escape to cancel recording (unless current shortcut is already Escape)
-      if (e.key === "Escape" && previewCloseShortcut !== "Escape") {
+    if (!isRecordingCloseShortcut) {
+      return;
+    }
+
+    const handler = (event: KeyboardEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (event.key === "Escape" && previewCloseShortcut !== "Escape") {
         setIsRecordingCloseShortcut(false);
         return;
       }
-      const key = e.key;
-      // Reject keys that conflict with text editing
-      if (key === " " || key.length === 1 && /[a-zA-Z0-9]/.test(key)) {
+
+      if (event.key === " " || (event.key.length === 1 && /[a-zA-Z0-9]/.test(event.key))) {
         toast.error(t("settings.shortcutInvalid"));
         setIsRecordingCloseShortcut(false);
         return;
       }
+
       setIsRecordingCloseShortcut(false);
-      setPreviewCloseShortcutState(key);
-      invoke("update_settings", { key: "preview_close_shortcut", value: key })
+      setPreviewCloseShortcutState(event.key);
+      invoke("update_settings", { key: "preview_close_shortcut", value: event.key })
         .then(() => toast.success(t("settings.shortcutSaved")))
         .catch(() => toast.error(t("settings.shortcutInvalid")));
     };
+
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [isRecordingCloseShortcut, previewCloseShortcut, t]);
 
-  const themes: { value: Theme; labelKey: string; icon: React.ReactNode }[] = [
-    {
-      value: "light",
-      labelKey: "settings.light",
-      icon: <Sun className="w-3.5 h-3.5" />,
-    },
-    {
-      value: "dark",
-      labelKey: "settings.dark",
-      icon: <Moon className="w-3.5 h-3.5" />,
-    },
-    {
-      value: "system",
-      labelKey: "settings.auto",
-      icon: <Monitor className="w-3.5 h-3.5" />,
-    },
+  const themes: { value: Theme; labelKey: string; icon: ReactNode }[] = [
+    { value: "light", labelKey: "settings.light", icon: <Sun className="h-3.5 w-3.5" /> },
+    { value: "dark", labelKey: "settings.dark", icon: <Moon className="h-3.5 w-3.5" /> },
+    { value: "system", labelKey: "settings.auto", icon: <Monitor className="h-3.5 w-3.5" /> },
   ];
+
   const themeColors: {
     value: Exclude<ThemeColorPreset, "custom">;
     labelKey: string;
@@ -195,467 +188,320 @@ export function GeneralTab() {
 
   return (
     <div className="space-y-5">
-      {/* Language */}
-      <section>
-        <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-          {t("settings.language")}
-        </label>
-        <div className="flex gap-1.5 mt-2">
-          {languages.map((lang) => (
-            <button
-              key={lang.value}
-              onClick={() => handleLocaleChange(lang.value)}
-              className={cn(
-                "flex-1 flex items-center justify-center py-1.5 rounded-md text-xs font-medium transition-colors",
-                locale === lang.value
-                  ? "bg-primary/15 text-primary ring-1 ring-primary/30"
-                  : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-              )}
-            >
-              {lang.label}
-            </button>
-          ))}
-        </div>
-        <p className="mt-1 text-xs2 text-muted-foreground/70">
-          {t("settings.languageDesc")}
-        </p>
-      </section>
+      {/* ─── Language ─── */}
+      <SettingsSection title={t("settings.language")}>
+        <SettingsRow
+          title={t("settings.language")}
+          description={t("settings.languageDesc")}
+          control={
+            <SettingsField className="w-[15rem]">
+              <SettingsSelect value={locale} onChange={(event) => handleLocaleChange(event.target.value)}>
+                {languages.map((lang) => (
+                  <option key={lang.value} value={lang.value}>
+                    {lang.label}
+                  </option>
+                ))}
+              </SettingsSelect>
+            </SettingsField>
+          }
+        />
+      </SettingsSection>
 
-      {/* Theme */}
-      <section>
-        <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-          {t("settings.theme")}
-        </label>
-        <div className="flex gap-1.5 mt-2">
-          {themes.map((themeItem) => (
-            <button
-              key={themeItem.value}
-              onClick={() => setTheme(themeItem.value)}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-colors",
-                theme === themeItem.value
-                  ? "bg-primary/15 text-primary ring-1 ring-primary/30"
-                  : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-              )}
-            >
-              {themeItem.icon}
-              {t(themeItem.labelKey)}
-            </button>
-          ))}
-        </div>
-      </section>
+      {/* ─── Appearance ─── */}
+      <SettingsSection title={t("settings.theme")}>
+        <SettingsRow
+          title={t("settings.theme")}
+          control={
+            <SettingsField className="w-[15rem]">
+              <SettingsSelect value={theme} onChange={(event) => setTheme(event.target.value as Theme)}>
+                {themes.map((themeItem) => (
+                  <option key={themeItem.value} value={themeItem.value}>
+                    {t(themeItem.labelKey)}
+                  </option>
+                ))}
+              </SettingsSelect>
+            </SettingsField>
+          }
+        />
 
-      <section>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-            {t("settings.themeColor")}
-          </label>
-          <div className="flex items-center gap-1.5 min-w-0 shrink-0">
-             <div className="flex items-center gap-2 px-2 py-1 bg-card/60 border border-border/40 rounded-lg">
-                <span
-                  title={t("settings.themeColor_custom")}
-                  className={cn(
-                    "flex items-center justify-center p-0.5 rounded-full outline-none transition-all cursor-pointer ring-offset-2 ring-offset-background",
-                    themeColorPreset === "custom" ? "ring-2 ring-primary scale-110" : "hover:scale-110"
-                  )}
-                  onClick={() => setThemeColorPreset("custom")}
+        <SettingsRow
+          title={t("settings.themeColor")}
+          description={t("settings.themeColorDesc")}
+          control={
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <SettingsField className="w-[15rem]">
+                <SettingsSelect
+                  value={themeColorPreset}
+                  onChange={(event) => setThemeColorPreset(event.target.value as ThemeColorPreset)}
                 >
-                  <span
-                    className="h-4 w-4 rounded-full border border-black/10 shadow-inner"
-                    style={{ background: `conic-gradient(from 180deg at 50% 50%, #ff0000, #ff8000, #ffff00, #00ff00, #00ffff, #0000ff, #8000ff, #ff0080, #ff0000)` }}
-                  />
-                </span>
+                  {themeColors.map((themeColor) => (
+                    <option key={themeColor.value} value={themeColor.value}>
+                      {t(themeColor.labelKey)}
+                    </option>
+                  ))}
+                  <option value="custom">{t("settings.themeColor_custom")}</option>
+                </SettingsSelect>
+              </SettingsField>
+              <SettingsField className="w-[6.5rem]">
                 <input
                   type="color"
                   value={themeColorCustom}
-                  onChange={(e) => {
-                    setThemeColorCustom(e.target.value);
+                  onChange={(event) => {
+                    setThemeColorCustom(event.target.value);
                     setThemeColorPreset("custom");
                   }}
-                  className="h-6 w-8 cursor-pointer rounded border border-border/60 bg-transparent p-0 flex-shrink-0"
+                  className="h-9 w-full cursor-pointer rounded-2xl border-0 bg-transparent p-1"
                   aria-label={t("settings.themeColorPicker")}
                 />
-             </div>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-2.5">
-          {themeColors.map((themeColor) => {
-            const active = themeColorPreset === themeColor.value;
-            return (
-              <button
-                key={themeColor.value}
-                onClick={() => setThemeColorPreset(themeColor.value)}
-                title={t(themeColor.labelKey)}
-                aria-label={t(themeColor.labelKey)}
-                className={cn(
-                  "flex items-center justify-center p-0.5 rounded-full outline-none transition-all cursor-pointer ring-offset-2 ring-offset-background",
-                  active ? "ring-2 ring-primary scale-110" : "hover:scale-110"
-                )}
-              >
-                <span
-                  className="h-5 w-5 rounded-full border border-black/10 shadow-sm"
-                  style={{ backgroundColor: themeColor.color }}
-                />
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* UI Scale */}
-      <section>
-        <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-          {t("settings.uiScale")}
-        </label>
-        <div className="flex gap-1 mt-2">
-          {(["xs", "sm", "md", "lg", "xl"] as UIScale[]).map((scale) => (
-            <button
-              key={scale}
-              onClick={() => setUIScale(scale)}
-              className={cn(
-                "flex-1 flex items-center justify-center py-1.5 rounded-md text-xs font-medium transition-colors",
-                uiScale === scale
-                  ? "bg-primary/15 text-primary ring-1 ring-primary/30"
-                  : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-              )}
-            >
-              {t(`settings.uiScale_${scale}`)}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* Font Family */}
-      <section>
-        <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-          {t("settings.fontFamily")}
-        </label>
-        <select
-          value={fontFamily}
-          onChange={(e) => setFontFamily(e.target.value as FontFamily)}
-          className="mt-2 w-full h-7 px-2 text-xs bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
-        >
-          {(
-            ["system", "microsoft-yahei", "noto-sans", "mono"] as FontFamily[]
-          ).map((f) => (
-            <option key={f} value={f}>
-              {t(`settings.fontFamily_${f}`)}
-            </option>
-          ))}
-        </select>
-        <p className="mt-1 text-xs2 text-muted-foreground/70">
-          {t("settings.fontFamilyDesc")}
-        </p>
-      </section>
-
-      {/* Button position (Linux only) */}
-      {platform === "linux" && (
-        <section>
-          <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-            {t("settings.buttonPosition")}
-          </label>
-          <div className="flex gap-1.5 mt-2">
-            {(["left", "right"] as ButtonPosition[]).map((pos) => (
-              <button
-                key={pos}
-                onClick={() => setButtonPosition(pos)}
-                className={cn(
-                  "flex-1 flex items-center justify-center py-1.5 rounded-md text-xs font-medium transition-colors",
-                  buttonPosition === pos
-                    ? "bg-primary/15 text-primary ring-1 ring-primary/30"
-                    : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-                )}
-              >
-                {t(`settings.buttonPosition${pos.charAt(0).toUpperCase() + pos.slice(1)}`)}
-              </button>
-            ))}
-          </div>
-          <p className="mt-1 text-xs2 text-muted-foreground/70">
-            {t("settings.buttonPositionDesc")}
-          </p>
-        </section>
-      )}
-
-      {/* Max history */}
-      <section>
-        <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-          {t("settings.historyLimit")}
-        </label>
-        <input
-          type="number"
-          min={10}
-          max={10000}
-          value={maxHistory}
-          onChange={(e) => {
-            const v = parseInt(e.target.value, 10);
-            if (!isNaN(v) && v > 0) setMaxHistory(v);
-          }}
-          className="mt-2 w-24 h-7 px-2 text-xs bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+              </SettingsField>
+            </div>
+          }
         />
-        <p className="mt-1 text-xs2 text-muted-foreground/70">
-          {t("settings.maxEntries")}
-        </p>
-      </section>
 
-      {/* Auto expire */}
-      <section>
-        <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-          {t("settings.expireDays")}
-        </label>
-        <div className="flex gap-1.5 mt-2">
-          {[
-            { value: 0, labelKey: "settings.expireNever" },
-            { value: 1, labelKey: "settings.expire1day" },
-            { value: 7, labelKey: "settings.expire7days" },
-            { value: 30, labelKey: "settings.expire30days" },
-            { value: 90, labelKey: "settings.expire90days" },
-          ].map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => setExpireDays(opt.value)}
-              className={cn(
-                "flex-1 flex items-center justify-center py-1.5 rounded-md text-xs font-medium transition-colors",
-                expireDays === opt.value
-                  ? "bg-primary/15 text-primary ring-1 ring-primary/30"
-                  : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-              )}
-            >
-              {t(opt.labelKey)}
-            </button>
-          ))}
-        </div>
-        <p className="mt-1 text-xs2 text-muted-foreground/70">
-          {t("settings.expireDaysDesc")}
-        </p>
-      </section>
+        <SettingsRow
+          title={t("settings.uiScale")}
+          control={
+            <SettingsField className="w-[15rem]">
+              <SettingsSelect value={uiScale} onChange={(event) => setUIScale(event.target.value as UIScale)}>
+                {(["xs", "sm", "md", "lg", "xl"] as UIScale[]).map((scale) => (
+                  <option key={scale} value={scale}>
+                    {t(`settings.uiScale_${scale}`)}
+                  </option>
+                ))}
+              </SettingsSelect>
+            </SettingsField>
+          }
+        />
 
-      {/* Paste and close */}
-      <section>
-        <div className="flex items-center justify-between">
-          <div>
-            <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-              {t("settings.autoClose")}
-            </label>
-            <p className="mt-0.5 text-xs2 text-muted-foreground/70">
-              {t("settings.hidePanel")}
-            </p>
-          </div>
-          <Toggle value={pasteAndClose} onChange={setPasteAndClose} />
-        </div>
-      </section>
+        <SettingsRow
+          title={t("settings.fontFamily")}
+          description={t("settings.fontFamilyDesc")}
+          control={
+            <SettingsField className="w-[15rem]">
+              <SettingsSelect
+                value={fontFamily}
+                onChange={(event) => setFontFamily(event.target.value as FontFamily)}
+              >
+                {(["system", "microsoft-yahei", "noto-sans", "mono"] as FontFamily[]).map((family) => (
+                  <option key={family} value={family}>
+                    {t(`settings.fontFamily_${family}`)}
+                  </option>
+                ))}
+              </SettingsSelect>
+            </SettingsField>
+          }
+        />
 
-      {/* Auto start */}
-      <section>
-        <div className="flex items-center justify-between">
-          <div>
-            <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-              {t("settings.autoStart")}
-            </label>
-            <p className="mt-0.5 text-xs2 text-muted-foreground/70">
-              {t("settings.autoStartDesc")}
-            </p>
-          </div>
-          <Toggle value={autoStart} onChange={setAutoStart} />
-        </div>
-      </section>
-
-      {/* System notifications */}
-      <section>
-        <div className="flex items-center justify-between">
-          <div>
-            <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-              {t("settings.systemNotifications")}
-            </label>
-            <p className="mt-0.5 text-xs2 text-muted-foreground/70">
-              {t("settings.systemNotificationsDesc")}
-            </p>
-          </div>
-          <Toggle
-            value={systemNotificationsEnabled}
-            onChange={setSystemNotificationsEnabled}
-          />
-        </div>
-      </section>
-
-      {/* Default browser */}
-      <section>
-        <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-          {t("settings.defaultBrowser")}
-        </label>
-        <select
-          value={defaultBrowser}
-          onChange={(e) => setDefaultBrowser(e.target.value)}
-          className="mt-2 w-full h-7 px-2 text-xs bg-muted/30 border border-border/50 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
-        >
-          <option value="system">{t("settings.browserSystem")}</option>
-          <option value="chrome">{t("settings.browserChrome")}</option>
-          <option value="firefox">{t("settings.browserFirefox")}</option>
-          <option value="edge">{t("settings.browserEdge")}</option>
-          <option value="brave">{t("settings.browserBrave")}</option>
-          {platform === "macos" && (
-            <option value="safari">{t("settings.browserSafari")}</option>
-          )}
-        </select>
-        <p className="mt-1 text-xs2 text-muted-foreground/70">
-          {t("settings.defaultBrowserDesc")}
-        </p>
-      </section>
-
-      {/* Toggle shortcut */}
-      <section>
-        <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-          {t("settings.toggleShortcut")}
-        </label>
-        <div className="mt-2 flex items-center gap-2">
-          <div className="flex-1 h-7 px-2 text-xs bg-muted/30 border border-border/50 rounded-md text-foreground flex items-center">
-            {isRecordingShortcut ? t("settings.shortcutRecording") : toggleShortcut}
-          </div>
-          <button
-            onClick={() => setIsRecordingShortcut((prev) => !prev)}
-            className={cn(
-              "h-7 px-3 text-xs font-medium rounded-md transition-colors",
-              isRecordingShortcut
-                ? "bg-muted/50 text-muted-foreground hover:bg-muted/60"
-                : "bg-primary/15 text-primary hover:bg-primary/25",
-            )}
-          >
-            {isRecordingShortcut ? t("template.cancel") : t("settings.shortcutRecord")}
-          </button>
-        </div>
-        <p className="mt-1 text-xs2 text-muted-foreground/70">
-          {t("settings.toggleShortcutDesc")}
-        </p>
-      </section>
-
-      {/* Preview close shortcut */}
-      <section>
-        <div className="flex items-center justify-between">
-          <div>
-            <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-              {t("preview.closeShortcut")}
-            </label>
-            <p className="mt-0.5 text-xs2 text-muted-foreground/70">
-              {t("preview.closeShortcutDesc")}
-            </p>
-          </div>
-          <button
-            onClick={() => setIsRecordingCloseShortcut(true)}
-            className={cn(
-              "rounded-lg border px-3 py-1.5 text-xs font-mono transition-colors",
-              isRecordingCloseShortcut
-                ? "border-primary bg-primary/10 text-primary animate-pulse"
-                : "border-border bg-card text-foreground hover:bg-accent"
-            )}
-          >
-            {isRecordingCloseShortcut ? t("settings.recording") : previewCloseShortcut}
-          </button>
-        </div>
-      </section>
-
-      {/* Reset close confirmation */}
-      <section>
-        <div className="flex items-center justify-between">
-          <div>
-            <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-              {t("preview.resetConfirm")}
-            </label>
-            <p className="mt-0.5 text-xs2 text-muted-foreground/70">
-              {t("preview.resetConfirmDesc")}
-            </p>
-          </div>
-          <button
-            onClick={() => {
-              invoke("update_settings", { key: "preview_close_confirmed", value: "false" })
-                .then(() => toast.success(t("preview.resetDone")))
-                .catch(() => {});
-            }}
-            className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-foreground transition-colors hover:bg-accent"
-          >
-            {t("preview.resetConfirm")}
-          </button>
-        </div>
-      </section>
-
-      {/* Auto check update */}
-      <section>
-        <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-          {t("settings.appVersion")}
-        </label>
-        <div className="mt-2 flex items-center justify-between gap-3 rounded-md border border-border/50 bg-muted/20 px-3 py-2">
-          <span className="text-sm font-medium text-foreground">
-            v{appVersion}
-          </span>
-          <span className="text-xs2 text-muted-foreground">
-            {platform}
-          </span>
-        </div>
-        <p className="mt-1 text-xs2 text-muted-foreground/70">
-          {t("settings.appVersionDesc")}
-        </p>
-      </section>
-
-      {/* Auto check update */}
-      <section>
-        <div className="flex items-center justify-between">
-          <div>
-            <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-              {t("settings.autoCheckUpdate")}
-            </label>
-            <p className="mt-0.5 text-xs2 text-muted-foreground/70">
-              {t("settings.autoCheckUpdateDesc")}
-            </p>
-          </div>
-          <Toggle value={autoCheckUpdate} onChange={setAutoCheckUpdate} />
-        </div>
-      </section>
-
-      {/* Auto download update */}
-      <section>
-        <div className="flex items-center justify-between">
-          <div>
-            <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-              {t("settings.autoDownloadUpdate")}
-            </label>
-            <p className="mt-0.5 text-xs2 text-muted-foreground/70">
-              {t("settings.autoDownloadUpdateDesc")}
-            </p>
-          </div>
-          <Toggle value={autoDownloadUpdate} onChange={setAutoDownloadUpdate} />
-        </div>
-      </section>
-
-      {/* Check for updates button */}
-      <section>
-        <button
-          disabled={isCheckingUpdate}
-          onClick={async () => {
-            setIsCheckingUpdate(true);
-            try {
-              const info = await checkForUpdates();
-              if (info) {
-                toast.success(t("update.available", { version: info.version }));
-                await downloadAndInstall(info.update);
-              } else {
-                toast.info(t("update.latest"));
-              }
-            } catch {
-              toast.error(t("update.failed"));
-            } finally {
-              setIsCheckingUpdate(false);
+        {platform === "linux" ? (
+          <SettingsRow
+            title={t("settings.buttonPosition")}
+            description={t("settings.buttonPositionDesc")}
+            control={
+              <SettingsField className="w-[15rem]">
+                <SettingsSelect
+                  value={buttonPosition}
+                  onChange={(event) => setButtonPosition(event.target.value as ButtonPosition)}
+                >
+                  <option value="left">{t("settings.buttonPositionLeft")}</option>
+                  <option value="right">{t("settings.buttonPositionRight")}</option>
+                </SettingsSelect>
+              </SettingsField>
             }
-          }}
-          className={cn(
-            "w-full h-7 px-3 text-xs font-medium rounded-md transition-colors",
-            "bg-primary/15 text-primary hover:bg-primary/25",
-            "disabled:opacity-50 disabled:cursor-not-allowed",
-          )}
-        >
-          {isCheckingUpdate
-            ? t("settings.checkingUpdate")
-            : t("settings.checkUpdate")}
-        </button>
-      </section>
+          />
+        ) : null}
+      </SettingsSection>
+
+      {/* ─── History ─── */}
+      <SettingsSection title={t("settings.historyLimit")}>
+        <SettingsRow
+          title={t("settings.historyLimit")}
+          description={t("settings.maxEntries")}
+          control={
+            <SettingsField className="w-[8rem]">
+              <SettingsInput
+                type="number"
+                min={10}
+                max={10000}
+                value={maxHistory}
+                onChange={(event) => {
+                  const value = parseInt(event.target.value, 10);
+                  if (!Number.isNaN(value) && value > 0) {
+                    setMaxHistory(value);
+                  }
+                }}
+              />
+            </SettingsField>
+          }
+        />
+
+        <SettingsRow
+          title={t("settings.expireDays")}
+          description={t("settings.expireDaysDesc")}
+          control={
+            <SettingsField className="w-[15rem]">
+              <SettingsSelect
+                value={String(expireDays)}
+                onChange={(event) => setExpireDays(Number(event.target.value))}
+              >
+                <option value="0">{t("settings.expireNever")}</option>
+                <option value="1">{t("settings.expire1day")}</option>
+                <option value="7">{t("settings.expire7days")}</option>
+                <option value="30">{t("settings.expire30days")}</option>
+                <option value="90">{t("settings.expire90days")}</option>
+              </SettingsSelect>
+            </SettingsField>
+          }
+        />
+
+        <SettingsRow
+          title={t("settings.autoClose")}
+          description={t("settings.hidePanel")}
+          control={<Toggle value={pasteAndClose} onChange={setPasteAndClose} />}
+        />
+      </SettingsSection>
+
+      {/* ─── Shortcuts ─── */}
+      <SettingsSection title={t("settings.toggleShortcut")}>
+        <SettingsRow
+          title={t("settings.toggleShortcut")}
+          description={t("settings.toggleShortcutDesc")}
+          control={
+            <div className="flex w-full max-w-[22rem] items-center gap-3">
+              <SettingsField className="flex-1">
+                <div className="flex h-9 items-center font-mono text-sm">
+                  {isRecordingShortcut ? t("settings.shortcutRecording") : toggleShortcut}
+                </div>
+              </SettingsField>
+              <SettingsButton onClick={() => setIsRecordingShortcut((prev) => !prev)}>
+                {isRecordingShortcut ? t("template.cancel") : t("settings.shortcutRecord")}
+              </SettingsButton>
+            </div>
+          }
+        />
+
+        <SettingsRow
+          title={t("preview.closeShortcut")}
+          description={t("preview.closeShortcutDesc")}
+          control={
+            <SettingsButton
+              tone={isRecordingCloseShortcut ? "primary" : "default"}
+              className={cn("min-w-[9rem] font-mono", isRecordingCloseShortcut && "animate-pulse")}
+              onClick={() => setIsRecordingCloseShortcut(true)}
+            >
+              {isRecordingCloseShortcut ? t("settings.recording") : previewCloseShortcut}
+            </SettingsButton>
+          }
+        />
+
+        <SettingsRow
+          title={t("preview.resetConfirm")}
+          description={t("preview.resetConfirmDesc")}
+          control={
+            <SettingsButton
+              tone="ghost"
+              onClick={() => {
+                invoke("update_settings", { key: "preview_close_confirmed", value: "false" })
+                  .then(() => toast.success(t("preview.resetDone")))
+                  .catch(() => {});
+              }}
+            >
+              {t("preview.resetConfirm")}
+            </SettingsButton>
+          }
+        />
+      </SettingsSection>
+
+      {/* ─── System ─── */}
+      <SettingsSection title={t("settings.autoStart")}>
+        <SettingsRow
+          title={t("settings.autoStart")}
+          description={t("settings.autoStartDesc")}
+          control={<Toggle value={autoStart} onChange={setAutoStart} />}
+        />
+
+        <SettingsRow
+          title={t("settings.systemNotifications")}
+          description={t("settings.systemNotificationsDesc")}
+          control={<Toggle value={systemNotificationsEnabled} onChange={setSystemNotificationsEnabled} />}
+        />
+
+        <SettingsRow
+          title={t("settings.defaultBrowser")}
+          description={t("settings.defaultBrowserDesc")}
+          control={
+            <SettingsField className="w-[15rem]">
+              <SettingsSelect
+                value={defaultBrowser}
+                onChange={(event) => setDefaultBrowser(event.target.value)}
+              >
+                <option value="system">{t("settings.browserSystem")}</option>
+                <option value="chrome">{t("settings.browserChrome")}</option>
+                <option value="firefox">{t("settings.browserFirefox")}</option>
+                <option value="edge">{t("settings.browserEdge")}</option>
+                <option value="brave">{t("settings.browserBrave")}</option>
+                {platform === "macos" ? (
+                  <option value="safari">{t("settings.browserSafari")}</option>
+                ) : null}
+              </SettingsSelect>
+            </SettingsField>
+          }
+        />
+      </SettingsSection>
+
+      {/* ─── Version & Update ─── */}
+      <SettingsSection
+        title={t("settings.appVersion")}
+        aside={<span className="settings-badge">{platform}</span>}
+      >
+        <SettingsRow
+          title={t("settings.appVersion")}
+          description={t("settings.appVersionDesc")}
+          control={
+            <SettingsField className="w-[12rem]">
+              <div className="flex h-9 items-center text-sm font-semibold">
+                v{appVersion}
+              </div>
+            </SettingsField>
+          }
+        />
+
+        <SettingsRow
+          title={t("settings.autoCheckUpdate")}
+          description={t("settings.autoCheckUpdateDesc")}
+          control={<Toggle value={autoCheckUpdate} onChange={setAutoCheckUpdate} />}
+        />
+
+        <SettingsRow
+          title={t("settings.autoDownloadUpdate")}
+          description={t("settings.autoDownloadUpdateDesc")}
+          control={<Toggle value={autoDownloadUpdate} onChange={setAutoDownloadUpdate} />}
+        />
+
+        <div className="px-5 py-3">
+          <SettingsButton
+            tone="primary"
+            disabled={isCheckingUpdate}
+            onClick={async () => {
+              setIsCheckingUpdate(true);
+              try {
+                const info = await checkForUpdates();
+                if (info) {
+                  toast.success(t("update.available", { version: info.version }));
+                  await downloadAndInstall(info.update);
+                } else {
+                  toast.info(t("update.latest"));
+                }
+              } catch {
+                toast.error(t("update.failed"));
+              } finally {
+                setIsCheckingUpdate(false);
+              }
+            }}
+          >
+            {isCheckingUpdate ? t("settings.checkingUpdate") : t("settings.checkUpdate")}
+          </SettingsButton>
+        </div>
+      </SettingsSection>
     </div>
   );
 }

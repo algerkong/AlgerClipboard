@@ -1,5 +1,11 @@
 import { cn } from "@/lib/utils";
 import type { Platform } from "@/contexts/PlatformContext";
+import type {
+  ButtonHTMLAttributes,
+  InputHTMLAttributes,
+  ReactNode,
+  SelectHTMLAttributes,
+} from "react";
 
 export type Theme = "light" | "dark" | "system";
 
@@ -149,6 +155,192 @@ export function Toggle({
           value && shift,
         )}
       />
+    </button>
+  );
+}
+
+export function SettingsHero({
+  eyebrow,
+  title,
+  description,
+  badge,
+}: {
+  eyebrow?: string;
+  title: string;
+  description: string;
+  badge?: string;
+}) {
+  return (
+    <div className="settings-hero">
+      <div className="space-y-2">
+        {eyebrow ? (
+          <div className="settings-eyebrow">{eyebrow}</div>
+        ) : null}
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="settings-title">{title}</h1>
+          {badge ? <span className="settings-badge">{badge}</span> : null}
+        </div>
+        <p className="settings-description max-w-3xl">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+export function SettingsSection({
+  title,
+  description,
+  children,
+  aside,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+  aside?: ReactNode;
+}) {
+  return (
+    <section className="settings-section">
+      <div className="settings-section-heading">
+        <div className="space-y-1">
+          <h2 className="settings-section-title">{title}</h2>
+          {description ? (
+            <p className="settings-section-description">{description}</p>
+          ) : null}
+        </div>
+        {aside ? <div className="shrink-0">{aside}</div> : null}
+      </div>
+      <div className="settings-card">{children}</div>
+    </section>
+  );
+}
+
+export function SettingsRow({
+  title,
+  description,
+  control,
+  stacked = false,
+}: {
+  title: string;
+  description?: string;
+  control: ReactNode;
+  stacked?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "settings-row",
+        stacked && "settings-row--stacked",
+      )}
+    >
+      <div className="min-w-0 space-y-1">
+        <div className="settings-row-title">{title}</div>
+        {description ? (
+          <p className="settings-row-description">{description}</p>
+        ) : null}
+      </div>
+      <div className="settings-row-control">{control}</div>
+    </div>
+  );
+}
+
+export function SettingsField({
+  className,
+  children,
+}: {
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className={cn("settings-field", className)}>
+      {children}
+    </div>
+  );
+}
+
+export function SettingsSubsection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="settings-subsection">
+      <div className="space-y-1">
+        <h3 className="settings-subsection-title">{title}</h3>
+        {description ? (
+          <p className="settings-subsection-description">{description}</p>
+        ) : null}
+      </div>
+      <div className="mt-3 space-y-1">{children}</div>
+    </div>
+  );
+}
+
+export function SettingsPillGroup({
+  className,
+  children,
+}: {
+  className?: string;
+  children: ReactNode;
+}) {
+  return <div className={cn("settings-pill-group", className)}>{children}</div>;
+}
+
+export function SettingsPillButton({
+  active,
+  className,
+  children,
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  active?: boolean;
+}) {
+  return (
+    <button
+      {...props}
+      data-active={active ? "true" : "false"}
+      className={cn("settings-pill-button", className)}
+    >
+      {children}
+    </button>
+  );
+}
+
+export function SettingsInput({
+  className,
+  ...props
+}: InputHTMLAttributes<HTMLInputElement>) {
+  return <input {...props} className={cn("settings-input", className)} />;
+}
+
+export function SettingsSelect({
+  className,
+  children,
+  ...props
+}: SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <select {...props} className={cn("settings-select", className)}>
+      {children}
+    </select>
+  );
+}
+
+export function SettingsButton({
+  tone = "default",
+  className,
+  children,
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  tone?: "default" | "primary" | "danger" | "ghost";
+}) {
+  return (
+    <button
+      {...props}
+      data-tone={tone}
+      className={cn("settings-button", className)}
+    >
+      {children}
     </button>
   );
 }

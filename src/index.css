@@ -338,6 +338,455 @@ body {
   background: transparent;
 }
 
+.settings-layout {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  gap: 0.75rem;
+  height: 100%;
+  padding: 0.75rem;
+  background: color-mix(in oklab, var(--background) 92%, var(--muted) 8%);
+}
+
+.settings-sidebar {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.settings-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  align-self: flex-start;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--border) 82%, transparent);
+  background: color-mix(in oklab, var(--card) 75%, transparent);
+  padding: 0.5rem 0.85rem;
+  font-size: 0.82rem;
+  color: var(--muted-foreground);
+  backdrop-filter: blur(16px);
+}
+
+.settings-back-button:hover {
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--accent) 88%, transparent);
+}
+
+.settings-sidebar-panel,
+.settings-content-scroll,
+.settings-card {
+  border: 1px solid color-mix(in oklab, var(--border) 84%, transparent);
+  background: color-mix(in oklab, var(--card) 100%, var(--background) 0%);
+  box-shadow: none;
+}
+
+.settings-sidebar-panel {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  border-radius: 1.25rem;
+  padding: 0.65rem;
+}
+
+.settings-sidebar-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.65rem;
+  border-radius: 0.85rem;
+  padding: 0.6rem 0.7rem;
+  color: var(--muted-foreground);
+}
+
+.settings-sidebar-item:hover {
+  background: color-mix(in oklab, var(--accent) 88%, transparent);
+  color: var(--foreground);
+}
+
+.settings-sidebar-item.is-active {
+  background: color-mix(in oklab, var(--accent) 95%, transparent);
+  color: var(--foreground);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 18%, transparent);
+}
+
+.dark .settings-sidebar-item.is-active {
+  background: color-mix(in oklab, var(--accent) 92%, transparent);
+}
+
+.settings-sidebar-icon {
+  display: flex;
+  height: 1.85rem;
+  width: 1.85rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.6rem;
+  background: color-mix(in oklab, var(--background) 72%, transparent);
+}
+
+.settings-content {
+  min-width: 0;
+  min-height: 0;
+}
+
+.settings-content-scroll {
+  height: 100%;
+  overflow-y: auto;
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+}
+
+.settings-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.4rem;
+  border: 1px solid color-mix(in oklab, var(--border) 75%, transparent);
+  background: color-mix(in oklab, var(--background) 55%, var(--card) 45%);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.settings-eyebrow,
+.settings-stat-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.settings-title {
+  font-size: clamp(1.5rem, 2.2vw, 2rem);
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.settings-description {
+  color: color-mix(in oklab, var(--muted-foreground) 92%, transparent);
+  line-height: 1.55;
+  font-size: 0.82rem;
+}
+
+.settings-section-description,
+.settings-subsection-description {
+  color: color-mix(in oklab, var(--muted-foreground) 85%, transparent);
+  line-height: 1.5;
+  font-size: 0.78rem;
+}
+
+.settings-row-description {
+  color: color-mix(in oklab, var(--muted-foreground) 80%, transparent);
+  line-height: 1.45;
+  font-size: 0.76rem;
+}
+
+.settings-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--primary) 12%, transparent);
+  padding: 0.3rem 0.6rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.settings-card {
+  overflow: hidden;
+  border-radius: 1rem;
+  background: color-mix(in oklab, var(--card) 86%, var(--background) 14%);
+}
+
+.settings-section-title {
+  font-size: 0.92rem;
+  font-weight: 650;
+  color: var(--foreground);
+}
+
+.settings-row-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.settings-section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-inline: 0.2rem;
+}
+
+.settings-subsection {
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 76%, transparent);
+}
+
+.settings-subsection:last-child {
+  border-bottom: 0;
+}
+
+.settings-subsection-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--muted-foreground) 94%, transparent);
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 76%, transparent);
+  padding: 0.75rem 1.25rem;
+}
+
+/* Rows inside subsections have reduced horizontal padding */
+.settings-subsection .settings-row {
+  padding-inline: 0;
+}
+
+.settings-row:last-child {
+  border-bottom: 0;
+}
+
+.settings-row--stacked {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.settings-row-control {
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
+  width: min(100%, 30rem);
+}
+
+.settings-field,
+.settings-inline-panel {
+  border: 1px solid color-mix(in oklab, var(--border) 76%, transparent);
+  background: color-mix(in oklab, var(--background) 55%, var(--card) 45%);
+  border-radius: 0.75rem;
+  padding: 0.05rem 0.65rem;
+}
+
+.settings-inline-panel {
+  padding: 1rem;
+}
+
+.settings-input,
+.settings-select {
+  width: 100%;
+  height: 2.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  outline: none;
+  font-size: 0.86rem;
+}
+
+.settings-input-standalone {
+  width: 100%;
+  height: 2.25rem;
+  border: 1px solid color-mix(in oklab, var(--border) 76%, transparent);
+  background: color-mix(in oklab, var(--background) 55%, var(--card) 45%);
+  border-radius: 0.75rem;
+  padding: 0 0.65rem;
+  color: var(--foreground);
+  outline: none;
+  font-size: 0.86rem;
+}
+
+.settings-input-standalone:focus {
+  border-color: color-mix(in oklab, var(--primary) 40%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 10%, transparent);
+}
+
+.settings-textarea {
+  width: 100%;
+  border: 1px solid color-mix(in oklab, var(--border) 76%, transparent);
+  background: color-mix(in oklab, var(--background) 55%, var(--card) 45%);
+  border-radius: 1rem;
+  padding: 0.75rem 1rem;
+  color: var(--foreground);
+  outline: none;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  resize: none;
+}
+
+.settings-textarea:focus {
+  border-color: color-mix(in oklab, var(--primary) 40%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 10%, transparent);
+}
+
+.settings-pill-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  justify-content: flex-end;
+}
+
+.settings-pill-button {
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--border) 74%, transparent);
+  background: color-mix(in oklab, var(--background) 60%, var(--card) 40%);
+  padding: 0.5rem 0.9rem;
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.settings-pill-button:hover {
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--accent) 85%, transparent);
+}
+
+.settings-pill-button[data-active="true"] {
+  border-color: color-mix(in oklab, var(--primary) 30%, transparent);
+  background: color-mix(in oklab, var(--primary) 12%, white);
+  color: var(--primary);
+}
+
+.dark .settings-pill-button[data-active="true"] {
+  background: color-mix(in oklab, var(--primary) 18%, transparent);
+}
+
+.settings-button {
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.settings-button[data-tone="default"] {
+  background: color-mix(in oklab, var(--accent) 72%, transparent);
+  color: var(--foreground);
+}
+
+.settings-button[data-tone="primary"] {
+  background: color-mix(in oklab, var(--primary) 16%, white);
+  color: var(--primary);
+}
+
+.settings-button[data-tone="danger"] {
+  background: color-mix(in oklab, var(--destructive) 14%, transparent);
+  color: var(--destructive);
+}
+
+.settings-button[data-tone="ghost"] {
+  border-color: color-mix(in oklab, var(--border) 76%, transparent);
+  background: transparent;
+  color: var(--muted-foreground);
+}
+
+.settings-button:hover {
+  transform: translateY(-1px);
+}
+
+.settings-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.settings-color-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.7rem;
+}
+
+.settings-color-swatch {
+  display: inline-flex;
+  padding: 0.18rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+}
+
+.settings-color-swatch span {
+  display: block;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35), 0 6px 14px -8px rgba(15,23,42,0.45);
+}
+
+.settings-color-swatch.is-active {
+  border-color: color-mix(in oklab, var(--primary) 35%, transparent);
+  transform: scale(1.08);
+}
+
+.settings-color-swatch-rainbow {
+  background: conic-gradient(from 180deg at 50% 50%, #ff0000, #ff8000, #ffff00, #00ff00, #00ffff, #0000ff, #8000ff, #ff0080, #ff0000);
+}
+
+.settings-stat-card {
+  border-radius: 0.85rem;
+  border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  background: color-mix(in oklab, var(--background) 46%, var(--card) 54%);
+  padding: 0.75rem 0.9rem;
+}
+
+.settings-stat-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+@media (max-width: 960px) {
+  .settings-layout {
+    grid-template-columns: 1fr;
+    padding: 0.75rem;
+  }
+
+  .settings-sidebar-panel {
+    flex: initial;
+  }
+
+  .settings-content-scroll {
+    padding: 1rem;
+  }
+
+  .settings-row,
+  .settings-row-control {
+    width: 100%;
+  }
+
+  .settings-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .settings-row-control,
+  .settings-pill-group,
+  .settings-color-grid {
+    justify-content: flex-start;
+  }
+}
+
 /* Fade-in animation for page transitions */
 @keyframes fadeIn {
   from {

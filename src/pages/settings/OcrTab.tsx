@@ -1,6 +1,16 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { Toggle, getOcrEngineList } from "./shared";
+import {
+  Toggle,
+  getOcrEngineList,
+  SettingsButton,
+  SettingsField,
+  SettingsInput,
+  SettingsRow,
+  SettingsSection,
+  SettingsSelect,
+  SettingsSubsection,
+} from "./shared";
 import {
   getOcrEngines,
   configureOcrEngine,
@@ -14,6 +24,7 @@ import {
   type RapidOcrRuntimeStatus,
 } from "@/services/ocrService";
 import { usePlatform } from "@/contexts/PlatformContext";
+import { Loader2, Trash2 } from "lucide-react";
 
 type FieldKey = "apiKey" | "apiSecret" | "endpoint" | "model" | "command";
 
@@ -52,7 +63,6 @@ export function OcrTab() {
   const loadedRef = useRef(false);
   const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
-  // Load engine configs
   useEffect(() => {
     getOcrEngines()
       .then((configs) => {
@@ -72,7 +82,6 @@ export function OcrTab() {
             : emptyForm();
         }
         setEngineForms(forms);
-        // Mark as loaded after state is set
         setTimeout(() => { loadedRef.current = true; }, 0);
       })
       .catch(() => {});
@@ -118,7 +127,6 @@ export function OcrTab() {
   const updateField = (engineId: string, field: keyof EngineForm, value: string | boolean) => {
     setEngineForms((prev) => {
       const updated = { ...prev, [engineId]: { ...prev[engineId], [field]: value } };
-      // Auto-save: immediate for toggle, debounced for text
       if (field === "enabled") {
         saveEngine(engineId, updated[engineId]);
       } else {
@@ -152,9 +160,7 @@ export function OcrTab() {
 
   const refreshRapidStatus = useCallback(async () => {
     const status = await getRapidOcrRuntimeStatus().catch(() => null);
-    if (status) {
-      setRapidStatus(status);
-    }
+    if (status) setRapidStatus(status);
   }, []);
 
   const handleInstallRapidOcr = useCallback(async () => {
@@ -186,130 +192,166 @@ export function OcrTab() {
   }, [refreshRapidStatus]);
 
   return (
-    <div className="space-y-3">
-      {/* Default engine selector */}
-      <div className="space-y-1">
-        <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-          {t("ocr.defaultEngine")}
-        </label>
-        <select
-          value={defaultEngine}
-          onChange={(e) => handleSetDefault(e.target.value)}
-          className="w-full h-7 px-2 text-sm2 bg-background border border-border/50 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
-        >
-          {engineList.map((eng) => (
-            <option key={eng.id} value={eng.id}>
-              {eng.label}
-            </option>
-          ))}
-        </select>
-      </div>
+    <div className="space-y-5">
+      {/* ─── Default Engine ─── */}
+      <SettingsSection
+        title={t("ocr.defaultEngine")}
+        description={t("ocr.defaultEngine")}
+      >
+        <SettingsRow
+          title={t("ocr.defaultEngine")}
+          control={
+            <SettingsField className="w-[15rem]">
+              <SettingsSelect
+                value={defaultEngine}
+                onChange={(e) => handleSetDefault(e.target.value)}
+              >
+                {engineList.map((eng) => (
+                  <option key={eng.id} value={eng.id}>{eng.label}</option>
+                ))}
+              </SettingsSelect>
+            </SettingsField>
+          }
+        />
+      </SettingsSection>
 
-      {/* Engine configs */}
-      <label className="text-sm2 font-medium text-muted-foreground uppercase tracking-wider">
-        {t("ocr.engineConfig")}
-      </label>
-      {engineList.map((eng) => {
-        const form = engineForms[eng.id];
-        if (!form) return null;
-        const isRapid = eng.id === "rapidocr";
-        const rapidInstalled = rapidStatus?.installed ?? false;
-        const rapidSupported = rapidStatus?.supported ?? true;
-        const rapidUnavailable = isRapid && (!rapidSupported || !rapidInstalled);
-        return (
-          <div key={eng.id} className="bg-muted/20 rounded-md p-2.5 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm2 font-medium text-foreground">
-                {eng.label}
-              </span>
-              <Toggle
-                value={form.enabled}
-                onChange={(v) => updateField(eng.id, "enabled", v)}
-                size="sm"
+      {/* ─── Engine Configuration ─── */}
+      <SettingsSection
+        title={t("ocr.engineConfig")}
+        description={t("ocr.engineConfig")}
+      >
+        {engineList.map((eng) => {
+          const form = engineForms[eng.id];
+          if (!form) return null;
+          const isRapid = eng.id === "rapidocr";
+          const rapidInstalled = rapidStatus?.installed ?? false;
+          const rapidSupported = rapidStatus?.supported ?? true;
+          const rapidUnavailable = isRapid && (!rapidSupported || !rapidInstalled);
+
+          return (
+            <SettingsSubsection key={eng.id} title={eng.label}>
+              <SettingsRow
+                title={eng.label}
+                control={
+                  <Toggle
+                    value={form.enabled}
+                    onChange={(v) => updateField(eng.id, "enabled", v)}
+                    size="sm"
+                  />
+                }
               />
-            </div>
-            {isRapid && (
-              <div className="space-y-2">
-                <div className="text-xs2 text-muted-foreground">
-                  {rapidSupported
-                    ? rapidInstalled
-                      ? t("ocr.rapidInstalled", { version: rapidStatus?.version ?? "unknown" })
-                      : t("ocr.rapidNotInstalled")
-                    : t("ocr.rapidUnsupported")}
-                </div>
-                <textarea
-                  value={form.extra}
-                  onChange={(e) => updateField(eng.id, "extra", e.target.value)}
-                  placeholder={t("ocr.rapidSourcesPlaceholder")}
-                  rows={3}
-                  className="w-full px-2 py-1.5 text-sm2 bg-background border border-border/50 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30 resize-y"
-                />
-                <p className="text-xs2 text-muted-foreground">
-                  {t("ocr.rapidSourcesHint")}
-                </p>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleInstallRapidOcr}
-                    disabled={rapidBusy || !rapidSupported}
-                    className="h-6 px-3 text-xs2 font-medium bg-primary/12 text-primary hover:bg-primary/18 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {rapidBusy ? t("ocr.rapidInstalling") : rapidInstalled ? t("ocr.rapidRepair") : t("ocr.rapidInstall")}
-                  </button>
-                  {rapidInstalled && (
-                    <button
-                      onClick={handleRemoveRapidOcr}
-                      disabled={rapidBusy}
-                      className="h-6 px-3 text-xs2 font-medium bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+
+              {/* RapidOCR specific */}
+              {isRapid && (
+                <div className="space-y-3 py-2">
+                  <p className="text-xs text-muted-foreground">
+                    {rapidSupported
+                      ? rapidInstalled
+                        ? t("ocr.rapidInstalled", { version: rapidStatus?.version ?? "unknown" })
+                        : t("ocr.rapidNotInstalled")
+                      : t("ocr.rapidUnsupported")}
+                  </p>
+
+                  <div>
+                    <textarea
+                      value={form.extra}
+                      onChange={(e) => updateField(eng.id, "extra", e.target.value)}
+                      placeholder={t("ocr.rapidSourcesPlaceholder")}
+                      rows={3}
+                      className="settings-textarea"
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {t("ocr.rapidSourcesHint")}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <SettingsButton
+                      tone="primary"
+                      onClick={handleInstallRapidOcr}
+                      disabled={rapidBusy || !rapidSupported}
                     >
-                      {t("ocr.rapidRemove")}
-                    </button>
+                      {rapidBusy && <Loader2 className="h-3 w-3 animate-spin" />}
+                      {rapidBusy ? t("ocr.rapidInstalling") : rapidInstalled ? t("ocr.rapidRepair") : t("ocr.rapidInstall")}
+                    </SettingsButton>
+                    {rapidInstalled && (
+                      <SettingsButton
+                        tone="danger"
+                        onClick={handleRemoveRapidOcr}
+                        disabled={rapidBusy}
+                      >
+                        {t("ocr.rapidRemove")}
+                      </SettingsButton>
+                    )}
+                  </div>
+
+                  {rapidStatus?.configured_urls?.length ? (
+                    <p className="text-xs text-muted-foreground break-all">
+                      {t("ocr.rapidUsingSources")}: {rapidStatus.configured_urls.join(" , ")}
+                    </p>
+                  ) : null}
+
+                  {(rapidActionError || rapidStatus?.last_error) && (
+                    <p className="text-xs text-destructive break-words">
+                      {rapidActionError ?? rapidStatus?.last_error}
+                    </p>
                   )}
                 </div>
-                {rapidStatus?.configured_urls?.length ? (
-                  <p className="text-xs2 text-muted-foreground break-all">
-                    {t("ocr.rapidUsingSources")}: {rapidStatus.configured_urls.join(" , ")}
-                  </p>
-                ) : null}
-                {(rapidActionError || rapidStatus?.last_error) && (
-                  <p className="text-xs2 text-red-400 break-words">
-                    {rapidActionError ?? rapidStatus?.last_error}
-                  </p>
-                )}
-              </div>
-            )}
-            {eng.fields.map((field) => (
-              <input
-                key={field}
-                type={fieldType[field]}
-                placeholder={fieldLabel[field]}
-                value={form[field]}
-                onChange={(e) => updateField(eng.id, field, e.target.value)}
-                className="w-full h-6 px-2 text-sm2 bg-background border border-border/50 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
-              />
-            ))}
-            {rapidUnavailable && (
-              <p className="text-xs2 text-amber-400">
-                {t("ocr.rapidInstallRequired")}
-              </p>
-            )}
-            {eng.id === "local_model" && (
-              <p className="text-xs2 text-muted-foreground">
-                {t("ocr.localModelHint")}
-              </p>
-            )}
-          </div>
-        );
-      })}
+              )}
 
-      {/* Clear OCR cache */}
-      <div className="pt-1">
-        <button
-          onClick={handleClearCache}
-          className="h-6 px-3 text-xs2 font-medium bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded transition-colors"
-        >
-          {cacheCleared ? t("ocr.cacheCleared") : t("ocr.clearCache")}
-        </button>
-      </div>
+              {/* Field inputs */}
+              {eng.fields.length > 0 && (
+                <div className="space-y-1">
+                  {eng.fields.map((field) => (
+                    <SettingsRow
+                      key={field}
+                      title={fieldLabel[field]}
+                      control={
+                        <SettingsField className="w-[15rem]">
+                          <SettingsInput
+                            type={fieldType[field]}
+                            placeholder={fieldLabel[field]}
+                            value={form[field]}
+                            onChange={(e) => updateField(eng.id, field, e.target.value)}
+                          />
+                        </SettingsField>
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+
+              {rapidUnavailable && (
+                <p className="px-1 py-2 text-xs text-amber-400">
+                  {t("ocr.rapidInstallRequired")}
+                </p>
+              )}
+
+              {eng.id === "local_model" && (
+                <p className="px-1 py-2 text-xs text-muted-foreground">
+                  {t("ocr.localModelHint")}
+                </p>
+              )}
+            </SettingsSubsection>
+          );
+        })}
+      </SettingsSection>
+
+      {/* ─── Cache ─── */}
+      <SettingsSection
+        title={t("ocr.clearCache")}
+        description={t("ocr.clearCache")}
+      >
+        <div className="px-5 py-4">
+          <SettingsButton
+            tone="danger"
+            onClick={handleClearCache}
+          >
+            <Trash2 className="h-3 w-3" />
+            {cacheCleared ? t("ocr.cacheCleared") : t("ocr.clearCache")}
+          </SettingsButton>
+        </div>
+      </SettingsSection>
     </div>
   );
 }

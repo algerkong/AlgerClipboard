@@ -373,6 +373,16 @@
     "syncMaxFileSizeDesc": "超过此大小的文件将跳过同步",
     "syncMaxFileSizeUnlimited": "不限制"
   },
+  "settingsLayout": {
+    "generalDesc": "管理应用外观、语言、快捷键和基础使用体验。",
+    "richTextDesc": "控制富文本在列表和详情中的显示策略，让界面更干净。",
+    "syncDesc": "连接云端账户，配置同步频率、加密和设置同步。",
+    "translateDesc": "配置翻译引擎凭据和可用状态，决定翻译能力来源。",
+    "ocrDesc": "管理 OCR 引擎、默认识别方式和本地运行时。",
+    "dataDesc": "查看剪贴板统计、导入导出历史并维护缓存。",
+    "aiDesc": "设置 AI 服务商、模型、摘要和提示词行为。",
+    "askAiDesc": "整理问 AI 菜单里的服务入口和预设操作。"
+  },
   "translate": {
     "title": "翻译",
     "translate": "翻译",
