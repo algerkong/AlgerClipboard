@@ -6,6 +6,8 @@ import {
   RotateCcw,
   Languages,
   Loader2,
+  Maximize,
+  ScanSearch,
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
@@ -30,6 +32,8 @@ export function ImageViewerPage() {
 
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [bgMode, setBgMode] = useState<"checker-dark" | "checker-light" | "white" | "black">("black");
+  const [fitMode, setFitMode] = useState<"fit" | "actual">("fit");
 
   const [ocrResult, setOcrResult] = useState<OcrResult | null>(null);
   const [ocrLoading, setOcrLoading] = useState(false);
@@ -147,32 +151,50 @@ export function ImageViewerPage() {
 
   const hasOcrText = ocrResult && ocrResult.lines.length > 0;
 
+  const isChecker = bgMode === "checker-dark" || bgMode === "checker-light";
+  const isDark = bgMode === "black" || bgMode === "checker-dark";
+  const bgColor = bgMode === "white" ? "#f5f5f5" : bgMode === "black" ? "#1e1e1e" : undefined;
+  const textClass = isDark ? "text-neutral-400" : bgMode === "white" ? "text-neutral-600" : "text-muted-foreground";
+
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-background">
+    <div
+      className="flex flex-col h-screen overflow-hidden"
+      style={{ backgroundColor: bgColor ?? (bgMode === "checker-light" ? "#ffffff" : "#1e1e1e") }}
+    >
       {/* Title bar */}
       <div
         data-tauri-drag-region
         className={cn(
-          "flex items-center justify-between h-8 pr-3 bg-card/80 backdrop-blur-sm border-b border-border/50 select-none shrink-0",
+          "flex items-center justify-between h-8 pr-3 border-b select-none shrink-0",
+          isDark ? "border-white/10" : "border-black/10",
           isMacOS ? "pl-[76px]" : "pl-3",
         )}
+        style={{ backgroundColor: bgColor ?? (bgMode === "checker-light" ? "#ffffff" : "#1e1e1e") }}
       >
         <div data-tauri-drag-region className="flex items-center gap-2">
-          <span data-tauri-drag-region className="text-sm2 font-medium text-muted-foreground">
+          <span data-tauri-drag-region className={cn("text-sm2 font-medium", textClass)}>
             {t("imageViewer.title")}
           </span>
           <div className="flex items-center gap-0.5">
-            <button onClick={handleZoomOut} className="p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors" title={t("imageViewer.zoomOut")}>
+            <button onClick={handleZoomOut} className={cn("p-0.5 rounded hover:opacity-80 transition-colors", textClass)} title={t("imageViewer.zoomOut")}>
               <ZoomOut className="w-3 h-3" />
             </button>
-            <span className="text-xs2 text-muted-foreground min-w-[32px] text-center">{Math.round(zoom * 100)}%</span>
-            <button onClick={handleZoomIn} className="p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors" title={t("imageViewer.zoomIn")}>
+            <span className={cn("text-xs2 min-w-[32px] text-center", textClass)}>{Math.round(zoom * 100)}%</span>
+            <button onClick={handleZoomIn} className={cn("p-0.5 rounded hover:opacity-80 transition-colors", textClass)} title={t("imageViewer.zoomIn")}>
               <ZoomIn className="w-3 h-3" />
             </button>
-            <button onClick={handleResetZoom} className="p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors" title={t("imageViewer.resetZoom")}>
+            <button onClick={handleResetZoom} className={cn("p-0.5 rounded hover:opacity-80 transition-colors", textClass)} title={t("imageViewer.resetZoom")}>
               <RotateCcw className="w-2.5 h-2.5" />
             </button>
           </div>
+          {/* Fit mode toggle */}
+          <button
+            onClick={() => setFitMode((m) => m === "fit" ? "actual" : "fit")}
+            className={cn("p-0.5 rounded hover:opacity-80 transition-colors", textClass)}
+            title={fitMode === "fit" ? t("imageViewer.actualSize") : t("imageViewer.fitWindow")}
+          >
+            {fitMode === "fit" ? <ScanSearch className="w-3 h-3" /> : <Maximize className="w-3 h-3" />}
+          </button>
           {availableEngines.length > 1 && (
             <select
               value={selectedEngine ?? ""}
@@ -185,11 +207,64 @@ export function ImageViewerPage() {
               ))}
             </select>
           )}
+          {/* Background mode toggle */}
+          <div className={cn("flex items-center h-5 rounded border overflow-hidden", isDark ? "border-white/20" : "border-black/15")}>
+            <button
+              onClick={() => setBgMode("black")}
+              className={cn(
+                "h-full w-5 flex items-center justify-center transition-colors",
+                bgMode === "black" ? (isDark ? "bg-white/20" : "bg-black/10") : (isDark ? "hover:bg-white/10" : "hover:bg-black/5"),
+              )}
+              title={t("imageViewer.bgBlack")}
+            >
+              <span className="w-2.5 h-2.5 rounded-sm bg-neutral-700 border border-neutral-600" />
+            </button>
+            <button
+              onClick={() => setBgMode("checker-dark")}
+              className={cn(
+                "h-full w-5 flex items-center justify-center transition-colors border-x",
+                isDark ? "border-white/20" : "border-black/15",
+                bgMode === "checker-dark" ? (isDark ? "bg-white/20" : "bg-black/10") : (isDark ? "hover:bg-white/10" : "hover:bg-black/5"),
+              )}
+              title={t("imageViewer.bgCheckerDark")}
+            >
+              <svg viewBox="0 0 8 8" className="w-3 h-3" shapeRendering="crispEdges">
+                <rect width="8" height="8" fill="#2a2a2a" />
+                <rect x="0" y="0" width="4" height="4" fill="#3a3a3a" />
+                <rect x="4" y="4" width="4" height="4" fill="#3a3a3a" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setBgMode("checker-light")}
+              className={cn(
+                "h-full w-5 flex items-center justify-center transition-colors border-r",
+                isDark ? "border-white/20" : "border-black/15",
+                bgMode === "checker-light" ? (isDark ? "bg-white/20" : "bg-black/10") : (isDark ? "hover:bg-white/10" : "hover:bg-black/5"),
+              )}
+              title={t("imageViewer.bgCheckerLight")}
+            >
+              <svg viewBox="0 0 8 8" className="w-3 h-3" shapeRendering="crispEdges">
+                <rect width="8" height="8" fill="#ffffff" />
+                <rect x="0" y="0" width="4" height="4" fill="#c8c8c8" />
+                <rect x="4" y="4" width="4" height="4" fill="#c8c8c8" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setBgMode("white")}
+              className={cn(
+                "h-full w-5 flex items-center justify-center transition-colors",
+                bgMode === "white" ? (isDark ? "bg-white/20" : "bg-black/10") : (isDark ? "hover:bg-white/10" : "hover:bg-black/5"),
+              )}
+              title={t("imageViewer.bgWhite")}
+            >
+              <span className="w-2.5 h-2.5 rounded-sm bg-white border border-neutral-300" />
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-0.5 -mr-1">
           {ocrLoading && (
-            <span className="flex items-center gap-1 px-1.5 h-5 text-xs2 text-muted-foreground">
+            <span className={cn("flex items-center gap-1 px-1.5 h-5 text-xs2", textClass)}>
               <Loader2 className="w-3 h-3 animate-spin" />
               {t("imageViewer.extracting")}
             </span>
@@ -211,15 +286,27 @@ export function ImageViewerPage() {
             </button>
           )}
           {!isMacOS && (
-            <button onClick={handleClose} className="flex items-center justify-center w-6 h-6 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors">
+            <button onClick={handleClose} className={cn("flex items-center justify-center w-6 h-6 rounded-md hover:text-red-400 hover:bg-red-500/10 transition-colors", textClass)}>
               <X className="w-3 h-3" />
             </button>
           )}
         </div>
       </div>
 
-      {/* Image + text layer — prioritize fitting full image height */}
-      <div ref={containerRef} className="flex-1 overflow-auto flex items-center justify-center min-h-0" onWheel={handleWheel}>
+      {/* Image + text layer */}
+      <div
+        ref={containerRef}
+        className={cn(
+          "flex-1 overflow-auto flex items-center justify-center min-h-0 image-viewer-overlay-scrollbar",
+          isChecker && "image-viewer-checkerboard",
+          bgMode === "checker-dark" && "image-viewer-checkerboard-dark",
+        )}
+        style={{
+          ...(!isChecker ? { backgroundColor: bgColor ?? "#1e1e1e" } : {}),
+          ...(isChecker ? { backgroundSize: `${16 * zoom}px ${16 * zoom}px` } : {}),
+        }}
+        onWheel={handleWheel}
+      >
         {imageSrc ? (
           <div
             className="relative inline-block"
@@ -230,7 +317,10 @@ export function ImageViewerPage() {
               src={imageSrc}
               alt=""
               className="block w-auto"
-              style={{ maxHeight: "calc(100vh - 2rem)", maxWidth: "100vw" }}
+              style={fitMode === "fit"
+                ? { maxHeight: "calc(100vh - 2rem)", maxWidth: "100vw" }
+                : undefined
+              }
               draggable={false}
               onLoad={handleImageLoad}
             />

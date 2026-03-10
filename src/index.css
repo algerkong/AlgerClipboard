@@ -1262,6 +1262,42 @@ body {
   color: transparent;
 }
 
+/* Image viewer overlay scrollbar — floats above content, doesn't take space */
+.image-viewer-overlay-scrollbar {
+  overflow: overlay;
+  scrollbar-gutter: auto;
+}
+.image-viewer-overlay-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.image-viewer-overlay-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.image-viewer-overlay-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 3px;
+}
+.image-viewer-overlay-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+.image-viewer-overlay-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Image viewer checkerboard background for transparent images */
+.image-viewer-checkerboard {
+  background-color: #ffffff;
+  background-image:
+    conic-gradient(#c8c8c8 25%, transparent 25% 50%, #c8c8c8 50% 75%, transparent 75%);
+  background-size: 16px 16px;
+}
+.image-viewer-checkerboard.image-viewer-checkerboard-dark {
+  background-color: #2a2a2a;
+  background-image:
+    conic-gradient(#3a3a3a 25%, transparent 25% 50%, #3a3a3a 50% 75%, transparent 75%);
+}
+
 /* Markdown Preview Typography */
 .markdown-preview h1 { @apply text-xl font-bold mt-6 mb-3 pb-2 border-b border-border/30; }
 .markdown-preview h2 { @apply text-lg font-semibold mt-5 mb-2 pb-1.5 border-b border-border/20; }
