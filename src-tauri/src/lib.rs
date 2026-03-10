@@ -75,13 +75,18 @@ pub fn run() {
         .on_window_event(|window, event| {
             if window.label() == "main" {
                 if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                    #[cfg(not(debug_assertions))]
+                    // On macOS the red-dot close button should hide the window
+                    // (standard macOS app behaviour) rather than quitting.
+                    // This applies in both debug and release builds.
+                    #[cfg(target_os = "macos")]
                     {
                         api.prevent_close();
                         let _ = window.hide();
                     }
 
-                    #[cfg(debug_assertions)]
+                    // On Windows / Linux, allow the close to proceed normally
+                    // so the window actually closes as the user expects.
+                    #[cfg(not(target_os = "macos"))]
                     {
                         let _ = api;
                     }
