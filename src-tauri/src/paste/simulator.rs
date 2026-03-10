@@ -223,12 +223,9 @@ pub fn paste_image(path: &str) -> Result<(), String> {
 #[cfg(target_os = "windows")]
 pub fn prepare_paste_target(target_hwnd: Option<isize>, source_hwnd: Option<isize>) {
     use windows_sys::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
-    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
-        SendInput, INPUT, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, VK_MENU,
-    };
     use windows_sys::Win32::UI::WindowsAndMessaging::{
-        GetForegroundWindow, GetWindowThreadProcessId, IsWindow, SetForegroundWindow, ShowWindow,
-        SW_SHOWNOACTIVATE,
+        GetForegroundWindow, GetWindowThreadProcessId, IsIconic, IsWindow, IsWindowVisible,
+        SetForegroundWindow, ShowWindow, SW_RESTORE, SW_SHOWNOACTIVATE,
     };
 
     let Some(target_hwnd) = target_hwnd else {
@@ -247,33 +244,22 @@ pub fn prepare_paste_target(target_hwnd: Option<isize>, source_hwnd: Option<isiz
             return;
         }
 
-        // Ensure target window is visible (in case it was minimized)
-        let _ = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+        // Only call ShowWindow if the target is minimized or hidden.
+        // For already-visible windows (including maximized), skip ShowWindow
+        // to preserve their current state (maximized vs normal).
+        if IsIconic(hwnd) != 0 {
+            // Window is minimized — restore it (preserves maximized state via restore)
+            let _ = ShowWindow(hwnd, SW_RESTORE);
+        } else if IsWindowVisible(hwnd) == 0 {
+            // Window is hidden — show without activating
+            let _ = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+        }
+        // else: window is already visible and not minimized — do nothing
 
-        // ALT key trick: sending a synthetic ALT press unlocks SetForegroundWindow
-        // This is the most reliable technique documented by the Windows community.
-        let mut alt_down: INPUT = std::mem::zeroed();
-        alt_down.r#type = INPUT_KEYBOARD;
-        alt_down.Anonymous.ki = KEYBDINPUT {
-            wVk: VK_MENU,
-            wScan: 0,
-            dwFlags: 0,
-            time: 0,
-            dwExtraInfo: 0,
-        };
-        let mut alt_up: INPUT = std::mem::zeroed();
-        alt_up.r#type = INPUT_KEYBOARD;
-        alt_up.Anonymous.ki = KEYBDINPUT {
-            wVk: VK_MENU,
-            wScan: 0,
-            dwFlags: KEYEVENTF_KEYUP,
-            time: 0,
-            dwExtraInfo: 0,
-        };
-        let alt_inputs = [alt_down, alt_up];
-        SendInput(2, alt_inputs.as_ptr(), std::mem::size_of::<INPUT>() as i32);
-
-        // Also use AttachThreadInput as a belt-and-suspenders approach
+        // Use AttachThreadInput to allow SetForegroundWindow.
+        // We are the foreground process at this point (our window was just visible),
+        // so AttachThreadInput alone is sufficient. The ALT key trick was removed
+        // because it caused the target window's system menu to appear.
         let cur_thread_id = GetCurrentThreadId();
         let target_thread_id = GetWindowThreadProcessId(hwnd, std::ptr::null_mut());
 

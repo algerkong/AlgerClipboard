@@ -15,9 +15,6 @@ pub const DEFAULT_TOGGLE_SHORTCUT: &str = "CmdOrCtrl+Shift+V";
 #[cfg(target_os = "windows")]
 fn force_window_focus(window: &tauri::WebviewWindow) {
     use windows_sys::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
-    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
-        SendInput, INPUT, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, VK_MENU,
-    };
     use windows_sys::Win32::UI::WindowsAndMessaging::{
         GetForegroundWindow, GetWindowThreadProcessId, SetForegroundWindow,
     };
@@ -28,32 +25,11 @@ fn force_window_focus(window: &tauri::WebviewWindow) {
     };
 
     unsafe {
-        // ALT key trick: sending a synthetic ALT press/release unlocks
-        // SetForegroundWindow for the calling process.
-        let mut alt_down: INPUT = std::mem::zeroed();
-        alt_down.r#type = INPUT_KEYBOARD;
-        alt_down.Anonymous.ki = KEYBDINPUT {
-            wVk: VK_MENU,
-            wScan: 0,
-            dwFlags: 0,
-            time: 0,
-            dwExtraInfo: 0,
-        };
-
-        let mut alt_up: INPUT = std::mem::zeroed();
-        alt_up.r#type = INPUT_KEYBOARD;
-        alt_up.Anonymous.ki = KEYBDINPUT {
-            wVk: VK_MENU,
-            wScan: 0,
-            dwFlags: KEYEVENTF_KEYUP,
-            time: 0,
-            dwExtraInfo: 0,
-        };
-
-        let inputs = [alt_down, alt_up];
-        SendInput(2, inputs.as_ptr(), std::mem::size_of::<INPUT>() as i32);
-
-        // Also attach to the foreground thread for extra reliability
+        // Use AttachThreadInput to allow SetForegroundWindow from our thread.
+        // All callers (global shortcut, tray click, single instance) already
+        // have foreground activation rights, so the ALT key trick is unnecessary.
+        // The ALT trick caused Windows to enter "menu mode", and subsequent
+        // arrow key presses would trigger the system menu.
         let cur_thread = GetCurrentThreadId();
         let fg_hwnd = GetForegroundWindow();
         let fg_thread = if !fg_hwnd.is_null() {
