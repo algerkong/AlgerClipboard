@@ -5,8 +5,12 @@
   "windows": [
     "main",
     "image-viewer-*",
+    "template-manager",
     "template-manager-*",
+    "settings",
     "settings-*",
+    "tag-manager",
+    "tag-manager-*",
     "detail-*",
     "ai-webview-*",
     "ask-ai-panel",
