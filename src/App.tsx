@@ -249,7 +249,7 @@ function SettingsWindow() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      <TitleBar onClose={handleClose} title={t("settings.title")} showSyncIndicator={false} />
+      <TitleBar onClose={handleClose} title={t("settings.title")} showSyncIndicator={false} showPinButton={false} />
       <div className="flex-1 min-h-0">
         <SettingsPage onBack={handleClose} initialTab={initialSettingsTab} />
       </div>
@@ -616,15 +616,46 @@ function MainApp() {
     return () => { unlisten.then((fn) => fn()); };
   }, []);
 
-  // Auto-hide when window loses focus (unless pinned)
+  // Auto-hide when window loses focus (unless pinned).
+  // Pin only controls this blur behavior — alwaysOnTop stays true always
+  // because a skip-taskbar popup window on Windows needs it to receive focus.
+  //
+  // We debounce the hide and cancel it if focus returns quickly, because the
+  // show_and_focus_main_window ALT-key trick can cause a transient blur event
+  // before focus is fully established.
   const isPinned = useSettingsStore((s) => s.isPinned);
+  const blurTimerRef = useRef<number | null>(null);
   useEffect(() => {
-    const unlisten = listen("tauri://blur", () => {
+    const cancelPendingHide = () => {
+      if (blurTimerRef.current !== null) {
+        window.clearTimeout(blurTimerRef.current);
+        blurTimerRef.current = null;
+      }
+    };
+
+    const unlistenBlur = listen("tauri://blur", () => {
       if (!isPinned) {
-        hideMainWindow();
+        cancelPendingHide();
+        blurTimerRef.current = window.setTimeout(() => {
+          blurTimerRef.current = null;
+          // Final check: if focus already returned, don't hide
+          if (!document.hasFocus()) {
+            hideMainWindow();
+          }
+        }, 150);
       }
     });
-    return () => { unlisten.then((fn) => fn()); };
+
+    // If focus returns before the timer fires, cancel the pending hide
+    const unlistenFocus = listen("tauri://focus", () => {
+      cancelPendingHide();
+    });
+
+    return () => {
+      cancelPendingHide();
+      unlistenBlur.then((fn) => fn());
+      unlistenFocus.then((fn) => fn());
+    };
   }, [hideMainWindow, isPinned]);
 
   // Escape key hides the window
