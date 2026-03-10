@@ -113,5 +113,18 @@
     "resetConfirm": "Reset confirmation",
     "resetConfirmDesc": "Show the first-time close confirmation dialog again",
     "resetDone": "Reset done"
+  },
+  "search": {
+    "timeAll": "All Time",
+    "timeToday": "Today",
+    "time3Days": "Last 3 Days",
+    "timeWeek": "This Week",
+    "timeMonth": "This Month",
+    "time3Months": "Last 3 Months",
+    "timeFilter": "Time Filter",
+    "recentSearches": "Recent Searches",
+    "clearHistory": "Clear All History",
+    "regexMode": "Regex Mode",
+    "noHistory": "No search history"
   }
 }
