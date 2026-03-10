@@ -1653,6 +1653,7 @@ impl ClipboardMonitor {
                                     content_category: Some("FilePath".to_string()),
                                     detected_language: None,
                                     file_meta: file_meta_json,
+                                    ocr_text: None,
                                 };
 
                                 if let Err(e) = db.insert_entry(&entry) {
@@ -1762,6 +1763,7 @@ impl ClipboardMonitor {
                                         content_category: None,
                                         detected_language: None,
                                         file_meta: None,
+                                        ocr_text: None,
                                     };
 
                                     if let Err(e) = db.insert_entry(&entry) {
@@ -1870,6 +1872,7 @@ impl ClipboardMonitor {
                                                 content_category: category_str,
                                                 detected_language: language,
                                                 file_meta: None,
+                                                ocr_text: None,
                                             };
 
                                             if let Err(e) = db.insert_entry(&entry) {

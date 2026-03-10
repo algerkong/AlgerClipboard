@@ -3,20 +3,20 @@ import { Search, X, Calendar } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useClipboardStore } from "@/stores/clipboardStore";
-import { getSearchHistory, deleteSearchHistory, clearSearchHistory } from "@/services/clipboardService";
+import { getSearchHistory, deleteSearchHistory, clearSearchHistory, addSearchHistory } from "@/services/clipboardService";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import type { SearchHistoryItem, TimeRange } from "@/types";
 
 export function SearchBar() {
   const { t } = useTranslation();
-  const { t: tc } = useTranslation("clipboard");
   const keyword = useClipboardStore((s) => s.keyword);
   const setKeyword = useClipboardStore((s) => s.setKeyword);
   const timeRange = useClipboardStore((s) => s.timeRange);
   const setTimeRange = useClipboardStore((s) => s.setTimeRange);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const historyDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [inputValue, setInputValue] = useState(keyword);
 
   // Hover state with delayed leave
@@ -112,6 +112,13 @@ export function SearchBar() {
       setInputValue(value);
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => setKeyword(value), 200);
+      // Save search history with longer debounce to only record final input
+      if (historyDebounceRef.current) clearTimeout(historyDebounceRef.current);
+      if (value.trim()) {
+        historyDebounceRef.current = setTimeout(() => {
+          addSearchHistory(value.trim()).catch(() => {});
+        }, 1000);
+      }
     },
     [setKeyword]
   );
@@ -119,14 +126,14 @@ export function SearchBar() {
   const handleClear = useCallback(() => {
     setInputValue("");
     setKeyword("");
+    if (historyDebounceRef.current) clearTimeout(historyDebounceRef.current);
     inputRef.current?.focus();
   }, [setKeyword]);
 
   useEffect(() => {
     return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (historyDebounceRef.current) clearTimeout(historyDebounceRef.current);
     };
   }, []);
 
@@ -158,12 +165,12 @@ export function SearchBar() {
   }, [setTimeRange]);
 
   const timeRangeOptions: { value: TimeRange; label: string }[] = [
-    { value: "all", label: tc("search.timeAll") },
-    { value: "today", label: tc("search.timeToday") },
-    { value: "3days", label: tc("search.time3Days") },
-    { value: "week", label: tc("search.timeWeek") },
-    { value: "month", label: tc("search.timeMonth") },
-    { value: "3months", label: tc("search.time3Months") },
+    { value: "all", label: t("search.timeAll") },
+    { value: "today", label: t("search.timeToday") },
+    { value: "3days", label: t("search.time3Days") },
+    { value: "week", label: t("search.timeWeek") },
+    { value: "month", label: t("search.timeMonth") },
+    { value: "3months", label: t("search.time3Months") },
   ];
 
   return (
@@ -216,7 +223,7 @@ export function SearchBar() {
               "absolute right-1 flex h-6 w-6 items-center justify-center rounded-full transition-colors",
               timeRange !== "all" ? "text-primary" : "text-muted-foreground hover:text-foreground"
             )}
-            title={tc("search.timeFilter")}
+            title={t("search.timeFilter")}
           >
             <Calendar className="w-3.5 h-3.5" />
             {timeRange !== "all" && (
@@ -257,7 +264,7 @@ export function SearchBar() {
       {/* Search history dropdown - only when hovered, empty input, has history */}
       {isHovered && !inputValue.trim() && searchHistory.length > 0 && !showTimeDropdown && (
         <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-lg border border-border/60 bg-card shadow-lg overflow-hidden">
-          <div className="px-3 py-1.5 text-xs text-muted-foreground">{tc("search.recentSearches")}</div>
+          <div className="px-3 py-1.5 text-xs text-muted-foreground">{t("search.recentSearches")}</div>
           {searchHistory.map((item) => (
             <div
               key={item.id}
@@ -284,7 +291,7 @@ export function SearchBar() {
             onClick={handleClearAllHistory}
             className="w-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors border-t border-border/30"
           >
-            {tc("search.clearHistory")}
+            {t("search.clearHistory")}
           </button>
         </div>
       )}

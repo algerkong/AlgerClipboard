@@ -54,7 +54,7 @@ CodeMirror 6 code editor with 12+ language syntax highlighting, TipTap 2 WYSIWYG
 
 | Category | Details |
 |----------|---------|
-| **Clipboard** | Auto-capture text, images, rich text, files &bull; SHA-256 deduplication &bull; Search & type filtering &bull; Smart content classification |
+| **Clipboard** | Auto-capture text, images, rich text, files &bull; SHA-256 deduplication &bull; [FTS5 full-text search](./docs/en/search-guide.md) with pinyin, regex, time filter &bull; Smart content classification |
 | **Editing** | CodeMirror 6 with toolbar (font size, line numbers, word wrap) &bull; TipTap 2 rich text WYSIWYG &bull; Split view (editor / split / preview) |
 | **Rendering** | Markdown (GFM) &bull; KaTeX math formulas &bull; Shiki code highlighting &bull; Mermaid diagrams &bull; Rich text (clean/full mode) |
 | **AI** | Multi-provider (OpenAI, Claude, Gemini, DeepSeek, Ollama, custom) &bull; Auto-summary &bull; AI translation &bull; Ask AI panel |
@@ -138,6 +138,10 @@ src-tauri/              # Rust backend
 │   └── paste/          # System paste simulation
 └── icons/              # App icons
 ```
+
+## Search
+
+Full-text search powered by SQLite FTS5 with multi-keyword, exact phrase, exclusion, regex, pinyin matching, time range filtering, and search history. See the [Search Guide](./docs/en/search-guide.md) for details.
 
 ## Cloud Sync Setup
 

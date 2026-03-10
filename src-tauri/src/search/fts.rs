@@ -7,6 +7,16 @@ use crate::clipboard::entry::ClipboardEntry;
 
 /// Initialize FTS5 virtual table and search_history table.
 pub fn init_fts(conn: &Connection) -> Result<(), String> {
+    // Check if existing FTS table has ocr_text column; if not, recreate it
+    let has_ocr_text = conn
+        .prepare("SELECT ocr_text FROM entries_fts LIMIT 0")
+        .is_ok();
+
+    if !has_ocr_text {
+        // Drop old FTS table if it exists (will be rebuilt on startup)
+        let _ = conn.execute_batch("DROP TABLE IF EXISTS entries_fts;");
+    }
+
     conn.execute_batch(
         "CREATE VIRTUAL TABLE IF NOT EXISTS entries_fts USING fts5(
             entry_id UNINDEXED,
@@ -16,6 +26,7 @@ pub fn init_fts(conn: &Connection) -> Result<(), String> {
             file_names,
             tags_text,
             pinyin_text,
+            ocr_text,
             content_type UNINDEXED,
             created_at UNINDEXED,
             tokenize='unicode61 remove_diacritics 2'
@@ -82,12 +93,13 @@ pub fn index_entry(
     let file_names = extract_file_names(entry.file_meta.as_deref());
     let tags_text = tags.join(" ");
     let pinyin_text = to_pinyin_text(text_content);
+    let ocr_text = entry.ocr_text.as_deref().unwrap_or("");
     let content_type = entry.content_type.as_str();
     let created_at = &entry.created_at;
 
     conn.execute(
-        "INSERT INTO entries_fts (entry_id, text_content, ai_summary, source_app, file_names, tags_text, pinyin_text, content_type, created_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+        "INSERT INTO entries_fts (entry_id, text_content, ai_summary, source_app, file_names, tags_text, pinyin_text, ocr_text, content_type, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
         params![
             entry.id,
             text_content,
@@ -96,6 +108,7 @@ pub fn index_entry(
             file_names,
             tags_text,
             pinyin_text,
+            ocr_text,
             content_type,
             created_at,
         ],
@@ -133,6 +146,16 @@ pub fn update_summary(conn: &Connection, entry_id: &str, summary: &str) -> Resul
         params![summary, entry_id],
     )
     .map_err(|e| format!("Failed to update summary in FTS: {}", e))?;
+    Ok(())
+}
+
+/// Update OCR text for an entry in the FTS index.
+pub fn update_ocr_text(conn: &Connection, entry_id: &str, ocr_text: &str) -> Result<(), String> {
+    conn.execute(
+        "UPDATE entries_fts SET ocr_text = ?1 WHERE entry_id = ?2",
+        params![ocr_text, entry_id],
+    )
+    .map_err(|e| format!("Failed to update ocr_text in FTS: {}", e))?;
     Ok(())
 }
 
@@ -301,6 +324,7 @@ fn search_regex(
             OR f.ai_summary REGEXP ?1
             OR f.file_names REGEXP ?1
             OR f.source_app REGEXP ?1
+            OR f.ocr_text REGEXP ?1
         )",
     );
     let mut param_values: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
@@ -371,14 +395,14 @@ pub fn rebuild_index(conn: &Connection) -> Result<usize, String> {
     let mut stmt = conn
         .prepare(
             "SELECT e.id, e.content_type, e.text_content, e.ai_summary, e.source_app,
-                    e.file_meta, e.created_at
+                    e.file_meta, e.created_at, e.ocr_text
              FROM entries e
              WHERE e.deleted = 0
              ORDER BY e.created_at DESC",
         )
         .map_err(|e| format!("Failed to prepare rebuild query: {}", e))?;
 
-    let entries: Vec<(String, String, Option<String>, Option<String>, Option<String>, Option<String>, String)> = stmt
+    let entries: Vec<(String, String, Option<String>, Option<String>, Option<String>, Option<String>, String, Option<String>)> = stmt
         .query_map([], |row| {
             Ok((
                 row.get::<_, String>(0)?,
@@ -388,6 +412,7 @@ pub fn rebuild_index(conn: &Connection) -> Result<usize, String> {
                 row.get::<_, Option<String>>(4)?,
                 row.get::<_, Option<String>>(5)?,
                 row.get::<_, String>(6)?,
+                row.get::<_, Option<String>>(7)?,
             ))
         })
         .map_err(|e| format!("Failed to query entries for rebuild: {}", e))?
@@ -396,7 +421,7 @@ pub fn rebuild_index(conn: &Connection) -> Result<usize, String> {
 
     let count = entries.len();
 
-    for (id, content_type, text_content, ai_summary, source_app, file_meta, created_at) in &entries
+    for (id, content_type, text_content, ai_summary, source_app, file_meta, created_at, ocr_text) in &entries
     {
         // Get tags for this entry
         let tags: Vec<String> = conn
@@ -413,11 +438,12 @@ pub fn rebuild_index(conn: &Connection) -> Result<usize, String> {
         let fnames = extract_file_names(file_meta.as_deref());
         let tags_text = tags.join(" ");
         let pinyin = to_pinyin_text(text);
+        let ocr = ocr_text.as_deref().unwrap_or("");
 
         let _ = conn.execute(
-            "INSERT INTO entries_fts (entry_id, text_content, ai_summary, source_app, file_names, tags_text, pinyin_text, content_type, created_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-            params![id, text, summary, app, fnames, tags_text, pinyin, content_type, created_at],
+            "INSERT INTO entries_fts (entry_id, text_content, ai_summary, source_app, file_names, tags_text, pinyin_text, ocr_text, content_type, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            params![id, text, summary, app, fnames, tags_text, pinyin, ocr, content_type, created_at],
         );
     }
 
