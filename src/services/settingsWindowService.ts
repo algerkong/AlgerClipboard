@@ -24,7 +24,7 @@ export async function openSettingsWindow(tab?: string) {
     minWidth: 560,
     minHeight: 460,
     ...getManagedWindowDecorations(),
-    alwaysOnTop: true,
+    alwaysOnTop: false,
     center: true,
     shadow: true,
     resizable: true,

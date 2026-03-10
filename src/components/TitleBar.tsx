@@ -11,6 +11,7 @@ interface Props {
   onClose: () => void;
   title?: string;
   showSyncIndicator?: boolean;
+  showPinButton?: boolean;
 }
 
 function SyncIndicator() {
@@ -62,26 +63,28 @@ function SyncIndicator() {
 }
 
 /* Windows/Linux-style square icon buttons */
-function WinLinuxButtons({ onClose }: { onClose: () => void }) {
+function WinLinuxButtons({ onClose, showPinButton = true }: { onClose: () => void; showPinButton?: boolean }) {
   const isPinned = useSettingsStore((s) => s.isPinned);
   const setIsPinned = useSettingsStore((s) => s.setIsPinned);
 
   const handleMinimize = () => getCurrentWebviewWindow().minimize();
-  const handleTogglePin = async () => {
-    const win = getCurrentWebviewWindow();
-    const next = !isPinned;
-    await win.setAlwaysOnTop(next);
-    setIsPinned(next);
+  const handleTogglePin = () => {
+    // Pin only controls auto-hide-on-blur behavior.
+    // alwaysOnTop stays true always — it's required for a skip-taskbar
+    // popup window to properly receive focus on Windows.
+    setIsPinned(!isPinned);
   };
 
   return (
     <div className="flex items-center gap-0.5">
-      <button
-        onClick={handleTogglePin}
-        className="titlebar-icon-btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        {isPinned ? <Pin className="w-3 h-3" /> : <PinOff className="w-3 h-3" />}
-      </button>
+      {showPinButton && (
+        <button
+          onClick={handleTogglePin}
+          className="titlebar-icon-btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {isPinned ? <Pin className="w-3 h-3" /> : <PinOff className="w-3 h-3" />}
+        </button>
+      )}
       <button
         onClick={handleMinimize}
         className="titlebar-icon-btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -103,11 +106,8 @@ function PinButton() {
   const isPinned = useSettingsStore((s) => s.isPinned);
   const setIsPinned = useSettingsStore((s) => s.setIsPinned);
 
-  const handleTogglePin = async () => {
-    const win = getCurrentWebviewWindow();
-    const next = !isPinned;
-    await win.setAlwaysOnTop(next);
-    setIsPinned(next);
+  const handleTogglePin = () => {
+    setIsPinned(!isPinned);
   };
 
   return (
@@ -145,6 +145,7 @@ export function TitleBar({
   onClose,
   title,
   showSyncIndicator = true,
+  showPinButton = true,
 }: Props) {
   const platform = usePlatform();
   const buttonPosition = useSettingsStore((s) => s.buttonPosition);
@@ -168,9 +169,11 @@ export function TitleBar({
       <div data-tauri-drag-region className={`flex h-9 shrink-0 items-center justify-between border-b border-border/50 bg-card/70 px-2 backdrop-blur-md select-none ${blurClass}`}>
         <div className="w-[72px] shrink-0" />
         <TitleText title={title} showSyncIndicator={showSyncIndicator} />
-        <div className="pr-2">
-          <PinButton />
-        </div>
+        {showPinButton && (
+          <div className="pr-2">
+            <PinButton />
+          </div>
+        )}
       </div>
     );
   }
@@ -180,7 +183,7 @@ export function TitleBar({
     return (
       <div data-tauri-drag-region className="flex h-9 shrink-0 items-center justify-between border-b border-border/50 bg-card/70 px-2 backdrop-blur-md select-none">
         <div className="pl-1">
-          <WinLinuxButtons onClose={onClose} />
+          <WinLinuxButtons onClose={onClose} showPinButton={showPinButton} />
         </div>
         <div data-tauri-drag-region className="flex-1" />
         <div className="pr-2">
@@ -195,7 +198,7 @@ export function TitleBar({
     <div data-tauri-drag-region className="flex h-9 shrink-0 items-center justify-between border-b border-border/50 bg-card/70 px-3 backdrop-blur-md select-none">
       <TitleText title={title} showSyncIndicator={showSyncIndicator} />
       <div className="-mr-1">
-        <WinLinuxButtons onClose={onClose} />
+        <WinLinuxButtons onClose={onClose} showPinButton={showPinButton} />
       </div>
     </div>
   );
