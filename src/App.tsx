@@ -505,12 +505,19 @@ function MainApp() {
   }, []);
 
   useEffect(() => {
-    const unlisten = listen<ClipboardEntry>("clipboard-changed", (event) => {
-      addEntry(event.payload);
-      toast.success(t("toast.copied"));
-      // Trigger realtime sync after a short debounce
-      setTimeout(() => realtimeSyncRef.current(), 500);
-    });
+    const unlisten = listen<{ entry: ClipboardEntry; from_paste: boolean }>(
+      "clipboard-changed",
+      (event) => {
+        addEntry(event.payload.entry);
+        // Suppress the "Copied" toast when the clipboard change was caused by
+        // our own paste operation — the user will already see a "Pasted" toast.
+        if (!event.payload.from_paste) {
+          toast.success(t("toast.copied"));
+        }
+        // Trigger realtime sync after a short debounce
+        setTimeout(() => realtimeSyncRef.current(), 500);
+      }
+    );
 
     return () => {
       unlisten.then((fn) => fn());

@@ -11,7 +11,7 @@ import { TypeFilter } from "@/components/TypeFilter";
 import { EntryCard } from "@/components/EntryCard";
 import { TemplateQuickPicker } from "@/components/TemplateQuickPicker";
 import { useClipboardStore } from "@/stores/clipboardStore";
-import { pasteEntry } from "@/services/clipboardService";
+import { pasteEntry, handlePasteError } from "@/services/clipboardService";
 import { openImageViewer } from "@/services/imageViewerService";
 import { openFileViewer } from "@/services/fileViewerService";
 import { openDetailWindow } from "@/services/detailWindowService";
@@ -105,7 +105,7 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
         setShortcutModifierPressed(false);
         pasteEntry(entryId)
           .then(() => toast.success(t("toast.pasted")))
-          .catch(() => toast.error(t("toast.pasteFailed")));
+          .catch((err: unknown) => handlePasteError(err, t));
         return;
       }
 
@@ -136,7 +136,7 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
         e.preventDefault();
         pasteEntry(selectedId)
           .then(() => toast.success(t("toast.pasted")))
-          .catch(() => toast.error(t("toast.pasteFailed")));
+          .catch((err: unknown) => handlePasteError(err, t));
       } else if (e.key === " " && selectedId) {
         if (isEditableTarget(e.target)) return;
         e.preventDefault();

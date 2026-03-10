@@ -159,7 +159,18 @@ pub fn run() {
             let db_for_ocr = db.clone();
             let blob_for_ocr = blob_store.clone();
             monitor.start(db.clone(), blob_store, move |entry| {
-                let _ = app_handle.emit("clipboard-changed", &entry);
+                // Check if this clipboard change was triggered by our own paste
+                // operation. If so, the frontend should skip the "Copied" toast.
+                let from_paste = crate::paste::take_paste_in_progress();
+                #[derive(serde::Serialize, Clone)]
+                struct ClipboardChangedPayload<'a> {
+                    entry: &'a crate::clipboard::entry::ClipboardEntry,
+                    from_paste: bool,
+                }
+                let _ = app_handle.emit(
+                    "clipboard-changed",
+                    ClipboardChangedPayload { entry: &entry, from_paste },
+                );
 
                 // Auto-summarize text entries if AI is configured
                 let has_text = entry.text_content.as_ref().map_or(false, |t| !t.is_empty());

@@ -79,6 +79,12 @@ pub fn show_and_focus_main_window(app: &tauri::AppHandle, window: &tauri::Webvie
             tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
 
             if let Some(window) = app_handle.get_webview_window(&window_label) {
+                // Skip if the window was hidden in the meantime (e.g. paste operation
+                // already transferred focus to the target app). Re-focusing here would
+                // steal focus back from the paste target and break the paste.
+                if !window.is_visible().unwrap_or(false) {
+                    break;
+                }
                 let _ = window.set_focus();
                 force_window_focus(&window);
                 focus_window_webview(&app_handle, &window);

@@ -25,6 +25,7 @@ import {
   getEntry,
   pasteEntry,
   updateEntryText,
+  handlePasteError,
 } from "@/services/clipboardService";
 import { aiSummarize, updateAiSummary } from "@/services/aiService";
 import { openSettingsWindow } from "@/services/settingsWindowService";
@@ -162,8 +163,8 @@ export function DetailPage() {
     try {
       await pasteEntry(entry.id);
       toast.success(t("toast.pasted"));
-    } catch {
-      toast.error(t("toast.pasteFailed"));
+    } catch (err) {
+      handlePasteError(err, t);
     }
   }, [entry, t]);
 

@@ -4,7 +4,7 @@ import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages, Pin, Eye, Cop
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { useCapabilityStore } from "@/stores/capabilityStore";
 import { useSettingsStore } from "@/stores/settingsStore";
-import { pasteEntry, getThumbnailBase64 } from "@/services/clipboardService";
+import { pasteEntry, getThumbnailBase64, handlePasteError } from "@/services/clipboardService";
 import { openUrl } from "@/services/settingsService";
 import type { ClipboardEntry, FileMeta } from "@/types";
 import { openFileViewer } from "@/services/fileViewerService";
@@ -305,7 +305,7 @@ export const EntryCard = memo(function EntryCard({
   const handlePaste = useCallback(() => {
     pasteEntry(entry.id)
       .then(() => toast.success(t("toast.pasted")))
-      .catch(() => toast.error(t("toast.pasteFailed")));
+      .catch((err: unknown) => handlePasteError(err, t));
   }, [entry.id, t]);
   const handleDoubleClick = useCallback(() => {
     handlePaste();
