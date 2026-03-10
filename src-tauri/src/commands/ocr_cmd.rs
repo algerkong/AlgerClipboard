@@ -340,3 +340,21 @@ pub fn remove_rapidocr_runtime(
 pub fn clear_ocr_cache(db: State<'_, AppDatabase>) -> Result<(), String> {
     db.0.clear_ocr_cache()
 }
+
+#[tauri::command]
+pub fn get_ocr_trigger_mode(db: State<'_, AppDatabase>) -> Result<String, String> {
+    let mode = db
+        .0
+        .get_setting("ocr_auto_trigger")
+        .unwrap_or(None)
+        .unwrap_or_else(|| "on_clipboard".to_string());
+    Ok(mode)
+}
+
+#[tauri::command]
+pub fn set_ocr_trigger_mode(
+    db: State<'_, AppDatabase>,
+    mode: String,
+) -> Result<(), String> {
+    db.0.set_setting("ocr_auto_trigger", &mode)
+}

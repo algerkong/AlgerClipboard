@@ -8,6 +8,8 @@ import {
   Loader2,
   Maximize,
   ScanSearch,
+  ClipboardCopy,
+  ChevronDown,
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
@@ -17,7 +19,7 @@ import { usePreviewCloseShortcut } from "@/hooks/usePreviewCloseShortcut";
 import { CloseConfirmDialog } from "@/components/CloseConfirmDialog";
 import { useTranslation } from "react-i18next";
 import { getThumbnailBase64 } from "@/services/clipboardService";
-import { getEnabledOcrEngines, ocrRecognize, type OcrEngineInfo } from "@/services/ocrService";
+import { getEnabledOcrEngines, getDefaultOcrEngine, ocrRecognize, type OcrEngineInfo } from "@/services/ocrService";
 import { translateText } from "@/services/translateService";
 import { toast } from "@/lib/toast";
 import type { OcrResult, OcrTextLine } from "@/types";
@@ -49,12 +51,16 @@ export function ImageViewerPage() {
   const imgRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [imgSize, setImgSize] = useState({ width: 0, height: 0 });
+  const userChangedEngine = useRef(false);
 
   // Save window size on resize (debounced), restored by imageViewerService on next open
   useEffect(() => trackWindowSize(IMAGE_VIEWER_SIZE_KEY), []);
 
   useEffect(() => {
     getEnabledOcrEngines().then(setAvailableEngines).catch(() => {});
+    getDefaultOcrEngine().then((engine) => {
+      setSelectedEngine(engine);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -102,6 +108,14 @@ export function ImageViewerPage() {
     }
   }, [blobPath, selectedEngine, t]);
 
+  // Re-run OCR when user manually selects a different engine
+  useEffect(() => {
+    if (userChangedEngine.current) {
+      userChangedEngine.current = false;
+      runOcr();
+    }
+  }, [selectedEngine, runOcr]);
+
   const handleClose = useCallback(async () => {
     await invoke("focus_main_window").catch(() => {});
     getCurrentWebviewWindow().close();
@@ -130,6 +144,15 @@ export function ImageViewerPage() {
     } finally {
       setTranslateLoading(false);
     }
+  }, [ocrResult, translatedLines, showTranslated, t]);
+
+  const handleCopyText = useCallback(() => {
+    if (!ocrResult || ocrResult.lines.length === 0) return;
+    const text = showTranslated && translatedLines
+      ? translatedLines.filter(Boolean).join("\n")
+      : ocrResult.lines.map((l) => l.text).join("\n");
+    navigator.clipboard.writeText(text);
+    toast.success(t("imageViewer.copyText"));
   }, [ocrResult, translatedLines, showTranslated, t]);
 
   // Intercept copy to force plain text (prevent HTML/rich text clipboard pollution)
@@ -171,64 +194,64 @@ export function ImageViewerPage() {
         )}
         style={{ backgroundColor: bgColor ?? (bgMode === "checker-light" ? "#ffffff" : "#1e1e1e") }}
       >
-        <div data-tauri-drag-region className="flex items-center gap-2">
-          <span data-tauri-drag-region className={cn("text-sm2 font-medium", textClass)}>
+        <div data-tauri-drag-region className="flex items-center gap-1.5">
+          <span data-tauri-drag-region className={cn("text-[11px] font-medium", textClass)}>
             {t("imageViewer.title")}
           </span>
           <div className="flex items-center gap-0.5">
-            <button onClick={handleZoomOut} className={cn("p-0.5 rounded hover:opacity-80 transition-colors", textClass)} title={t("imageViewer.zoomOut")}>
-              <ZoomOut className="w-3 h-3" />
+            <button onClick={handleZoomOut} className={cn("p-0.5 rounded hover:opacity-80 transition-colors cursor-pointer", textClass)} title={t("imageViewer.zoomOut")}>
+              <ZoomOut className="w-2.5 h-2.5" />
             </button>
-            <span className={cn("text-xs2 min-w-[32px] text-center", textClass)}>{Math.round(zoom * 100)}%</span>
-            <button onClick={handleZoomIn} className={cn("p-0.5 rounded hover:opacity-80 transition-colors", textClass)} title={t("imageViewer.zoomIn")}>
-              <ZoomIn className="w-3 h-3" />
+            <span className={cn("text-[10px] min-w-[28px] text-center", textClass)}>{Math.round(zoom * 100)}%</span>
+            <button onClick={handleZoomIn} className={cn("p-0.5 rounded hover:opacity-80 transition-colors cursor-pointer", textClass)} title={t("imageViewer.zoomIn")}>
+              <ZoomIn className="w-2.5 h-2.5" />
             </button>
-            <button onClick={handleResetZoom} className={cn("p-0.5 rounded hover:opacity-80 transition-colors", textClass)} title={t("imageViewer.resetZoom")}>
-              <RotateCcw className="w-2.5 h-2.5" />
+            <button onClick={handleResetZoom} className={cn("p-0.5 rounded hover:opacity-80 transition-colors cursor-pointer", textClass)} title={t("imageViewer.resetZoom")}>
+              <RotateCcw className="w-2 h-2" />
             </button>
           </div>
           {/* Fit mode toggle */}
           <button
             onClick={() => setFitMode((m) => m === "fit" ? "actual" : "fit")}
-            className={cn("p-0.5 rounded hover:opacity-80 transition-colors", textClass)}
+            className={cn("p-0.5 rounded hover:opacity-80 transition-colors cursor-pointer", textClass)}
             title={fitMode === "fit" ? t("imageViewer.actualSize") : t("imageViewer.fitWindow")}
           >
-            {fitMode === "fit" ? <ScanSearch className="w-3 h-3" /> : <Maximize className="w-3 h-3" />}
+            {fitMode === "fit" ? <ScanSearch className="w-2.5 h-2.5" /> : <Maximize className="w-2.5 h-2.5" />}
           </button>
           {availableEngines.length > 1 && (
-            <select
-              value={selectedEngine ?? ""}
-              onChange={(e) => setSelectedEngine(e.target.value || undefined)}
-              className="h-5 px-1 text-xs2 bg-background border border-border/50 rounded text-foreground focus:outline-none"
-            >
-              <option value="">{t("ocr.defaultEngine")}</option>
-              {availableEngines.map((eng) => (
-                <option key={eng.engine_type} value={eng.engine_type}>{eng.label}</option>
-              ))}
-            </select>
+            <OcrEngineDropdown
+              engines={availableEngines}
+              selectedEngine={selectedEngine}
+              isDark={isDark}
+              defaultLabel={t("ocr.defaultEngine")}
+              onSelect={(val) => {
+                userChangedEngine.current = true;
+                setSelectedEngine(val);
+              }}
+            />
           )}
           {/* Background mode toggle */}
-          <div className={cn("flex items-center h-5 rounded border overflow-hidden", isDark ? "border-white/20" : "border-black/15")}>
+          <div className={cn("flex items-center h-4 rounded border overflow-hidden", isDark ? "border-white/20" : "border-black/15")}>
             <button
               onClick={() => setBgMode("black")}
               className={cn(
-                "h-full w-5 flex items-center justify-center transition-colors",
+                "h-full w-4 flex items-center justify-center transition-colors cursor-pointer",
                 bgMode === "black" ? (isDark ? "bg-white/20" : "bg-black/10") : (isDark ? "hover:bg-white/10" : "hover:bg-black/5"),
               )}
               title={t("imageViewer.bgBlack")}
             >
-              <span className="w-2.5 h-2.5 rounded-sm bg-neutral-700 border border-neutral-600" />
+              <span className="w-2 h-2 rounded-sm bg-neutral-700 border border-neutral-600" />
             </button>
             <button
               onClick={() => setBgMode("checker-dark")}
               className={cn(
-                "h-full w-5 flex items-center justify-center transition-colors border-x",
+                "h-full w-4 flex items-center justify-center transition-colors cursor-pointer border-x",
                 isDark ? "border-white/20" : "border-black/15",
                 bgMode === "checker-dark" ? (isDark ? "bg-white/20" : "bg-black/10") : (isDark ? "hover:bg-white/10" : "hover:bg-black/5"),
               )}
               title={t("imageViewer.bgCheckerDark")}
             >
-              <svg viewBox="0 0 8 8" className="w-3 h-3" shapeRendering="crispEdges">
+              <svg viewBox="0 0 8 8" className="w-2.5 h-2.5" shapeRendering="crispEdges">
                 <rect width="8" height="8" fill="#2a2a2a" />
                 <rect x="0" y="0" width="4" height="4" fill="#3a3a3a" />
                 <rect x="4" y="4" width="4" height="4" fill="#3a3a3a" />
@@ -237,13 +260,13 @@ export function ImageViewerPage() {
             <button
               onClick={() => setBgMode("checker-light")}
               className={cn(
-                "h-full w-5 flex items-center justify-center transition-colors border-r",
+                "h-full w-4 flex items-center justify-center transition-colors cursor-pointer border-r",
                 isDark ? "border-white/20" : "border-black/15",
                 bgMode === "checker-light" ? (isDark ? "bg-white/20" : "bg-black/10") : (isDark ? "hover:bg-white/10" : "hover:bg-black/5"),
               )}
               title={t("imageViewer.bgCheckerLight")}
             >
-              <svg viewBox="0 0 8 8" className="w-3 h-3" shapeRendering="crispEdges">
+              <svg viewBox="0 0 8 8" className="w-2.5 h-2.5" shapeRendering="crispEdges">
                 <rect width="8" height="8" fill="#ffffff" />
                 <rect x="0" y="0" width="4" height="4" fill="#c8c8c8" />
                 <rect x="4" y="4" width="4" height="4" fill="#c8c8c8" />
@@ -252,42 +275,55 @@ export function ImageViewerPage() {
             <button
               onClick={() => setBgMode("white")}
               className={cn(
-                "h-full w-5 flex items-center justify-center transition-colors",
+                "h-full w-4 flex items-center justify-center transition-colors cursor-pointer",
                 bgMode === "white" ? (isDark ? "bg-white/20" : "bg-black/10") : (isDark ? "hover:bg-white/10" : "hover:bg-black/5"),
               )}
               title={t("imageViewer.bgWhite")}
             >
-              <span className="w-2.5 h-2.5 rounded-sm bg-white border border-neutral-300" />
+              <span className="w-2 h-2 rounded-sm bg-white border border-neutral-300" />
             </button>
           </div>
         </div>
 
         <div className="flex items-center gap-0.5 -mr-1">
           {ocrLoading && (
-            <span className={cn("flex items-center gap-1 px-1.5 h-5 text-xs2", textClass)}>
-              <Loader2 className="w-3 h-3 animate-spin" />
+            <span className={cn("flex items-center gap-1 px-1 h-4.5 text-[10px]", textClass)}>
+              <Loader2 className="w-2.5 h-2.5 animate-spin" />
               {t("imageViewer.extracting")}
             </span>
+          )}
+          {hasOcrText && (
+            <button
+              onClick={handleCopyText}
+              className={cn(
+                "flex items-center gap-1 px-1 h-4.5 rounded text-[10px] font-medium transition-colors cursor-pointer",
+                "text-blue-400 hover:bg-blue-400/10"
+              )}
+              title={t("imageViewer.copyText")}
+            >
+              <ClipboardCopy className="w-2.5 h-2.5" />
+              {t("imageViewer.copyText")}
+            </button>
           )}
           {hasOcrText && (
             <button
               onClick={handleTranslate}
               disabled={translateLoading}
               className={cn(
-                "flex items-center gap-1 px-1.5 h-5 rounded text-xs2 font-medium transition-colors",
+                "flex items-center gap-1 px-1 h-4.5 rounded text-[10px] font-medium transition-colors",
                 translateLoading ? "text-muted-foreground cursor-not-allowed"
-                  : showTranslated ? "text-green-400 hover:bg-green-400/10"
-                    : "text-blue-400 hover:bg-blue-400/10"
+                  : showTranslated ? "text-green-400 hover:bg-green-400/10 cursor-pointer"
+                    : "text-blue-400 hover:bg-blue-400/10 cursor-pointer"
               )}
               title={t("imageViewer.translateText")}
             >
-              {translateLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Languages className="w-3 h-3" />}
+              {translateLoading ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Languages className="w-2.5 h-2.5" />}
               {t("imageViewer.translateText")}
             </button>
           )}
           {!isMacOS && (
-            <button onClick={handleClose} className={cn("flex items-center justify-center w-6 h-6 rounded-md hover:text-red-400 hover:bg-red-500/10 transition-colors", textClass)}>
-              <X className="w-3 h-3" />
+            <button onClick={handleClose} className={cn("flex items-center justify-center w-5 h-5 rounded-md hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer", textClass)}>
+              <X className="w-2.5 h-2.5" />
             </button>
           )}
         </div>
@@ -434,6 +470,92 @@ function OcrSelectableText({
     >
       {line.text}
     </span>
+  );
+}
+
+/**
+ * Custom dropdown for OCR engine selection, themed to match image viewer background.
+ */
+function OcrEngineDropdown({
+  engines,
+  selectedEngine,
+  isDark,
+  defaultLabel,
+  onSelect,
+}: {
+  engines: OcrEngineInfo[];
+  selectedEngine: string | undefined;
+  isDark: boolean;
+  defaultLabel: string;
+  onSelect: (engine: string | undefined) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const currentLabel = selectedEngine
+    ? engines.find((e) => e.engine_type === selectedEngine)?.label ?? defaultLabel
+    : defaultLabel;
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          "flex items-center gap-0.5 h-4.5 px-1.5 text-[10px] rounded-md cursor-pointer transition-colors",
+          isDark
+            ? "bg-white/10 border border-white/15 text-neutral-300 hover:bg-white/15"
+            : "bg-black/5 border border-black/10 text-neutral-700 hover:bg-black/10"
+        )}
+      >
+        <span className="truncate max-w-[80px]">{currentLabel}</span>
+        <ChevronDown className={cn("w-2 h-2 shrink-0 transition-transform", open && "rotate-180")} />
+      </button>
+      {open && (
+        <div
+          className={cn(
+            "absolute top-full left-0 mt-1 min-w-[120px] py-0.5 rounded-lg shadow-lg z-50 border backdrop-blur-md",
+            isDark
+              ? "bg-neutral-800/95 border-white/10"
+              : "bg-white/95 border-black/10"
+          )}
+        >
+          <button
+            onClick={() => { onSelect(undefined); setOpen(false); }}
+            className={cn(
+              "w-full text-left px-2.5 py-1 text-[10px] cursor-pointer transition-colors rounded-md",
+              !selectedEngine
+                ? isDark ? "bg-white/10 text-white" : "bg-black/8 text-neutral-900"
+                : isDark ? "text-neutral-300 hover:bg-white/8" : "text-neutral-700 hover:bg-black/5"
+            )}
+          >
+            {defaultLabel}
+          </button>
+          {engines.map((eng) => (
+            <button
+              key={eng.engine_type}
+              onClick={() => { onSelect(eng.engine_type); setOpen(false); }}
+              className={cn(
+                "w-full text-left px-2.5 py-1 text-[10px] cursor-pointer transition-colors rounded-md",
+                selectedEngine === eng.engine_type
+                  ? isDark ? "bg-white/10 text-white" : "bg-black/8 text-neutral-900"
+                  : isDark ? "text-neutral-300 hover:bg-white/8" : "text-neutral-700 hover:bg-black/5"
+              )}
+            >
+              {eng.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
