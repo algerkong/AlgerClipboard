@@ -5,18 +5,23 @@ import { getSavedWindowSize } from "@/lib/windowSize";
 
 export const SETTINGS_SIZE_KEY = "settings-window-size";
 
-let windowCounter = 0;
+const SETTINGS_LABEL = "settings";
 
 export async function openSettingsWindow(tab?: string) {
-  windowCounter++;
-  const label = `settings-${windowCounter}`;
+  // If settings window already exists, focus it instead of creating a new one
+  const existing = await WebviewWindow.getByLabel(SETTINGS_LABEL);
+  if (existing) {
+    await existing.setFocus();
+    return;
+  }
+
   const url = tab
     ? `index.html?window=settings&tab=${tab}`
     : `index.html?window=settings`;
 
   const size = getSavedWindowSize(SETTINGS_SIZE_KEY, { width: 680, height: 560 });
 
-  const win = new WebviewWindow(label, {
+  const win = new WebviewWindow(SETTINGS_LABEL, {
     url,
     title: i18n.t("settings.title"),
     width: size.width,
