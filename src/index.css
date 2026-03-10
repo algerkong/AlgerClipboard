@@ -630,6 +630,166 @@ body {
   box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 10%, transparent);
 }
 
+/* ─── Styled Select (custom dropdown) ─── */
+
+.styled-select {
+  position: relative;
+  display: inline-flex;
+}
+
+.styled-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  height: 2rem;
+  padding: 0 0.6rem;
+  border-radius: 0.625rem;
+  border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+  background: color-mix(in oklab, var(--card) 70%, var(--background) 30%);
+  color: var(--foreground);
+  font-size: 0.75rem;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 150ms, box-shadow 150ms;
+  white-space: nowrap;
+}
+
+.styled-select-trigger:hover {
+  border-color: color-mix(in oklab, var(--border) 90%, transparent);
+}
+
+.styled-select-trigger:focus-visible {
+  border-color: color-mix(in oklab, var(--primary) 50%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 12%, transparent);
+}
+
+.styled-select-trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.styled-select-chevron {
+  width: 0.7rem;
+  height: 0.7rem;
+  color: var(--muted-foreground);
+  flex-shrink: 0;
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.styled-select-content {
+  border-radius: 0.625rem;
+  border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow:
+    0 4px 16px -2px rgba(0, 0, 0, 0.25),
+    0 2px 6px -1px rgba(0, 0, 0, 0.15);
+  animation: styled-select-in 120ms ease-out;
+  overflow: hidden;
+}
+
+@keyframes styled-select-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.styled-select-viewport {
+  padding: 0.25rem;
+  max-height: 12rem;
+  overflow-y: auto;
+}
+
+.styled-select-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 0.4rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 80ms;
+  color: var(--popover-foreground);
+}
+
+.styled-select-item[data-focused] {
+  background: color-mix(in oklab, var(--accent) 70%, transparent);
+}
+
+.styled-select-item[aria-selected="true"] {
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.styled-select-check {
+  width: 0.7rem;
+  height: 0.7rem;
+  flex-shrink: 0;
+  color: var(--primary);
+}
+
+.styled-select-group {
+  padding: 0.375rem 0.5rem 0.2rem;
+  font-size: 0.643rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* ─── Detail page ─── */
+
+.detail-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.375rem 0.625rem;
+  border-bottom: 1px solid var(--border);
+  gap: 0.5rem;
+  min-height: 2.25rem;
+}
+
+.detail-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.35rem 0.625rem;
+  border-top: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+  flex-wrap: wrap;
+}
+
+.detail-status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.3rem;
+  font-size: 0.643rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  opacity: 0.7;
+  background: color-mix(in oklab, var(--muted) 30%, transparent);
+}
+
+.detail-action-group {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  padding: 0.15rem;
+  border-radius: 999px;
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+
 .settings-pill-group {
   display: flex;
   flex-wrap: wrap;
