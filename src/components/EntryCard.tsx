@@ -10,6 +10,7 @@ import type { ClipboardEntry, FileMeta } from "@/types";
 import { openFileViewer } from "@/services/fileViewerService";
 import { openInFileExplorer, openFileDefault } from "@/services/clipboardService";
 import { cn } from "@/lib/utils";
+import { highlightText } from "@/lib/highlightText";
 import { useTranslation } from "react-i18next";
 import { openImageViewer } from "@/services/imageViewerService";
 import { openDetailWindow } from "@/services/detailWindowService";
@@ -242,6 +243,7 @@ export const EntryCard = memo(function EntryCard({
 }) {
   const { t } = useTranslation();
   const selectedId = useClipboardStore((s) => s.selectedId);
+  const keyword = useClipboardStore((s) => s.keyword);
   const selectEntry = useClipboardStore((s) => s.selectEntry);
   const toggleFavorite = useClipboardStore((s) => s.toggleFavorite);
   const togglePin = useClipboardStore((s) => s.togglePin);
@@ -502,7 +504,7 @@ export const EntryCard = memo(function EntryCard({
             onClick={(e) => { e.stopPropagation(); openFileViewer(entry.id); }}
           />
           <div className="min-w-0">
-            <p className="truncate text-sm2 font-medium text-foreground">{fileMetas[0].name}</p>
+            <p className="truncate text-sm2 font-medium text-foreground">{keyword ? highlightText(fileMetas[0].name, keyword) : fileMetas[0].name}</p>
             <p className="text-2xs text-muted-foreground">{formatFileSize(fileMetas[0].size)}</p>
           </div>
         </div>
@@ -529,7 +531,9 @@ export const EntryCard = memo(function EntryCard({
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm2 font-medium text-foreground">
-              {fileMetas.length === 1 ? fileMetas[0].name : `${fileMetas.length} files`}
+              {fileMetas.length === 1
+                ? (keyword ? highlightText(fileMetas[0].name, keyword) : fileMetas[0].name)
+                : `${fileMetas.length} files`}
             </p>
             <p className="text-2xs text-muted-foreground">
               {formatFileSize(fileMetas.reduce((sum, f) => sum + f.size, 0))}
@@ -562,7 +566,7 @@ export const EntryCard = memo(function EntryCard({
     // Plain text preview
     return (
       <p className="line-clamp-3 text-base2 leading-relaxed text-foreground break-all">
-        {getPreview(entry, t, fileMetas)}
+        {keyword ? highlightText(getPreview(entry, t, fileMetas), keyword) : getPreview(entry, t, fileMetas)}
       </p>
     );
   };
@@ -680,7 +684,7 @@ export const EntryCard = memo(function EntryCard({
           {/* AI summary block */}
           {entry.ai_summary && (
             <div className="mt-1.5 line-clamp-1 rounded-md border-l-2 px-2 py-0.5 text-[0.714rem] italic leading-snug text-muted-foreground" style={{ background: "color-mix(in oklab, var(--primary) 6%, transparent)", borderLeftColor: "color-mix(in oklab, var(--primary) 35%, transparent)" }}>
-              {entry.ai_summary}
+              {keyword ? highlightText(entry.ai_summary, keyword) : entry.ai_summary}
             </div>
           )}
 

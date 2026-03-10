@@ -8,6 +8,7 @@ mod sync;
 mod translate;
 mod search;
 
+use clipboard::entry::ContentType;
 use clipboard::monitor::ClipboardMonitor;
 use commands::clipboard_cmd::AppDatabase;
 use commands::paste_cmd::{AppBlobStore, AppPasteTargetState, PasteTargetSnapshot};
@@ -155,6 +156,8 @@ pub fn run() {
             let monitor = ClipboardMonitor::new(device_id);
             let app_handle = app.handle().clone();
             let db_for_ai = db.clone();
+            let db_for_ocr = db.clone();
+            let blob_for_ocr = blob_store.clone();
             monitor.start(db.clone(), blob_store, move |entry| {
                 let _ = app_handle.emit("clipboard-changed", &entry);
 
@@ -234,6 +237,46 @@ pub fn run() {
                             }
                         }
                     });
+                }
+
+                // Auto-OCR for image entries when trigger mode is "on_clipboard"
+                if entry.content_type == ContentType::Image {
+                    if let Some(ref blob_path) = entry.blob_path {
+                        let db = db_for_ocr.clone();
+                        let blob = blob_for_ocr.clone();
+                        let handle = app_handle.clone();
+                        let blob_path = blob_path.clone();
+
+                        tauri::async_runtime::spawn(async move {
+                            let trigger_mode = db
+                                .get_setting("ocr_auto_trigger")
+                                .unwrap_or(None)
+                                .unwrap_or_else(|| "on_clipboard".to_string());
+
+                            if trigger_mode != "on_clipboard" {
+                                return;
+                            }
+
+                            let full_path = blob.get_blob_path(&blob_path);
+                            let image_data = match std::fs::read(&full_path) {
+                                Ok(data) => data,
+                                Err(e) => {
+                                    log::warn!("Auto-OCR: failed to read blob '{}': {}", blob_path, e);
+                                    return;
+                                }
+                            };
+
+                            let app_db = AppDatabase(db);
+                            match commands::ocr_cmd::run_ocr_with_app(&handle, &app_db, image_data, None).await {
+                                Ok(_) => {
+                                    log::info!("Auto-OCR completed for {}", blob_path);
+                                }
+                                Err(e) => {
+                                    log::warn!("Auto-OCR failed for {}: {}", blob_path, e);
+                                }
+                            }
+                        });
+                    }
                 }
             });
 
@@ -443,6 +486,13 @@ pub fn run() {
             commands::ocr_cmd::install_rapidocr_runtime,
             commands::ocr_cmd::remove_rapidocr_runtime,
             commands::ocr_cmd::clear_ocr_cache,
+            commands::ocr_cmd::get_ocr_trigger_mode,
+            commands::ocr_cmd::set_ocr_trigger_mode,
+            commands::search_cmd::search_entries,
+            commands::search_cmd::add_search_history,
+            commands::search_cmd::get_search_history,
+            commands::search_cmd::delete_search_history,
+            commands::search_cmd::clear_search_history,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

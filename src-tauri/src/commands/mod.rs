@@ -5,6 +5,7 @@ pub mod file_cmd;
 pub mod notification_cmd;
 pub mod ocr_cmd;
 pub mod paste_cmd;
+pub mod search_cmd;
 pub mod settings_cmd;
 pub mod sync_cmd;
 pub mod template_cmd;
