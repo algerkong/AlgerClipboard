@@ -10,7 +10,11 @@
     "noEntries": "No clipboard entries yet",
     "copyToStart": "Copy something to get started",
     "items": "{{count}} items",
-    "pasteHint": "← → switch · ↵ paste · esc close"
+    "pasteHint": "← → switch · ↵ paste · esc close",
+    "statusSelect": "Select",
+    "statusToggle": "Switch",
+    "statusPaste": "Paste",
+    "statusPreview": "Preview"
   },
   "detail": {
     "title": "Detail",

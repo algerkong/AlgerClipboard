@@ -15,6 +15,7 @@ import { pasteEntry } from "@/services/clipboardService";
 import { openImageViewer } from "@/services/imageViewerService";
 import { openFileViewer } from "@/services/fileViewerService";
 import { openDetailWindow } from "@/services/detailWindowService";
+import { openUrl } from "@/services/settingsService";
 import { useTranslation } from "react-i18next";
 import { toast } from "@/lib/toast";
 import { usePlatform } from "@/contexts/PlatformContext";
@@ -145,6 +146,8 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
           openImageViewer(entry.blob_path);
         } else if (entry.content_type === "FilePaths") {
           openFileViewer(entry.id);
+        } else if (entry.text_content && /^https?:\/\/\S+$/i.test(entry.text_content.trim())) {
+          openUrl(entry.text_content.trim()).catch(() => toast.error(t("toast.openUrlFailed")));
         } else {
           openDetailWindow(entry.id, "view");
         }
@@ -180,100 +183,109 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
 
   return (
     <div className="app-shell flex h-full flex-col">
-      <div className="px-3 pb-1 pt-2">
-        <div className="animate-float-up">
-          <div className="flex items-center gap-1.5 px-1 py-1">
-            <SearchBar />
-            <div className="relative shrink-0">
-              <button
-                onClick={() => setShowTemplatePicker((value) => !value)}
-                className="toolbar-icon-btn shrink-0"
-                title={t("template.title")}
-                aria-label={t("template.title")}
-              >
-                <FileText className="h-4 w-4" />
-              </button>
-              {showTemplatePicker && (
-                <TemplateQuickPicker onClose={() => setShowTemplatePicker(false)} />
-              )}
-            </div>
-            <button
-              onClick={onOpenSettings}
-              className="toolbar-icon-btn shrink-0"
-              title={t("settings.title")}
-              aria-label={t("settings.title")}
-            >
-              <Settings className="h-4 w-4" />
-            </button>
-          </div>
+      {/* Header: search + buttons */}
+      <div className="flex items-center gap-1.5 px-2 pb-1.5 pt-1">
+        <SearchBar />
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setShowTemplatePicker((value) => !value)}
+            className="header-action-btn shrink-0"
+            title={t("template.title")}
+            aria-label={t("template.title")}
+          >
+            <FileText className="h-[15px] w-[15px]" />
+          </button>
+          {showTemplatePicker && (
+            <TemplateQuickPicker onClose={() => setShowTemplatePicker(false)} />
+          )}
         </div>
+        <button
+          onClick={onOpenSettings}
+          className="header-action-btn shrink-0"
+          title={t("settings.title")}
+          aria-label={t("settings.title")}
+        >
+          <Settings className="h-[15px] w-[15px]" />
+        </button>
       </div>
 
+      {/* Filter tabs */}
       <TypeFilter />
 
-      <div className="flex-1 min-h-0 px-3 pb-0">
-        <div className="surface-panel relative h-full overflow-hidden rounded-t-2xl border-b-0">
-          {loading && (
-            <div className="pointer-events-none absolute right-3 top-3 z-10 flex items-center gap-2 rounded-full border border-border/60 bg-card/90 px-2.5 py-1 text-2xs font-medium text-muted-foreground shadow-sm">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              <span>{t("clipboardPanel.loading")}</span>
-            </div>
-          )}
+      {/* Entry list */}
+      <div className="relative flex-1 min-h-0">
+        {loading && (
+          <div className="pointer-events-none absolute right-3 top-2 z-10 flex items-center gap-2 rounded-full border border-border/60 bg-card/90 px-2.5 py-1 text-2xs font-medium text-muted-foreground shadow-sm">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <span>{t("clipboardPanel.loading")}</span>
+          </div>
+        )}
 
-          {displayEntries.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-muted-foreground/70">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/50">
-                <ClipboardList className="h-7 w-7 text-muted-foreground/55" />
-              </div>
-              <div className="text-center">
-                <p className="text-sm2 font-medium text-foreground">
-                  {hasActiveFilters
-                    ? t("clipboardPanel.emptyFiltered")
-                    : t("clipboardPanel.noEntries")}
-                </p>
-                <p className="mt-1 text-xs2">
-                  {hasActiveFilters
-                    ? t("clipboardPanel.emptyFilteredHint")
-                    : t("clipboardPanel.copyToStart")}
-                </p>
-              </div>
+        {displayEntries.length === 0 ? (
+          <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-muted-foreground/70">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/50">
+              <ClipboardList className="h-7 w-7 text-muted-foreground/55" />
             </div>
-          ) : (
-            <Virtuoso
-              ref={virtuosoRef}
-              data={displayEntries}
-              rangeChanged={(range) => {
-                setVisibleRange({ startIndex: range.startIndex, endIndex: range.endIndex });
-              }}
-              itemContent={(index, entry) => (
-                <div
-                  className={cn(
-                    "relative px-2",
-                    index === 0 ? "pt-2 pb-1" : "py-1",
-                    index === displayEntries.length - 1 ? "pb-4" : "",
-                    index !== displayEntries.length - 1 && "after:absolute after:bottom-0 after:left-14 after:right-6 after:h-px after:bg-border/40"
-                  )}
-                >
-                  <EntryCard
-                    entry={entry}
-                    shortcutNumber={
-                      shortcutModifierPressed
-                        ? shortcutNumbersByEntryId.get(entry.id) ?? null
-                        : null
-                    }
-                  />
-                </div>
-              )}
-              overscan={100}
-              className="h-full"
-            />
-          )}
-        </div>
+            <div className="text-center">
+              <p className="text-sm2 font-medium text-foreground">
+                {hasActiveFilters
+                  ? t("clipboardPanel.emptyFiltered")
+                  : t("clipboardPanel.noEntries")}
+              </p>
+              <p className="mt-1 text-xs2">
+                {hasActiveFilters
+                  ? t("clipboardPanel.emptyFilteredHint")
+                  : t("clipboardPanel.copyToStart")}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <Virtuoso
+            ref={virtuosoRef}
+            data={displayEntries}
+            rangeChanged={(range) => {
+              setVisibleRange({ startIndex: range.startIndex, endIndex: range.endIndex });
+            }}
+            itemContent={(index, entry) => (
+              <div
+                className={cn(
+                  "px-2",
+                  index === 0 ? "pt-0.5" : "",
+                  index === displayEntries.length - 1 ? "pb-3" : "border-b border-border/20"
+                )}
+              >
+                <EntryCard
+                  entry={entry}
+                  shortcutNumber={
+                    shortcutModifierPressed
+                      ? shortcutNumbersByEntryId.get(entry.id) ?? null
+                      : null
+                  }
+                />
+              </div>
+            )}
+            overscan={100}
+            className="h-full"
+          />
+        )}
       </div>
 
-      <div className="status-bar-panel flex shrink-0 items-center justify-between px-4 py-1.5 text-xs2 text-muted-foreground/80">
+      {/* Status bar */}
+      <div className="status-bar-panel flex shrink-0 items-center justify-between px-2.5 py-1.5 text-xs2 text-muted-foreground/80">
         <span>{t("clipboardPanel.items", { count: totalCount })}</span>
-        <span>{t("clipboardPanel.pasteHint")}</span>
+        <div className="flex items-center gap-1.5">
+          <kbd className="status-kbd">↑↓</kbd>
+          <span>{t("clipboardPanel.statusSelect")}</span>
+          <span className="text-border">·</span>
+          <kbd className="status-kbd">←→</kbd>
+          <span>{t("clipboardPanel.statusToggle")}</span>
+          <span className="text-border">·</span>
+          <kbd className="status-kbd">↵</kbd>
+          <span>{t("clipboardPanel.statusPaste")}</span>
+          <span className="text-border">·</span>
+          <kbd className="status-kbd">␣</kbd>
+          <span>{t("clipboardPanel.statusPreview")}</span>
+        </div>
       </div>
     </div>
   );

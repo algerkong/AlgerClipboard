@@ -144,10 +144,10 @@ export function TypeFilter() {
   }, [activeRow, getActivePrimaryIndex, handlePrimaryClick, handleSecondaryClick, secondaryTabs, showTagPanel, tagFilter]);
 
   return (
-    <div className="px-3 pb-2 pt-1">
-      <div className="surface-panel overflow-hidden rounded-[1.25rem] shadow-sm">
-        <div className="tab-scroll-area overflow-x-auto px-2 py-1.5">
-          <div className="inline-flex min-w-full items-center gap-1">
+    <div className="px-2 pb-1.5">
+      {/* Primary filter row */}
+      <div className="tab-scroll-area overflow-x-auto">
+        <div className="inline-flex min-w-full items-center gap-1">
           {filters.map((item, index) => (
             <button
               key={item.labelKey}
@@ -161,7 +161,7 @@ export function TypeFilter() {
                 "filter-pill flex shrink-0 items-center whitespace-nowrap px-0 font-medium leading-none text-muted-foreground transition-all",
                 isPrimaryActive(item)
                   ? "text-foreground"
-                  : "hover:border-primary/20 hover:bg-accent/50 hover:text-foreground"
+                  : "hover:bg-accent/50 hover:text-foreground"
               )}
             >
               <span style={tabIconStyle} className="inline-flex items-center justify-center">{item.icon}</span>
@@ -180,7 +180,7 @@ export function TypeFilter() {
               "filter-pill flex shrink-0 items-center whitespace-nowrap px-0 font-medium leading-none text-muted-foreground transition-all",
               isPrimaryActive("tag")
                 ? "text-foreground"
-                : "hover:border-primary/20 hover:bg-accent/50 hover:text-foreground"
+                : "hover:bg-accent/50 hover:text-foreground"
             )}
           >
             <Tag style={tabIconStyle} />
@@ -189,13 +189,9 @@ export function TypeFilter() {
         </div>
       </div>
 
+      {/* Secondary tag filter row */}
       {showTagPanel && (
-        <div className="border-t border-border/10 bg-background/20 px-2.5 py-2">
-          <div className="mb-1 flex items-center justify-between px-1">
-            <span className="text-2xs font-semibold uppercase tracking-[0.18em] text-muted-foreground/80">
-              {t("tags.title")}
-            </span>
-          </div>
+        <div className="mt-1 border-t border-border/20 pt-1.5">
           <div className="tab-scroll-area overflow-x-auto">
             <div className="inline-flex min-w-full items-center gap-1">
               <button
@@ -209,7 +205,7 @@ export function TypeFilter() {
                   "filter-pill flex shrink-0 items-center whitespace-nowrap px-0 font-medium leading-none text-muted-foreground transition-all",
                   tagFilter === null
                     ? "text-foreground"
-                    : "hover:border-primary/20 hover:bg-accent/50 hover:text-foreground"
+                    : "hover:bg-accent/50 hover:text-foreground"
                 )}
               >
                 <span>{t("tags.all")}</span>
@@ -228,7 +224,7 @@ export function TypeFilter() {
                     "filter-pill flex shrink-0 items-center whitespace-nowrap px-0 font-medium leading-none text-muted-foreground transition-all",
                     tagFilter === tag
                       ? "text-foreground"
-                      : "hover:border-primary/20 hover:bg-accent/50 hover:text-foreground"
+                      : "hover:bg-accent/50 hover:text-foreground"
                   )}
                 >
                   <span>{tag}</span>
@@ -241,7 +237,7 @@ export function TypeFilter() {
               <button
                 onClick={() => void openTagManagerWindow()}
                 style={tabStyle}
-                className="filter-pill ml-1 flex shrink-0 items-center whitespace-nowrap px-0 font-medium leading-none text-muted-foreground transition-all hover:border-primary/20 hover:bg-accent/50 hover:text-foreground"
+                className="filter-pill ml-1 flex shrink-0 items-center whitespace-nowrap px-0 font-medium leading-none text-muted-foreground transition-all hover:bg-accent/50 hover:text-foreground"
               >
                 <Settings style={tabIconStyle} />
                 <span>{t("tags.manage")}</span>
@@ -250,7 +246,6 @@ export function TypeFilter() {
           </div>
         </div>
       )}
-      </div>
     </div>
   );
 }
