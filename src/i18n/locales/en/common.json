@@ -36,7 +36,11 @@
     "downloading": "Downloading update...",
     "ready": "Update downloaded, restarting...",
     "latest": "You are on the latest version",
-    "failed": "Update check failed"
+    "failed": "Update check failed",
+    "confirmTitle": "Update Available",
+    "confirmMessage": "A new version {{version}} is available. Would you like to update now?",
+    "confirmOk": "Update Now",
+    "confirmCancel": "Later"
   },
   "toast": {
     "copied": "Copied",

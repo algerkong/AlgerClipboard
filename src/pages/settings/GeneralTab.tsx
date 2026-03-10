@@ -8,7 +8,7 @@ import {
   type ThemeColorPreset,
   type UIScale,
 } from "@/stores/settingsStore";
-import { checkForUpdates, downloadAndInstall } from "@/services/updateService";
+import { checkForUpdates, promptAndInstallUpdate } from "@/services/updateService";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { toast } from "@/lib/toast";
@@ -444,8 +444,7 @@ export function GeneralTab() {
               try {
                 const info = await checkForUpdates();
                 if (info) {
-                  toast.success(t("update.available", { version: info.version }));
-                  await downloadAndInstall(info.update);
+                  await promptAndInstallUpdate(info);
                 } else {
                   toast.info(t("update.latest"));
                 }

@@ -20,7 +20,7 @@ import { useCapabilityStore } from "@/stores/capabilityStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { PlatformProvider } from "@/contexts/PlatformContext";
 import { useSyncStore } from "@/stores/syncStore";
-import { checkForUpdates, downloadAndInstall } from "@/services/updateService";
+import { startPeriodicUpdateCheck, stopPeriodicUpdateCheck } from "@/services/updateService";
 import { openUrl } from "@/services/settingsService";
 import type { ClipboardEntry } from "@/types";
 import { getSavedWindowSize, trackWindowSize } from "@/lib/windowSize";
@@ -441,24 +441,16 @@ function MainApp() {
     loadAccounts();
   }, [loadSettings, fetchHistory, loadAccounts]);
 
-  // Auto-check for updates on startup
+  // Auto-check for updates on startup and periodically
   const autoCheckUpdate = useSettingsStore((s) => s.autoCheckUpdate);
   const autoDownloadUpdate = useSettingsStore((s) => s.autoDownloadUpdate);
   useEffect(() => {
-    if (!autoCheckUpdate) return;
-    const timer = setTimeout(async () => {
-      try {
-        const info = await checkForUpdates();
-        if (info) {
-          if (autoDownloadUpdate) {
-            await downloadAndInstall(info.update);
-          }
-        }
-      } catch {
-        // silently ignore update check failures on startup
-      }
-    }, 3000);
-    return () => clearTimeout(timer);
+    if (!autoCheckUpdate) {
+      stopPeriodicUpdateCheck();
+      return;
+    }
+    startPeriodicUpdateCheck({ autoDownloadUpdate });
+    return () => stopPeriodicUpdateCheck();
   }, [autoCheckUpdate, autoDownloadUpdate]);
 
   // Sync i18n language with stored locale
