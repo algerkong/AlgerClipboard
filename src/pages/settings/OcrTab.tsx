@@ -20,6 +20,8 @@ import {
   getRapidOcrRuntimeStatus,
   installRapidOcrRuntime,
   removeRapidOcrRuntime,
+  getOcrTriggerMode,
+  setOcrTriggerMode,
   type OcrEngineConfig,
   type RapidOcrRuntimeStatus,
 } from "@/services/ocrService";
@@ -56,6 +58,7 @@ export function OcrTab() {
 
   const [engineForms, setEngineForms] = useState<Record<string, EngineForm>>({});
   const [defaultEngine, setDefaultEngine] = useState("");
+  const [triggerMode, setTriggerMode] = useState("on_clipboard");
   const [cacheCleared, setCacheCleared] = useState(false);
   const [rapidStatus, setRapidStatus] = useState<RapidOcrRuntimeStatus | null>(null);
   const [rapidBusy, setRapidBusy] = useState(false);
@@ -90,6 +93,10 @@ export function OcrTab() {
       .then(setDefaultEngine)
       .catch(() => {});
 
+    getOcrTriggerMode()
+      .then(setTriggerMode)
+      .catch(() => {});
+
     getRapidOcrRuntimeStatus()
       .then(setRapidStatus)
       .catch(() => {});
@@ -122,6 +129,11 @@ export function OcrTab() {
   const handleSetDefault = async (engineType: string) => {
     setDefaultEngine(engineType);
     await setDefaultOcrEngine(engineType).catch(() => {});
+  };
+
+  const handleSetTriggerMode = async (mode: string) => {
+    setTriggerMode(mode);
+    await setOcrTriggerMode(mode).catch(() => {});
   };
 
   const updateField = (engineId: string, field: keyof EngineForm, value: string | boolean) => {
@@ -205,6 +217,20 @@ export function OcrTab() {
               value={defaultEngine}
               onChange={handleSetDefault}
               options={engineList.map((eng) => ({ value: eng.id, label: eng.label }))}
+              className="w-[15rem]"
+            />
+          }
+        />
+        <SettingsRow
+          title={t("ocr.triggerMode")}
+          control={
+            <StyledSelect
+              value={triggerMode}
+              onChange={handleSetTriggerMode}
+              options={[
+                { value: "on_clipboard", label: t("ocr.triggerOnClipboard") },
+                { value: "on_preview", label: t("ocr.triggerOnPreview") },
+              ]}
               className="w-[15rem]"
             />
           }

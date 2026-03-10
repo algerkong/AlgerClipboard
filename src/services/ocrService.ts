@@ -72,3 +72,11 @@ export async function installRapidOcrRuntime(): Promise<RapidOcrRuntimeStatus> {
 export async function removeRapidOcrRuntime(): Promise<RapidOcrRuntimeStatus> {
   return invoke("remove_rapidocr_runtime");
 }
+
+export async function getOcrTriggerMode(): Promise<string> {
+  return invoke("get_ocr_trigger_mode");
+}
+
+export async function setOcrTriggerMode(mode: string): Promise<void> {
+  return invoke("set_ocr_trigger_mode", { mode });
+}

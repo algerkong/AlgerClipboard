@@ -37,6 +37,9 @@
     "rapidUsingSources": "安装源",
     "localModelHint": "本地模型需要自行安装环境。程序通过 stdin 传入 base64 图片数据，从 stdout 读取 JSON 结果。",
     "clearCache": "清除 OCR 缓存",
-    "cacheCleared": "缓存已清除"
+    "cacheCleared": "缓存已清除",
+    "triggerMode": "OCR 触发时机",
+    "triggerOnClipboard": "图片进入剪贴板时",
+    "triggerOnPreview": "打开图片预览时"
   }
 }

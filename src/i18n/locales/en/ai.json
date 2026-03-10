@@ -37,6 +37,9 @@
     "rapidUsingSources": "Installer sources",
     "localModelHint": "Local model requires manual installation. The program sends base64 image data via stdin and reads JSON results from stdout.",
     "clearCache": "Clear OCR Cache",
-    "cacheCleared": "Cache Cleared"
+    "cacheCleared": "Cache Cleared",
+    "triggerMode": "OCR Trigger Timing",
+    "triggerOnClipboard": "When image enters clipboard",
+    "triggerOnPreview": "When opening image preview"
   }
 }
