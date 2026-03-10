@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { X, Minus, Pin, PinOff, Cloud, CloudOff, Loader2 } from "lucide-react";
+import appIcon from "@/assets/app-icon.png";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useTranslation } from "react-i18next";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -130,9 +131,10 @@ function TitleText({
   const { t } = useTranslation();
   return (
     <div data-tauri-drag-region className="flex items-center gap-1.5">
+      <img src={appIcon} alt="" className="h-4 w-4 shrink-0" draggable={false} data-tauri-drag-region />
       <span
         data-tauri-drag-region
-        className="text-[length:var(--app-title-font-size)] font-semibold uppercase tracking-[0.2em] text-muted-foreground"
+        className="text-[length:var(--app-title-font-size)] font-semibold text-muted-foreground"
       >
         {title ?? t("titleBar.clipboard")}
       </span>

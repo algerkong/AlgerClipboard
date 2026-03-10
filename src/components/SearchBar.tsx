@@ -88,7 +88,7 @@ export function SearchBar() {
         value={inputValue}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
-        className="w-full h-8 rounded-full border border-transparent bg-accent/40 py-1.5 pl-9 pr-9 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground/70 focus:bg-accent focus:border-primary/30"
+        className="w-full h-8 rounded-lg border-[1.5px] border-border/60 bg-accent/30 py-1.5 pl-9 pr-9 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground/70 focus:bg-card focus:border-primary/30 focus:ring-3 focus:ring-ring/8"
       />
       {inputValue && (
         <button

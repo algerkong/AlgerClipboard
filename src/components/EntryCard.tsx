@@ -23,6 +23,68 @@ import { sanitizePreviewHtml } from "@/lib/richText";
 // In-memory cache: relative_path -> data URL
 const _thumbCache = new Map<string, string>();
 
+// In-memory cache: source_icon (base64) -> dominant color string
+const _iconColorCache = new Map<string, string>();
+
+function extractDominantColor(iconSrc: string): Promise<string> {
+  const cached = _iconColorCache.get(iconSrc);
+  if (cached) return Promise.resolve(cached);
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const size = 16;
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { resolve(""); return; }
+      ctx.drawImage(img, 0, 0, size, size);
+      const data = ctx.getImageData(0, 0, size, size).data;
+
+      // Simple: find the most saturated, non-gray pixel
+      let bestR = 128, bestG = 128, bestB = 128, bestScore = -1;
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
+        if (a < 128) continue; // skip transparent
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        const sat = max === 0 ? 0 : (max - min) / max;
+        const lum = (r + g + b) / 3;
+        // Prefer saturated, mid-luminance colors
+        const score = sat * 2 + (1 - Math.abs(lum / 255 - 0.45));
+        if (score > bestScore) {
+          bestScore = score;
+          bestR = r; bestG = g; bestB = b;
+        }
+      }
+      const color = `rgb(${bestR}, ${bestG}, ${bestB})`;
+      _iconColorCache.set(iconSrc, color);
+      resolve(color);
+    };
+    img.onerror = () => resolve("");
+    img.src = iconSrc;
+  });
+}
+
+function useDominantColor(sourceIcon: string | null): string {
+  const fallback = "";
+  const [color, setColor] = useState(() => sourceIcon ? _iconColorCache.get(sourceIcon) ?? fallback : fallback);
+
+  useEffect(() => {
+    if (!sourceIcon) { setColor(fallback); return; }
+    const cached = _iconColorCache.get(sourceIcon);
+    if (cached) { setColor(cached); return; }
+    let cancelled = false;
+    extractDominantColor(sourceIcon).then((c) => {
+      if (!cancelled && c) setColor(c);
+    });
+    return () => { cancelled = true; };
+  }, [sourceIcon]);
+
+  return color;
+}
+
 function useImageSrc(entry: ClipboardEntry): string | null {
   const path = entry.thumbnail_path ?? entry.blob_path;
   const [loadedImage, setLoadedImage] = useState<{ path: string; src: string } | null>(null);
@@ -111,16 +173,12 @@ function getIcon(type: string, fileMetas?: FileMeta[]) {
   }
 }
 
-function getTypeLabel(type: string, t: (key: string) => string): string {
+function getTypeLineColor(type: string): string {
   switch (type) {
-    case "Image":
-      return t("typeFilter.image");
-    case "FilePaths":
-      return t("typeFilter.file");
-    case "RichText":
-      return t("clipboardPanel.richText");
-    default:
-      return t("typeFilter.text");
+    case "Image": return "oklch(0.55 0.18 155)";
+    case "FilePaths": return "oklch(0.6 0.2 50)";
+    case "RichText": return "oklch(0.55 0.22 300)";
+    default: return "oklch(0.55 0.2 260)";
   }
 }
 
@@ -230,6 +288,8 @@ export const EntryCard = memo(function EntryCard({
     ? isNonChinese(entry.text_content)
     : false;
   const imageSrc = useImageSrc(entry);
+  const dominantColor = useDominantColor(entry.source_icon);
+  const typeLineColor = dominantColor || getTypeLineColor(entry.content_type);
   const availableTags = useMemo(() => {
     const query = tagInputValue.trim().toLowerCase();
     return allTags.filter((tag) => {
@@ -429,65 +489,111 @@ export const EntryCard = memo(function EntryCard({
     return items;
   };
 
+  const renderContent = () => {
+    // File paths with image thumbnail
+    if (isFilePaths && fileMetas.length === 1 && fileMetas[0].file_type === "Image" && imageSrc) {
+      return (
+        <div className="flex items-start gap-2.5">
+          <img
+            src={imageSrc}
+            alt={fileMetas[0].name}
+            className="h-[42px] w-14 shrink-0 rounded-lg border border-border/30 object-cover cursor-zoom-in shadow-xs"
+            draggable={false}
+            onClick={(e) => { e.stopPropagation(); openFileViewer(entry.id); }}
+          />
+          <div className="min-w-0">
+            <p className="truncate text-sm2 font-medium text-foreground">{fileMetas[0].name}</p>
+            <p className="text-2xs text-muted-foreground">{formatFileSize(fileMetas[0].size)}</p>
+          </div>
+        </div>
+      );
+    }
+    // Image with thumbnail
+    if (isImage && imageSrc) {
+      return (
+        <img
+          src={imageSrc}
+          alt=""
+          className="max-h-[82px] max-w-full rounded-lg border border-border/30 object-cover cursor-zoom-in"
+          draggable={false}
+          onClick={(e) => { e.stopPropagation(); handleOpenImageViewer(); }}
+        />
+      );
+    }
+    // File paths (non-image) — file info block
+    if (isFilePaths && fileMetas.length > 0) {
+      return (
+        <div className="flex items-center gap-2.5 rounded-lg border px-2 py-1.5" style={{ background: "color-mix(in oklab, var(--muted) 30%, transparent)", borderColor: "color-mix(in oklab, var(--border) 50%, transparent)" }}>
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: "color-mix(in oklab, var(--primary) 8%, transparent)" }}>
+            {getIcon(entry.content_type, fileMetas)}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm2 font-medium text-foreground">
+              {fileMetas.length === 1 ? fileMetas[0].name : `${fileMetas.length} files`}
+            </p>
+            <p className="text-2xs text-muted-foreground">
+              {formatFileSize(fileMetas.reduce((sum, f) => sum + f.size, 0))}
+              {fileMetas.length === 1 && fileMetas[0].file_type !== "Other" && ` · ${fileMetas[0].file_type}`}
+            </p>
+          </div>
+        </div>
+      );
+    }
+    // Rich text preview
+    if (showRichTextPreview) {
+      return (
+        <div
+          className="rich-text-content rich-text-content--preview break-all text-base2 leading-relaxed text-foreground"
+          dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+          onClick={(e) => {
+            const anchor = (e.target as HTMLElement).closest("a");
+            if (anchor) {
+              e.preventDefault();
+              e.stopPropagation();
+              const href = anchor.getAttribute("href");
+              if (href && /^https?:\/\//i.test(href)) {
+                openUrl(href).catch(() => toast.error(t("toast.openUrlFailed")));
+              }
+            }
+          }}
+        />
+      );
+    }
+    // Plain text preview
+    return (
+      <p className="line-clamp-3 text-base2 leading-relaxed text-foreground break-all">
+        {getPreview(entry, t, fileMetas)}
+      </p>
+    );
+  };
+
   return (
     <div
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
       className={cn(
-        "entry-card-shell group relative cursor-pointer overflow-hidden p-3 transition-all duration-200",
+        "group relative cursor-pointer overflow-hidden rounded-lg border-[1.5px] border-transparent px-2.5 py-1.5 transition-all duration-200",
         isSelected
-          ? "entry-card-shell--selected"
-          : "hover:bg-accent/50"
+          ? "border-border/60 bg-accent/70"
+          : "hover:border-border/60 hover:bg-accent/25"
       )}
     >
       {shortcutNumber !== null && (
-        <div className="absolute right-2.5 top-2.5 z-20 flex h-5 min-w-5 items-center justify-center rounded-full border border-primary/35 bg-card/95 px-1 text-2xs font-semibold text-primary shadow-sm">
+        <div className="absolute right-2.5 top-2.5 z-20 flex h-5 min-w-5 items-center justify-center rounded-md border border-primary/35 bg-card/95 px-1 text-2xs font-semibold text-primary shadow-sm">
           {shortcutNumber}
         </div>
       )}
 
-      <div className="flex min-w-0 items-start gap-2.5">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border border-border/40 bg-card/50 shadow-sm">
-          {getIcon(entry.content_type, fileMetas)}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex min-h-7 items-center justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="meta-pill inline-flex items-center gap-1 text-xs text-muted-foreground">
-                  {getTypeLabel(entry.content_type, t)}
-                </span>
-                {entry.content_category && entry.content_category !== "General" && (
-                  <span className="meta-pill inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    {entry.content_category}
-                  </span>
-                )}
-                {entry.detected_language && (
-                  <span className="meta-pill inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    {entry.detected_language}
-                  </span>
-                )}
-                {entry.is_pinned && (
-                  <span className="meta-pill inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <Pin className="h-2.5 w-2.5 fill-current" />
-                    {t("entryCard.pin")}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="flex shrink-0 items-center gap-1">
+      {/* Floating action buttons — hover only */}
+      <div className="absolute right-1.5 top-1.5 z-10 flex gap-px rounded-lg p-0.5 opacity-0 shadow-sm backdrop-blur-sm transition-opacity duration-150 group-hover:opacity-100" style={{ background: "color-mix(in oklab, var(--card) 92%, transparent)" }}>
               {hasText && entry.text_content && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     startAskAi(entry.id, { x: e.clientX, y: e.clientY });
                   }}
-                  className={cn(
-                    "entry-action text-muted-foreground transition-all hover:text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    isSelected ? "opacity-100 scale-100" : "opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100"
-                  )}
+                  className="flex items-center justify-center min-w-7 min-h-7 rounded-md border border-transparent cursor-pointer text-muted-foreground transition-all hover:bg-primary/10 hover:text-primary hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   title={t("askAi.askAi")}
                   aria-label={t("askAi.askAi")}
                 >
@@ -499,10 +605,7 @@ export const EntryCard = memo(function EntryCard({
                   e.stopPropagation();
                   handlePaste();
                 }}
-                className={cn(
-                  "entry-action text-muted-foreground transition-all hover:text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  isSelected ? "opacity-100 scale-100" : "opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100"
-                )}
+                className="flex items-center justify-center min-w-7 min-h-7 rounded-md border border-transparent cursor-pointer text-muted-foreground transition-all hover:bg-primary/10 hover:text-primary hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 title={t("contextMenu.paste")}
                 aria-label={t("contextMenu.paste")}
               >
@@ -514,10 +617,7 @@ export const EntryCard = memo(function EntryCard({
                     e.stopPropagation();
                     openFileViewer(entry.id);
                   }}
-                  className={cn(
-                    "entry-action text-muted-foreground transition-all hover:text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    isSelected ? "opacity-100 scale-100" : "opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100"
-                  )}
+                  className="flex items-center justify-center min-w-7 min-h-7 rounded-md border border-transparent cursor-pointer text-muted-foreground transition-all hover:bg-primary/10 hover:text-primary hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   title={t("contextMenu.previewFile")}
                   aria-label={t("contextMenu.previewFile")}
                 >
@@ -534,10 +634,7 @@ export const EntryCard = memo(function EntryCard({
                       openDetailWindow(entry.id, "view");
                     }
                   }}
-                  className={cn(
-                    "entry-action text-muted-foreground transition-all hover:text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    isSelected ? "opacity-100 scale-100" : "opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100"
-                  )}
+                  className="flex items-center justify-center min-w-7 min-h-7 rounded-md border border-transparent cursor-pointer text-muted-foreground transition-all hover:bg-primary/10 hover:text-primary hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   title={isImage ? t("contextMenu.viewImage") : t("contextMenu.viewFull")}
                   aria-label={isImage ? t("contextMenu.viewImage") : t("contextMenu.viewFull")}
                 >
@@ -547,9 +644,8 @@ export const EntryCard = memo(function EntryCard({
               <button
                 onClick={handleTogglePin}
                 className={cn(
-                  "entry-action transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  entry.is_pinned ? "text-primary opacity-100 scale-100" : "text-muted-foreground hover:text-primary opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100",
-                  isSelected && !entry.is_pinned && "opacity-100 scale-100"
+                  "flex items-center justify-center min-w-7 min-h-7 rounded-md border border-transparent cursor-pointer transition-all hover:bg-primary/10 hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  entry.is_pinned ? "text-primary" : "text-muted-foreground hover:text-primary"
                 )}
                 title={entry.is_pinned ? t("entryCard.unpin") : t("entryCard.pin")}
                 aria-label={entry.is_pinned ? t("entryCard.unpin") : t("entryCard.pin")}
@@ -559,64 +655,36 @@ export const EntryCard = memo(function EntryCard({
               <button
                 onClick={handleToggleFavorite}
                 className={cn(
-                  "entry-action transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  entry.is_favorite ? "text-yellow-400 opacity-100 scale-100" : "text-muted-foreground hover:text-yellow-400 opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100",
-                  isSelected && !entry.is_favorite && "opacity-100 scale-100"
+                  "flex items-center justify-center min-w-7 min-h-7 rounded-md border border-transparent cursor-pointer transition-all hover:bg-primary/10 hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  entry.is_favorite ? "text-yellow-400" : "text-muted-foreground hover:text-yellow-400"
                 )}
                 title={entry.is_favorite ? t("contextMenu.unfavorite") : t("contextMenu.favorite")}
                 aria-label={entry.is_favorite ? t("contextMenu.unfavorite") : t("contextMenu.favorite")}
               >
                 <Star className={cn("h-3 w-3", entry.is_favorite && "fill-current")} />
               </button>
-            </div>
-          </div>
+      </div>
 
-          <div className="mt-1.5">
-          {isFilePaths && fileMetas.length === 1 && fileMetas[0].file_type === "Image" && imageSrc ? (
-            <img
-              src={imageSrc}
-              alt={fileMetas[0].name}
-              className="max-h-[82px] max-w-full rounded-lg border border-border/30 object-cover cursor-zoom-in"
-              draggable={false}
-              onClick={(e) => { e.stopPropagation(); openFileViewer(entry.id); }}
-            />
-          ) : isImage && imageSrc ? (
-            <img
-              src={imageSrc}
-              alt=""
-              className="max-h-[82px] max-w-full rounded-lg border border-border/30 object-cover cursor-zoom-in"
-              draggable={false}
-              onClick={(e) => { e.stopPropagation(); handleOpenImageViewer(); }}
-            />
-          ) : showRichTextPreview ? (
-            <div
-              className="rich-text-content rich-text-content--preview break-all text-base2 leading-relaxed text-foreground"
-              dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
-              onClick={(e) => {
-                const anchor = (e.target as HTMLElement).closest("a");
-                if (anchor) {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const href = anchor.getAttribute("href");
-                  if (href && /^https?:\/\//i.test(href)) {
-                    openUrl(href).catch(() => toast.error(t("toast.openUrlFailed")));
-                  }
-                }
-              }}
-            />
-          ) : (
-            <p className="line-clamp-3 text-base2 leading-relaxed text-foreground break-all">
-              {getPreview(entry, t, fileMetas)}
-            </p>
-          )}
-          </div>
+      {/* Type indicator line — flush left */}
+      <div
+        className={cn(
+          "absolute left-0 top-2 bottom-2 w-[3px] rounded-full transition-opacity duration-150",
+          isSelected ? "opacity-100" : "opacity-50 group-hover:opacity-75"
+        )}
+        style={{ background: typeLineColor }}
+      />
 
+      <div className="min-w-0 flex-1">
+          {renderContent()}
+
+          {/* AI summary block */}
           {entry.ai_summary && (
-            <p className="mt-1 line-clamp-2 text-xs2 italic text-muted-foreground/85">
+            <div className="mt-1.5 line-clamp-1 rounded-md border-l-2 px-2 py-0.5 text-[0.714rem] italic leading-snug text-muted-foreground" style={{ background: "color-mix(in oklab, var(--primary) 6%, transparent)", borderLeftColor: "color-mix(in oklab, var(--primary) 35%, transparent)" }}>
               {entry.ai_summary}
-            </p>
+            </div>
           )}
 
+          {/* Compact meta row */}
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs2 text-muted-foreground">
             <span className="meta-pill inline-flex items-center gap-1 text-xs text-muted-foreground">{formatTimeAgo(entry.created_at)}</span>
             {entry.source_app && (
@@ -628,12 +696,31 @@ export const EntryCard = memo(function EntryCard({
                 textClassName="text-xs2 text-muted-foreground"
               />
             )}
-            {entry.sync_status !== "Local" && (
+            {entry.detected_language && (
+              <span className="meta-pill inline-flex items-center gap-1 rounded bg-muted/40 px-1 py-px font-mono text-2xs text-muted-foreground">
+                {entry.detected_language}
+              </span>
+            )}
+            {entry.content_category && entry.content_category !== "General" && (
               <span className="meta-pill inline-flex items-center gap-1 text-xs text-muted-foreground">
+                {entry.content_category}
+              </span>
+            )}
+            {entry.is_pinned && (
+              <span className="text-primary">
+                <Pin className="h-2.5 w-2.5 fill-current" />
+              </span>
+            )}
+            {entry.is_favorite && (
+              <span className="text-yellow-400">
+                <Star className="h-2.5 w-2.5 fill-current" />
+              </span>
+            )}
+            {entry.sync_status !== "Local" && (
+              <span className="inline-flex items-center">
                 {entry.sync_status === "Synced" && <Cloud className="w-2.5 h-2.5 text-green-400/70" />}
                 {entry.sync_status === "PendingSync" && <Upload className="w-2.5 h-2.5 text-blue-400/70" />}
                 {entry.sync_status === "Conflict" && <CloudAlert className="w-2.5 h-2.5 text-amber-400/70" />}
-                <span>{entry.sync_status}</span>
               </span>
             )}
             {showTranslateHint && (
@@ -661,27 +748,23 @@ export const EntryCard = memo(function EntryCard({
                 <span>{urls.length > 1 ? `${urls.length} URLs` : truncateUrl(urls[0], 24)}</span>
               </button>
             )}
+            {entry.tags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center gap-0.5 rounded bg-primary/8 px-1.5 py-px text-2xs font-medium text-primary"
+              >
+                {tag}
+                <button
+                  onClick={(e) => { e.stopPropagation(); removeTag(entry.id, tag); }}
+                  className="hover:text-red-400 transition-colors"
+                >
+                  <X className="w-2 h-2" />
+                </button>
+              </span>
+            ))}
           </div>
 
-          {entry.tags.length > 0 && (
-            <div className="mt-1.5 flex flex-wrap items-center gap-1">
-              {entry.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="meta-pill inline-flex items-center gap-1"
-                >
-                  {tag}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); removeTag(entry.id, tag); }}
-                    className="hover:text-red-400 transition-colors"
-                  >
-                    <X className="w-2 h-2" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-
+          {/* Tag input */}
           {showTagInput && (
             <div
               ref={tagEditorRef}
@@ -743,7 +826,6 @@ export const EntryCard = memo(function EntryCard({
               </div>
             </div>
           )}
-        </div>
       </div>
 
       {contextMenu && (
