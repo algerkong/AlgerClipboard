@@ -1,6 +1,6 @@
 import { listen } from "@tauri-apps/api/event";
 import { create } from "zustand";
-import type { ClipboardEntry, ContentType, TagSummary } from "@/types";
+import type { ClipboardEntry, ContentType, TagSummary, TimeRange } from "@/types";
 import {
   getClipboardHistory,
   getEntryCount,
@@ -14,6 +14,8 @@ import {
   getTagSummaries as getTagSummariesApi,
   renameTag as renameTagApi,
   deleteTagEverywhere as deleteTagEverywhereApi,
+  searchEntries,
+  addSearchHistory,
 } from "@/services/clipboardService";
 
 interface ClipboardState {
@@ -26,6 +28,7 @@ interface ClipboardState {
   showFavoritesOnly: boolean;
   tagFilter: string | null;
   showTagPanel: boolean;
+  timeRange: TimeRange;
   allTags: string[];
   tagSummaries: TagSummary[];
 
@@ -34,6 +37,7 @@ interface ClipboardState {
   setKeyword: (keyword: string) => void;
   setShowFavoritesOnly: (show: boolean) => void;
   setTagFilter: (tag: string | null) => void;
+  setTimeRange: (range: TimeRange) => void;
   setShowTagPanel: (show: boolean) => void;
   selectEntry: (id: string | null) => void;
   toggleFavorite: (id: string) => Promise<void>;
@@ -69,6 +73,7 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
   showFavoritesOnly: false,
   tagFilter: null,
   showTagPanel: false,
+  timeRange: "all" as TimeRange,
   allTags: [],
   tagSummaries: [],
 
@@ -76,17 +81,28 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
     set({ loading: true });
     try {
       const state = get();
-      const [entries, totalCount] = await Promise.all([
-        getClipboardHistory({
+      let entries: ClipboardEntry[];
+
+      if (state.keyword.trim()) {
+        // Use FTS search when keyword is present
+        entries = await searchEntries(state.keyword, {
+          typeFilter: state.typeFilter ?? undefined,
+          timeRange: state.timeRange !== "all" ? state.timeRange : undefined,
+          tagFilter: state.tagFilter ?? undefined,
+          taggedOnly: state.showTagPanel && !state.tagFilter,
+        });
+      } else {
+        // Normal history fetch (no keyword)
+        entries = await getClipboardHistory({
           limit: 200,
           offset: 0,
           type_filter: state.typeFilter ?? undefined,
-          keyword: state.keyword || undefined,
           tag_filter: state.tagFilter ?? undefined,
           tagged_only: state.showTagPanel && !state.tagFilter,
-        }),
-        getEntryCount(),
-      ]);
+        });
+      }
+
+      const totalCount = await getEntryCount();
       set({ entries, totalCount, loading: false });
     } catch (err) {
       console.error("Failed to fetch clipboard history:", err);
@@ -102,6 +118,9 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
   setKeyword: (keyword: string) => {
     set({ keyword });
     get().fetchHistory();
+    if (keyword.trim()) {
+      addSearchHistory(keyword.trim()).catch(() => {});
+    }
   },
 
   setShowFavoritesOnly: (show: boolean) => {
@@ -184,6 +203,11 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
 
   setTagFilter: (tag: string | null) => {
     set({ tagFilter: tag, showFavoritesOnly: false, showTagPanel: true });
+    get().fetchHistory();
+  },
+
+  setTimeRange: (range: TimeRange) => {
+    set({ timeRange: range });
     get().fetchHistory();
   },
 
@@ -306,7 +330,7 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
   },
 
   resetView: () => {
-    set({ typeFilter: null, keyword: "", showFavoritesOnly: false, tagFilter: null, showTagPanel: false, selectedId: null });
+    set({ typeFilter: null, keyword: "", showFavoritesOnly: false, tagFilter: null, showTagPanel: false, selectedId: null, timeRange: "all" });
     get().fetchHistory();
   },
 }));
