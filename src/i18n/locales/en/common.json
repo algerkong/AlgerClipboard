@@ -1,0 +1,88 @@
+{
+  "titleBar": {
+    "clipboard": "Clipboard"
+  },
+  "searchBar": {
+    "placeholder": "Search..."
+  },
+  "typeFilter": {
+    "all": "All",
+    "text": "Text",
+    "image": "Image",
+    "file": "File",
+    "starred": "Starred",
+    "tag": "Tag",
+    "code": "Code",
+    "url": "URL",
+    "email": "Email",
+    "json": "JSON",
+    "markdown": "Markdown",
+    "command": "Command",
+    "sql": "SQL"
+  },
+  "entryCard": {
+    "image": "Image",
+    "file": "File",
+    "pin": "Pin to top",
+    "unpin": "Unpin"
+  },
+  "notifications": {
+    "successTitle": "AlgerClipboard",
+    "errorTitle": "AlgerClipboard",
+    "infoTitle": "AlgerClipboard"
+  },
+  "update": {
+    "available": "New version {{version}} available",
+    "downloading": "Downloading update...",
+    "ready": "Update downloaded, restarting...",
+    "latest": "You are on the latest version",
+    "failed": "Update check failed"
+  },
+  "toast": {
+    "copied": "Copied",
+    "pasted": "Pasted",
+    "pasteFailed": "Paste failed",
+    "exported": "Export successful",
+    "exportFailed": "Export failed",
+    "imported": "Imported {{count}} entries",
+    "importFailed": "Import failed",
+    "cleared": "History cleared",
+    "clearFailed": "Clear failed",
+    "syncSuccess": "Sync complete",
+    "syncFailed": "Sync failed",
+    "openUrlFailed": "Failed to open URL",
+    "summarized": "Summary generated",
+    "summarizeFailed": "Summary generation failed",
+    "translateConfigRequired": "Configure a translation engine or AI first",
+    "summaryConfigRequired": "Configure AI first"
+  },
+  "contextMenu": {
+    "viewFull": "View Full Text",
+    "viewImage": "View Image",
+    "copy": "Copy",
+    "paste": "Paste",
+    "pin": "Pin to Top",
+    "unpin": "Unpin",
+    "favorite": "Favorite",
+    "unfavorite": "Unfavorite",
+    "translate": "Translate",
+    "addTag": "Add Tag",
+    "tagPlaceholder": "Enter tag name...",
+    "openInBrowser": "Open in Browser",
+    "aiSummarize": "AI Summarize",
+    "resummarize": "Re-summarize",
+    "previewFile": "Preview File",
+    "openInExplorer": "Open in Explorer",
+    "openDefault": "Open with Default App",
+    "copyFilePath": "Copy File Path",
+    "delete": "Delete"
+  },
+  "viewer": {
+    "fullText": "Full Text",
+    "codePreview": "Code Preview",
+    "copy": "Copy",
+    "translateHint": "Translate",
+    "viewSource": "Source",
+    "viewRendered": "Rendered"
+  }
+}

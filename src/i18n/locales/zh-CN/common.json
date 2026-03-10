@@ -1,0 +1,88 @@
+{
+  "titleBar": {
+    "clipboard": "剪贴板"
+  },
+  "searchBar": {
+    "placeholder": "搜索..."
+  },
+  "typeFilter": {
+    "all": "全部",
+    "text": "文本",
+    "image": "图片",
+    "file": "文件",
+    "starred": "收藏",
+    "tag": "标签",
+    "code": "代码",
+    "url": "链接",
+    "email": "邮件",
+    "json": "JSON",
+    "markdown": "Markdown",
+    "command": "命令",
+    "sql": "SQL"
+  },
+  "entryCard": {
+    "image": "图片",
+    "file": "文件",
+    "pin": "置顶",
+    "unpin": "取消置顶"
+  },
+  "notifications": {
+    "successTitle": "AlgerClipboard",
+    "errorTitle": "AlgerClipboard",
+    "infoTitle": "AlgerClipboard"
+  },
+  "update": {
+    "available": "发现新版本 {{version}}",
+    "downloading": "正在下载更新...",
+    "ready": "更新已下载，正在重启...",
+    "latest": "当前已是最新版本",
+    "failed": "检查更新失败"
+  },
+  "toast": {
+    "copied": "已复制",
+    "pasted": "已粘贴",
+    "pasteFailed": "粘贴失败",
+    "exported": "导出成功",
+    "exportFailed": "导出失败",
+    "imported": "成功导入 {{count}} 条记录",
+    "importFailed": "导入失败",
+    "cleared": "历史已清空",
+    "clearFailed": "清空失败",
+    "syncSuccess": "同步完成",
+    "syncFailed": "同步失败",
+    "openUrlFailed": "打开链接失败",
+    "summarized": "摘要生成成功",
+    "summarizeFailed": "摘要生成失败",
+    "translateConfigRequired": "请先配置翻译引擎或 AI",
+    "summaryConfigRequired": "请先配置 AI 功能"
+  },
+  "contextMenu": {
+    "viewFull": "查看全文",
+    "viewImage": "查看图片",
+    "copy": "复制",
+    "paste": "粘贴",
+    "pin": "置顶",
+    "unpin": "取消置顶",
+    "favorite": "收藏",
+    "unfavorite": "取消收藏",
+    "translate": "翻译",
+    "addTag": "添加标签",
+    "tagPlaceholder": "输入标签名...",
+    "openInBrowser": "在浏览器中打开",
+    "aiSummarize": "AI 摘要",
+    "resummarize": "重新摘要",
+    "previewFile": "预览文件",
+    "openInExplorer": "在资源管理器中打开",
+    "openDefault": "用默认程序打开",
+    "copyFilePath": "复制文件路径",
+    "delete": "删除"
+  },
+  "viewer": {
+    "fullText": "查看全文",
+    "codePreview": "代码预览",
+    "copy": "复制",
+    "translateHint": "翻译",
+    "viewSource": "源码",
+    "viewRendered": "渲染"
+  }
+}

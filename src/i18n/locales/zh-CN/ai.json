@@ -1,0 +1,42 @@
+{
+  "askAi": {
+    "askAi": "问 AI",
+    "presets": {
+      "translate": "翻译",
+      "summarize": "总结",
+      "explain": "解释",
+      "rewrite": "改写",
+      "continue": "续写",
+      "custom": "自定义提示"
+    },
+    "tabBar": "AI 服务",
+    "customPromptPlaceholder": "输入你的提示...",
+    "send": "发送",
+    "selectService": "选择 AI 服务",
+    "sending": "正在发送...",
+    "noEnabledServices": "没有启用的 AI 服务。请在设置 > 问 AI 中启用。"
+  },
+  "ocr": {
+    "defaultEngine": "默认 OCR 引擎",
+    "engineConfig": "OCR 引擎配置",
+    "apiKey": "API Key",
+    "apiSecret": "API Secret",
+    "endpoint": "接口地址",
+    "model": "模型名称",
+    "command": "启动命令",
+    "rapidInstall": "安装运行时",
+    "rapidInstalling": "安装中...",
+    "rapidRepair": "重新安装",
+    "rapidRemove": "移除运行时",
+    "rapidInstalled": "RapidOCR 运行时已安装（版本 {{version}}）",
+    "rapidNotInstalled": "RapidOCR 运行时尚未安装",
+    "rapidUnsupported": "当前平台暂不支持 RapidOCR 运行时",
+    "rapidInstallRequired": "安装 RapidOCR 运行时后，这个引擎才会变为可用。",
+    "rapidSourcesPlaceholder": "可选：每行一个 manifest 地址",
+    "rapidSourcesHint": "默认下载源慢或被拦截时，可在这里添加镜像地址或私有 manifest 地址。",
+    "rapidUsingSources": "安装源",
+    "localModelHint": "本地模型需要自行安装环境。程序通过 stdin 传入 base64 图片数据，从 stdout 读取 JSON 结果。",
+    "clearCache": "清除 OCR 缓存",
+    "cacheCleared": "缓存已清除"
+  }
+}
