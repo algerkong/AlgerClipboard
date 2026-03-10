@@ -315,7 +315,7 @@ fn unpack_runtime_archive(
             .to_path_buf();
         let out_path = destination.join(enclosed);
 
-        if file.name().ends_with('/') {
+        if is_directory_entry(&file) {
             fs::create_dir_all(&out_path)
                 .map_err(|e| format!("Failed to create runtime directory: {}", e))?;
             continue;
@@ -353,6 +353,10 @@ fn unpack_runtime_archive(
     }
 
     Ok(())
+}
+
+fn is_directory_entry(file: &zip::read::ZipFile<'_>) -> bool {
+    file.is_dir() || file.name().ends_with('/') || file.name().ends_with('\\')
 }
 
 async fn fetch_manifest(
@@ -466,4 +470,40 @@ fn write_json_file<T: Serialize>(path: &Path, value: &T) -> Result<(), String> {
     let data = serde_json::to_vec_pretty(value)
         .map_err(|e| format!("Failed to serialize JSON file: {}", e))?;
     fs::write(path, data).map_err(|e| format!("Failed to write JSON file: {}", e))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::unpack_runtime_archive;
+    use std::fs;
+    use std::io::{Cursor, Write};
+    use uuid::Uuid;
+    use zip::write::SimpleFileOptions;
+
+    #[test]
+    fn unpack_runtime_archive_handles_backslash_directory_entries() {
+        let mut buffer = Cursor::new(Vec::new());
+        {
+            let mut writer = zip::ZipWriter::new(&mut buffer);
+            let options = SimpleFileOptions::default();
+            writer.add_directory("bin\\", options).unwrap();
+            writer
+                .start_file("bin\\alger-rapidocr.exe", options)
+                .unwrap();
+            writer.write_all(b"rapidocr").unwrap();
+            writer.finish().unwrap();
+        }
+
+        let destination = std::env::temp_dir().join(format!("rapidocr-test-{}", Uuid::new_v4()));
+        fs::create_dir_all(&destination).unwrap();
+
+        let result =
+            unpack_runtime_archive(buffer.get_ref(), &destination, "bin/alger-rapidocr.exe");
+
+        let executable_path = destination.join("bin").join("alger-rapidocr.exe");
+        assert!(result.is_ok(), "{result:?}");
+        assert!(executable_path.is_file());
+
+        fs::remove_dir_all(&destination).unwrap();
+    }
 }
