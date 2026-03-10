@@ -2,13 +2,16 @@ import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import i18n from "@/i18n";
 import { getManagedWindowDecorations } from "@/services/windowOptions";
 
-let windowCounter = 0;
+const TAG_MANAGER_LABEL = "tag-manager";
 
 export async function openTagManagerWindow() {
-  windowCounter++;
-  const label = `tag-manager-${windowCounter}`;
+  const existing = await WebviewWindow.getByLabel(TAG_MANAGER_LABEL);
+  if (existing) {
+    await existing.setFocus();
+    return;
+  }
 
-  const win = new WebviewWindow(label, {
+  const win = new WebviewWindow(TAG_MANAGER_LABEL, {
     url: "index.html?window=tag-manager",
     title: i18n.t("tags.title"),
     width: 620,
