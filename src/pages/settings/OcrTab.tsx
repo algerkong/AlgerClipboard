@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { StyledSelect } from "@/components/ui/styled-select";
 import {
   Toggle,
   getOcrEngineList,
@@ -8,7 +9,6 @@ import {
   SettingsInput,
   SettingsRow,
   SettingsSection,
-  SettingsSelect,
   SettingsSubsection,
 } from "./shared";
 import {
@@ -201,16 +201,12 @@ export function OcrTab() {
         <SettingsRow
           title={t("ocr.defaultEngine")}
           control={
-            <SettingsField className="w-[15rem]">
-              <SettingsSelect
-                value={defaultEngine}
-                onChange={(e) => handleSetDefault(e.target.value)}
-              >
-                {engineList.map((eng) => (
-                  <option key={eng.id} value={eng.id}>{eng.label}</option>
-                ))}
-              </SettingsSelect>
-            </SettingsField>
+            <StyledSelect
+              value={defaultEngine}
+              onChange={handleSetDefault}
+              options={engineList.map((eng) => ({ value: eng.id, label: eng.label }))}
+              className="w-[15rem]"
+            />
           }
         />
       </SettingsSection>

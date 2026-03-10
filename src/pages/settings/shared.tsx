@@ -4,7 +4,6 @@ import type {
   ButtonHTMLAttributes,
   InputHTMLAttributes,
   ReactNode,
-  SelectHTMLAttributes,
 } from "react";
 
 export type Theme = "light" | "dark" | "system";
@@ -314,17 +313,6 @@ export function SettingsInput({
   return <input {...props} className={cn("settings-input", className)} />;
 }
 
-export function SettingsSelect({
-  className,
-  children,
-  ...props
-}: SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
-    <select {...props} className={cn("settings-select", className)}>
-      {children}
-    </select>
-  );
-}
 
 export function SettingsButton({
   tone = "default",

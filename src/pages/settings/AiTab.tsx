@@ -9,13 +9,13 @@ import {
 import { useAiStore, DEFAULT_SUMMARY_PROMPT, DEFAULT_TRANSLATE_PROMPT } from "@/stores/aiStore";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import { StyledSelect } from "@/components/ui/styled-select";
 import {
   SettingsButton,
   SettingsField,
   SettingsInput,
   SettingsRow,
   SettingsSection,
-  SettingsSelect,
   SettingsSubsection,
   Toggle,
 } from "./shared";
@@ -79,49 +79,25 @@ export function AiTab() {
         <SettingsRow
           title={t("settings.ai.provider")}
           control={
-            <SettingsField className="w-[15rem]">
-              <SettingsSelect
-                value={config.provider}
-                onChange={(e) => {
-                  const preset = providers.find((p) => p.id === e.target.value);
-                  updateConfig({
-                    provider: e.target.value,
-                    model: preset?.default_model || "",
-                    base_url: preset?.base_url || "",
-                  });
-                }}
-              >
-                <option value="">{t("settings.ai.selectProvider")}</option>
-                {groupedProviders.international.length > 0 && (
-                  <optgroup label={t("settings.ai.international")}>
-                    {groupedProviders.international.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </optgroup>
-                )}
-                {groupedProviders.domestic.length > 0 && (
-                  <optgroup label={t("settings.ai.domestic")}>
-                    {groupedProviders.domestic.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </optgroup>
-                )}
-                {groupedProviders.local.length > 0 && (
-                  <optgroup label={t("settings.ai.local")}>
-                    {groupedProviders.local.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </optgroup>
-                )}
-                {groupedProviders.custom.length > 0 && (
-                  <optgroup label={t("settings.ai.custom")}>
-                    {groupedProviders.custom.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </optgroup>
-                )}
-              </SettingsSelect>
-            </SettingsField>
+            <StyledSelect
+              value={config.provider}
+              onChange={(v) => {
+                const preset = providers.find((p) => p.id === v);
+                updateConfig({
+                  provider: v,
+                  model: preset?.default_model || "",
+                  base_url: preset?.base_url || "",
+                });
+              }}
+              placeholder={t("settings.ai.selectProvider")}
+              options={[
+                ...groupedProviders.international.map((p) => ({ value: p.id, label: p.name, group: t("settings.ai.international") })),
+                ...groupedProviders.domestic.map((p) => ({ value: p.id, label: p.name, group: t("settings.ai.domestic") })),
+                ...groupedProviders.local.map((p) => ({ value: p.id, label: p.name, group: t("settings.ai.local") })),
+                ...groupedProviders.custom.map((p) => ({ value: p.id, label: p.name, group: t("settings.ai.custom") })),
+              ]}
+              className="w-[15rem]"
+            />
           }
         />
 
@@ -158,19 +134,19 @@ export function AiTab() {
             title={t("settings.ai.model")}
             control={
               <div className="flex items-center gap-2">
-                <SettingsField className="w-[15rem]">
+                <div className="w-[15rem]">
                   {models.length > 0 && !fetchModelsError ? (
-                    <SettingsSelect
+                    <StyledSelect
                       value={config.model}
-                      onChange={(e) => updateConfig({ model: e.target.value })}
-                    >
-                      {!models.find((m) => m.id === config.model) && config.model && (
-                        <option value={config.model}>{config.model}</option>
-                      )}
-                      {models.map((m) => (
-                        <option key={m.id} value={m.id}>{m.name || m.id}</option>
-                      ))}
-                    </SettingsSelect>
+                      onChange={(v) => updateConfig({ model: v })}
+                      options={[
+                        ...(!models.find((m) => m.id === config.model) && config.model
+                          ? [{ value: config.model, label: config.model }]
+                          : []),
+                        ...models.map((m) => ({ value: m.id, label: m.name || m.id })),
+                      ]}
+                      className="w-full"
+                    />
                   ) : (
                     <SettingsInput
                       type="text"
@@ -179,7 +155,7 @@ export function AiTab() {
                       placeholder={selectedProvider?.default_model || "model-name"}
                     />
                   )}
-                </SettingsField>
+                </div>
                 {config.provider && (config.api_key || config.provider === "ollama") && (
                   <button
                     onClick={() => loadModels()}
@@ -293,16 +269,16 @@ export function AiTab() {
         <SettingsRow
           title={t("settings.ai.summaryLanguage")}
           control={
-            <SettingsField className="w-[15rem]">
-              <SettingsSelect
-                value={config.summary_language}
-                onChange={(e) => updateConfig({ summary_language: e.target.value })}
-              >
-                <option value="same">{t("settings.ai.summaryLangSame")}</option>
-                <option value="zh-CN">{t("settings.ai.summaryLangZh")}</option>
-                <option value="en">{t("settings.ai.summaryLangEn")}</option>
-              </SettingsSelect>
-            </SettingsField>
+            <StyledSelect
+              value={config.summary_language}
+              onChange={(v) => updateConfig({ summary_language: v })}
+              options={[
+                { value: "same", label: t("settings.ai.summaryLangSame") },
+                { value: "zh-CN", label: t("settings.ai.summaryLangZh") },
+                { value: "en", label: t("settings.ai.summaryLangEn") },
+              ]}
+              className="w-[15rem]"
+            />
           }
         />
       </SettingsSection>
