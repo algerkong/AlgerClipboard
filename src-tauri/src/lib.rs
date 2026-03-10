@@ -370,12 +370,15 @@ pub fn run() {
                 }
             }
 
-            // Apply rounded corners on Windows 11+
+            // Apply rounded corners and remove system menu on Windows 11+
             #[cfg(target_os = "windows")]
             {
                 if let Some(win) = app.get_webview_window("main") {
                     if let Ok(hwnd) = win.hwnd() {
                         use windows_sys::Win32::Graphics::Dwm::DwmSetWindowAttribute;
+                        use windows_sys::Win32::UI::WindowsAndMessaging::{
+                            GetWindowLongW, SetWindowLongW, GWL_STYLE, WS_SYSMENU,
+                        };
                         const DWMWA_WINDOW_CORNER_PREFERENCE: u32 = 33;
                         const DWMWCP_ROUND: u32 = 2;
                         unsafe {
@@ -385,6 +388,11 @@ pub fn run() {
                                 &DWMWCP_ROUND as *const u32 as *const std::ffi::c_void,
                                 std::mem::size_of::<u32>() as u32,
                             );
+
+                            // Remove WS_SYSMENU to prevent the system menu from
+                            // appearing when ALT + arrow keys are pressed.
+                            let style = GetWindowLongW(hwnd.0, GWL_STYLE);
+                            SetWindowLongW(hwnd.0, GWL_STYLE, style & !(WS_SYSMENU as i32));
                         }
                     }
                 }
