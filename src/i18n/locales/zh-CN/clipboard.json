@@ -57,7 +57,13 @@
     "zoomOut": "缩小",
     "resetZoom": "重置",
     "ocrResult": "识别结果",
-    "toggleOverlay": "显示/隐藏文字覆盖"
+    "toggleOverlay": "显示/隐藏文字覆盖",
+    "bgCheckerDark": "深色棋盘格",
+    "bgCheckerLight": "浅色棋盘格",
+    "bgWhite": "白色背景",
+    "bgBlack": "深色背景",
+    "fitWindow": "适应窗口",
+    "actualSize": "实际大小"
   },
   "fileViewer": {
     "title": "文件预览",

@@ -57,7 +57,13 @@
     "zoomOut": "Zoom Out",
     "resetZoom": "Reset",
     "ocrResult": "OCR Result",
-    "toggleOverlay": "Toggle text overlay"
+    "toggleOverlay": "Toggle text overlay",
+    "bgCheckerDark": "Dark checkerboard",
+    "bgCheckerLight": "Light checkerboard",
+    "bgWhite": "White background",
+    "bgBlack": "Dark background",
+    "fitWindow": "Fit to window",
+    "actualSize": "Actual size"
   },
   "fileViewer": {
     "title": "File Preview",
