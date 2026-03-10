@@ -1,8 +1,9 @@
 use std::thread;
 use std::time::Duration;
 
-/// Set clipboard text and simulate Ctrl+V paste
+/// Set clipboard text and simulate Ctrl+V paste.
 pub fn paste_text(text: &str) -> Result<(), String> {
+    crate::paste::begin_paste();
     {
         let mut clipboard =
             arboard::Clipboard::new().map_err(|e| format!("Failed to open clipboard: {}", e))?;
@@ -10,16 +11,13 @@ pub fn paste_text(text: &str) -> Result<(), String> {
             .set_text(text)
             .map_err(|e| format!("Failed to set clipboard text: {}", e))?;
     }
-
     thread::sleep(Duration::from_millis(50));
-    simulate_paste()?;
-
-    Ok(())
+    simulate_paste()
 }
 
-/// Set clipboard to file list (CF_HDROP) and simulate Ctrl+V paste
-#[cfg(target_os = "windows")]
+/// Set clipboard to a file list (CF_HDROP) and simulate Ctrl+V paste.
 pub fn paste_files(paths: &[&str]) -> Result<(), String> {
+    crate::paste::begin_paste();
     use windows_sys::Win32::Foundation::{FALSE, HWND};
     use windows_sys::Win32::System::DataExchange::{
         CloseClipboard, EmptyClipboard, OpenClipboard, SetClipboardData,
@@ -43,11 +41,11 @@ pub fn paste_files(paths: &[&str]) -> Result<(), String> {
     }
     wide_paths.push(0); // double-null terminator
 
-    // DROPFILES struct: 20 bytes header
-    // pFiles (u32) = offset to file list = 20
-    // pt.x (i32) = 0, pt.y (i32) = 0
-    // fNC (i32) = 0
-    // fWide (i32) = 1 (wide chars)
+    // DROPFILES struct: 20-byte header
+    //   pFiles (u32) = 20  — offset to file list
+    //   pt.x / pt.y (i32) = 0
+    //   fNC (i32) = 0
+    //   fWide (i32) = 1    — wide-char paths
     let dropfiles_size: usize = 20;
     let total_size = dropfiles_size + wide_paths.len() * 2;
 
@@ -62,17 +60,13 @@ pub fn paste_files(paths: &[&str]) -> Result<(), String> {
             return Err("Failed to lock global memory".to_string());
         }
 
-        // Write DROPFILES header
         let buf = ptr as *mut u8;
-        // pFiles = 20 (offset to file list)
+        // pFiles = 20
         std::ptr::copy_nonoverlapping(&(dropfiles_size as u32) as *const u32 as *const u8, buf, 4);
-        // pt.x = 0, pt.y = 0 (bytes 4-11) - already zeroed
-        // fNC = 0 (bytes 12-15) - already zeroed
-        // fWide = 1 (bytes 16-19)
+        // fWide = 1 at offset 16
         let f_wide: i32 = 1;
         std::ptr::copy_nonoverlapping(&f_wide as *const i32 as *const u8, buf.add(16), 4);
-
-        // Write file paths after header
+        // file paths after header
         std::ptr::copy_nonoverlapping(
             wide_paths.as_ptr() as *const u8,
             buf.add(dropfiles_size),
@@ -84,9 +78,7 @@ pub fn paste_files(paths: &[&str]) -> Result<(), String> {
         if OpenClipboard(0 as HWND) == FALSE {
             return Err("Failed to open clipboard".to_string());
         }
-
         EmptyClipboard();
-
         let result = SetClipboardData(CF_HDROP as u32, hmem);
         CloseClipboard();
 
@@ -96,111 +88,15 @@ pub fn paste_files(paths: &[&str]) -> Result<(), String> {
     }
 
     thread::sleep(Duration::from_millis(50));
-    simulate_paste()?;
-
-    Ok(())
-}
-
-#[cfg(target_os = "macos")]
-pub fn paste_files(paths: &[&str]) -> Result<(), String> {
-    let paths_str = paths
-        .iter()
-        .map(|p| format!("\"{}\"", p.trim()))
-        .collect::<Vec<_>>()
-        .join(", ");
-    let script = format!(
-        r#"
-use framework "AppKit"
-set pb to current application's NSPasteboard's generalPasteboard()
-pb's clearContents()
-set fileURLs to current application's NSMutableArray's new()
-repeat with f in {{{}}}
-    set fileURL to current application's NSURL's fileURLWithPath:f
-    (fileURLs's addObject:fileURL)
-end repeat
-pb's writeObjects:fileURLs
-"#,
-        paths_str
-    );
-    let output = std::process::Command::new("osascript")
-        .arg("-e")
-        .arg(&script)
-        .output()
-        .map_err(|e| format!("Failed to run osascript: {}", e))?;
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("Failed to set file clipboard: {}", stderr));
-    }
-    thread::sleep(Duration::from_millis(50));
     simulate_paste()
 }
 
-#[cfg(target_os = "linux")]
-pub fn paste_files(paths: &[&str]) -> Result<(), String> {
-    let content = format!(
-        "copy\n{}",
-        paths
-            .iter()
-            .map(|p| format!("file://{}", p.trim()))
-            .collect::<Vec<_>>()
-            .join("\n")
-    );
-
-    // Try X11 first (xclip)
-    let xclip_result = std::process::Command::new("xclip")
-        .args([
-            "-selection",
-            "clipboard",
-            "-t",
-            "x-special/gnome-copied-files",
-            "-i",
-        ])
-        .stdin(std::process::Stdio::piped())
-        .spawn()
-        .and_then(|mut child| {
-            use std::io::Write;
-            if let Some(ref mut stdin) = child.stdin {
-                stdin.write_all(content.as_bytes())?;
-            }
-            child.wait()
-        });
-
-    match xclip_result {
-        Ok(status) if status.success() => {}
-        _ => {
-            // Wayland fallback (wl-copy)
-            let mut child = std::process::Command::new("wl-copy")
-                .args(["-t", "x-special/gnome-copied-files"])
-                .stdin(std::process::Stdio::piped())
-                .spawn()
-                .map_err(|e| format!("Failed to run wl-copy (tried xclip first): {}", e))?;
-            {
-                use std::io::Write;
-                if let Some(ref mut stdin) = child.stdin {
-                    stdin
-                        .write_all(content.as_bytes())
-                        .map_err(|e| format!("Failed to write to wl-copy stdin: {}", e))?;
-                }
-            }
-            let status = child
-                .wait()
-                .map_err(|e| format!("Failed to wait for wl-copy: {}", e))?;
-            if !status.success() {
-                return Err("wl-copy failed to set file clipboard".to_string());
-            }
-        }
-    }
-
-    thread::sleep(Duration::from_millis(50));
-    simulate_paste()
-}
-
-/// Load image from path, set on clipboard, and simulate Ctrl+V paste
+/// Load image from path, set on clipboard, and simulate Ctrl+V paste.
 pub fn paste_image(path: &str) -> Result<(), String> {
+    crate::paste::begin_paste();
     let img = image::open(path).map_err(|e| format!("Failed to open image: {}", e))?;
     let rgba = img.to_rgba8();
     let (width, height) = rgba.dimensions();
-
     {
         let mut clipboard =
             arboard::Clipboard::new().map_err(|e| format!("Failed to open clipboard: {}", e))?;
@@ -213,14 +109,15 @@ pub fn paste_image(path: &str) -> Result<(), String> {
             .set_image(img_data)
             .map_err(|e| format!("Failed to set clipboard image: {}", e))?;
     }
-
     thread::sleep(Duration::from_millis(50));
-    simulate_paste()?;
-
-    Ok(())
+    simulate_paste()
 }
 
-#[cfg(target_os = "windows")]
+/// Bring the target window to the foreground so it receives the paste.
+///
+/// IMPORTANT: Call this *before* hiding our window so that we are still the
+/// foreground process when `SetForegroundWindow` is called — Windows only allows
+/// foreground processes to steal focus.
 pub fn prepare_paste_target(target_hwnd: Option<isize>, source_hwnd: Option<isize>) {
     use windows_sys::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
     use windows_sys::Win32::UI::WindowsAndMessaging::{
@@ -244,22 +141,18 @@ pub fn prepare_paste_target(target_hwnd: Option<isize>, source_hwnd: Option<isiz
             return;
         }
 
-        // Only call ShowWindow if the target is minimized or hidden.
-        // For already-visible windows (including maximized), skip ShowWindow
-        // to preserve their current state (maximized vs normal).
+        // Restore minimized windows; show hidden windows without activating.
+        // For already-visible windows (including maximized) do nothing so their
+        // state is preserved.
         if IsIconic(hwnd) != 0 {
-            // Window is minimized — restore it (preserves maximized state via restore)
             let _ = ShowWindow(hwnd, SW_RESTORE);
         } else if IsWindowVisible(hwnd) == 0 {
-            // Window is hidden — show without activating
             let _ = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
         }
-        // else: window is already visible and not minimized — do nothing
 
-        // Use AttachThreadInput to allow SetForegroundWindow.
-        // We are the foreground process at this point (our window was just visible),
-        // so AttachThreadInput alone is sufficient. The ALT key trick was removed
-        // because it caused the target window's system menu to appear.
+        // AttachThreadInput lets us call SetForegroundWindow from a non-foreground
+        // thread.  The ALT-key trick was removed because it caused the target
+        // window's system menu to appear.
         let cur_thread_id = GetCurrentThreadId();
         let target_thread_id = GetWindowThreadProcessId(hwnd, std::ptr::null_mut());
 
@@ -276,7 +169,7 @@ pub fn prepare_paste_target(target_hwnd: Option<isize>, source_hwnd: Option<isiz
             target_hwnd
         );
 
-        // Wait for focus transfer (up to 250ms)
+        // Poll until focus is confirmed transferred (max ~250ms)
         let mut focused = false;
         for _ in 0..50 {
             if GetForegroundWindow() == hwnd {
@@ -285,7 +178,6 @@ pub fn prepare_paste_target(target_hwnd: Option<isize>, source_hwnd: Option<isiz
             }
             thread::sleep(Duration::from_millis(5));
         }
-
         if !focused {
             log::warn!(
                 "Focus transfer may have failed. Current fg: {:?}, target: {:?}",
@@ -298,45 +190,16 @@ pub fn prepare_paste_target(target_hwnd: Option<isize>, source_hwnd: Option<isiz
             AttachThreadInput(cur_thread_id, target_thread_id, 0);
         }
 
-        // Settle time for the target window to be ready for input
+        // Give the target window a moment to settle before we inject input
         thread::sleep(Duration::from_millis(30));
     }
 }
 
-#[cfg(target_os = "macos")]
-pub fn prepare_paste_target(target_bundle_id: Option<String>) {
-    let Some(bundle_id) = target_bundle_id else {
-        return;
-    };
-    if bundle_id.is_empty() {
-        return;
-    }
-
-    let script = format!("tell application id \"{}\" to activate", bundle_id);
-    let _ = std::process::Command::new("osascript")
-        .args(["-e", script.as_str()])
-        .output();
-    // Wait for macOS to complete the app switch animation and focus transfer
-    thread::sleep(Duration::from_millis(80));
-}
-
-#[cfg(target_os = "linux")]
-pub fn prepare_paste_target(target_window_id: Option<String>) {
-    let Some(window_id) = target_window_id else {
-        return;
-    };
-    if window_id.is_empty() {
-        return;
-    }
-
-    let _ = std::process::Command::new("xdotool")
-        .args(["windowactivate", "--sync", window_id.as_str()])
-        .output();
-    thread::sleep(Duration::from_millis(50));
-}
-
-/// Platform-specific paste simulation
-#[cfg(target_os = "windows")]
+/// Simulate a paste keystroke appropriate for the foreground window class.
+///
+/// * Regular apps → Ctrl+V
+/// * PuTTY / mintty → Shift+Insert
+/// * Legacy console (cmd.exe / old PowerShell) → WM_COMMAND 0xfff1
 fn simulate_paste() -> Result<(), String> {
     use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
         GetAsyncKeyState, MapVirtualKeyW, SendInput, INPUT, INPUT_KEYBOARD, KEYBDINPUT,
@@ -347,31 +210,22 @@ fn simulate_paste() -> Result<(), String> {
         GetClassNameW, GetForegroundWindow, SendMessageW,
     };
 
-    /// Paste method to use, depending on the target window class.
     enum PasteMethod {
         CtrlV,
         ShiftInsert,
-        /// Legacy console: use undocumented WM_COMMAND with ID 0xfff1 (Edit > Paste)
+        /// Legacy console: WM_COMMAND 0xfff1 (Edit > Paste)
         ConsolePaste,
     }
 
-    /// Release all modifier keys that are currently pressed to prevent contamination.
+    /// Release all logically-stuck modifier keys before injecting Ctrl+V.
     fn release_all_modifiers() {
         unsafe {
             let modifiers: &[u16] = &[
-                VK_CONTROL,
-                VK_LCONTROL,
-                VK_RCONTROL,
-                VK_SHIFT,
-                0xA0, /* VK_LSHIFT */
-                0xA1, /* VK_RSHIFT */
-                VK_MENU,
-                VK_LMENU,
-                VK_RMENU,
-                VK_LWIN,
-                VK_RWIN,
+                VK_CONTROL, VK_LCONTROL, VK_RCONTROL,
+                VK_SHIFT, 0xA0 /* VK_LSHIFT */, 0xA1 /* VK_RSHIFT */,
+                VK_MENU, VK_LMENU, VK_RMENU,
+                VK_LWIN, VK_RWIN,
             ];
-
             let mut ups: Vec<INPUT> = Vec::new();
             for &vk in modifiers {
                 if GetAsyncKeyState(vk as i32) < 0 {
@@ -388,7 +242,6 @@ fn simulate_paste() -> Result<(), String> {
                     ups.push(input);
                 }
             }
-
             if !ups.is_empty() {
                 log::info!("Releasing {} stuck modifier key(s) before paste", ups.len());
                 SendInput(
@@ -401,7 +254,7 @@ fn simulate_paste() -> Result<(), String> {
         }
     }
 
-    /// Wait until all physical modifier keys are released (max ~300ms)
+    /// Wait until all physical modifier keys are released (max ~300ms).
     fn wait_for_modifiers_release() {
         unsafe {
             let check_keys: &[u16] = &[VK_CONTROL, VK_SHIFT, VK_MENU, VK_LWIN, VK_RWIN];
@@ -434,7 +287,6 @@ fn simulate_paste() -> Result<(), String> {
             }
 
             let key_scan = MapVirtualKeyW(key as u32, MAPVK_VK_TO_VSC) as u16;
-
             let mut key_down: INPUT = std::mem::zeroed();
             key_down.r#type = INPUT_KEYBOARD;
             key_down.Anonymous.ki = KEYBDINPUT {
@@ -480,19 +332,16 @@ fn simulate_paste() -> Result<(), String> {
             if sent != expected {
                 return Err("Failed to simulate paste keystroke".to_string());
             }
-
             Ok(())
         }
     }
 
-    /// Get foreground window HWND and class name
     fn get_foreground_info() -> (Option<*mut std::ffi::c_void>, Option<String>) {
         unsafe {
             let hwnd = GetForegroundWindow();
             if hwnd.is_null() {
                 return (None, None);
             }
-
             let mut buf = [0u16; 256];
             let len = GetClassNameW(hwnd, buf.as_mut_ptr(), buf.len() as i32);
             let class_name = if len > 0 {
@@ -504,10 +353,9 @@ fn simulate_paste() -> Result<(), String> {
         }
     }
 
-    // Step 1: Wait for physical modifier keys to be released
+    // 1. Wait for physical modifiers to be released
     wait_for_modifiers_release();
-
-    // Step 2: Force-release any logically stuck modifier keys
+    // 2. Force-release any logically stuck modifiers
     release_all_modifiers();
 
     let (fg_hwnd, target_class) = get_foreground_info();
@@ -518,23 +366,16 @@ fn simulate_paste() -> Result<(), String> {
     );
 
     let method = match target_class.as_deref() {
-        // PuTTY / mintty (Git Bash): Shift+Insert
         Some("PuTTY") | Some("mintty") => PasteMethod::ShiftInsert,
-        // Legacy console host (cmd.exe, old PowerShell): use WM_COMMAND paste
         Some("ConsoleWindowClass") => PasteMethod::ConsolePaste,
-        // Everything else (including Windows Terminal CASCADIA_HOSTING_WINDOW_CLASS): Ctrl+V
         _ => PasteMethod::CtrlV,
     };
 
-    // Step 3: Send the paste
+    // 3. Send the paste
     match method {
         PasteMethod::CtrlV => send_key_chord(&[VK_CONTROL], VK_V),
         PasteMethod::ShiftInsert => send_key_chord(&[VK_SHIFT], VK_INSERT),
         PasteMethod::ConsolePaste => {
-            // Legacy console windows don't reliably process SendInput Ctrl+V.
-            // Use the undocumented WM_COMMAND with ID 0xfff1 which triggers
-            // the console's internal Edit > Paste command. This is the technique
-            // used by Ditto and other clipboard managers.
             if let Some(hwnd) = fg_hwnd {
                 unsafe {
                     const WM_COMMAND: u32 = 0x0111;
@@ -544,123 +385,8 @@ fn simulate_paste() -> Result<(), String> {
                 log::info!("Used WM_COMMAND console paste for ConsoleWindowClass");
                 Ok(())
             } else {
-                // Fallback to Ctrl+V if we can't get the HWND
                 send_key_chord(&[VK_CONTROL], VK_V)
             }
         }
-    }
-}
-
-#[cfg(target_os = "macos")]
-fn simulate_paste() -> Result<(), String> {
-    std::process::Command::new("osascript")
-        .arg("-e")
-        .arg("tell application \"System Events\" to keystroke \"v\" using command down")
-        .output()
-        .map_err(|e| format!("Failed to simulate paste: {}", e))?;
-    Ok(())
-}
-
-#[cfg(target_os = "linux")]
-fn simulate_paste() -> Result<(), String> {
-    #[derive(Clone, Copy)]
-    enum Shortcut {
-        CtrlV,
-        CtrlShiftV,
-        ShiftInsert,
-    }
-
-    fn active_window_class_name() -> Option<String> {
-        let window = std::process::Command::new("xdotool")
-            .arg("getactivewindow")
-            .output()
-            .ok()?;
-        if !window.status.success() {
-            return None;
-        }
-        let window_id = String::from_utf8_lossy(&window.stdout).trim().to_string();
-        if window_id.is_empty() {
-            return None;
-        }
-
-        let class = std::process::Command::new("xdotool")
-            .args(["getwindowclassname", window_id.as_str()])
-            .output()
-            .ok()?;
-        if !class.status.success() {
-            return None;
-        }
-        let value = String::from_utf8_lossy(&class.stdout).trim().to_lowercase();
-        if value.is_empty() {
-            None
-        } else {
-            Some(value)
-        }
-    }
-
-    fn pick_shortcut() -> Shortcut {
-        let Some(class_name) = active_window_class_name() else {
-            return Shortcut::CtrlV;
-        };
-
-        if class_name.contains("putty") || class_name.contains("mintty") {
-            Shortcut::ShiftInsert
-        } else if class_name.contains("terminal")
-            || class_name.contains("kitty")
-            || class_name.contains("wezterm")
-            || class_name.contains("alacritty")
-            || class_name.contains("xterm")
-            || class_name.contains("konsole")
-            || class_name.contains("tilix")
-            || class_name.contains("terminator")
-        {
-            Shortcut::CtrlShiftV
-        } else {
-            Shortcut::CtrlV
-        }
-    }
-
-    fn send_with_xdotool(shortcut: Shortcut) -> Result<(), String> {
-        let chord = match shortcut {
-            Shortcut::CtrlV => "ctrl+v",
-            Shortcut::CtrlShiftV => "ctrl+shift+v",
-            Shortcut::ShiftInsert => "shift+insert",
-        };
-        let output = std::process::Command::new("xdotool")
-            .args(["key", "--clearmodifiers", chord])
-            .output()
-            .map_err(|e| format!("Failed to run xdotool: {}", e))?;
-        if output.status.success() {
-            Ok(())
-        } else {
-            Err("xdotool failed to send paste key".to_string())
-        }
-    }
-
-    fn send_with_wtype(shortcut: Shortcut) -> Result<(), String> {
-        let args: &[&str] = match shortcut {
-            Shortcut::CtrlV => &["-M", "ctrl", "-P", "v", "-m", "ctrl", "-p", "v"],
-            Shortcut::CtrlShiftV => &[
-                "-M", "ctrl", "-M", "shift", "-P", "v", "-m", "shift", "-m", "ctrl", "-p", "v",
-            ],
-            Shortcut::ShiftInsert => {
-                &["-M", "shift", "-P", "insert", "-m", "shift", "-p", "insert"]
-            }
-        };
-        let output = std::process::Command::new("wtype")
-            .args(args)
-            .output()
-            .map_err(|e| format!("Failed to run wtype: {}", e))?;
-        if output.status.success() {
-            Ok(())
-        } else {
-            Err("wtype failed to send paste key".to_string())
-        }
-    }
-
-    let shortcut = pick_shortcut();
-    match send_with_xdotool(shortcut) {
-        Ok(()) => Ok(()),
-        Err(_) => send_with_wtype(shortcut),
     }
 }
