@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, type ReactNode } from "react";
+import { useCallback, useEffect, useState, useMemo, useRef, type ReactNode } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { Moon, Monitor, Sun } from "lucide-react";
 import {
@@ -181,6 +181,17 @@ export function GeneralTab() {
     { value: "slate", labelKey: "settings.themeColor_slate", color: "#475569" },
   ];
 
+  // Lightweight CSS-only update during color picker drag (no reflow, no IPC)
+  const handleColorLiveChange = useCallback((color: string) => {
+    document.documentElement.style.setProperty("--theme-accent-source", color);
+  }, []);
+
+  // Full persist on release
+  const handleColorCommit = useCallback((color: string) => {
+    setThemeColorCustom(color);
+    setThemeColorPreset("custom");
+  }, [setThemeColorCustom, setThemeColorPreset]);
+
   const handleLocaleChange = (newLocale: string) => {
     setLocale(newLocale);
     i18n.changeLanguage(newLocale);
@@ -253,15 +264,11 @@ export function GeneralTab() {
                 className="w-[15rem]"
               />
               <SettingsField className="w-[6.5rem]">
-                <input
-                  type="color"
+                <ColorPickerInput
                   value={themeColorCustom}
-                  onChange={(event) => {
-                    setThemeColorCustom(event.target.value);
-                    setThemeColorPreset("custom");
-                  }}
-                  className="h-9 w-full cursor-pointer rounded-2xl border-0 bg-transparent p-1"
-                  aria-label={t("settings.themeColorPicker")}
+                  onLiveChange={handleColorLiveChange}
+                  onCommit={handleColorCommit}
+                  ariaLabel={t("settings.themeColorPicker")}
                 />
               </SettingsField>
             </div>
@@ -460,5 +467,81 @@ export function GeneralTab() {
         </div>
       </SettingsSection>
     </div>
+  );
+}
+
+/**
+ * Color picker that uses local state during drag to avoid expensive operations.
+ *
+ * On Windows, `<input type="color">` fires both `onInput` and `onChange` continuously
+ * while dragging — NOT just on release. So we:
+ * 1. Use uncontrolled input (defaultValue, not value) to avoid React re-renders
+ * 2. Throttle CSS variable updates to once per animation frame
+ * 3. Debounce the full persist (store + IPC) with a 300ms delay after last change,
+ *    which naturally fires once when the user stops dragging or closes the picker
+ */
+function ColorPickerInput({
+  value,
+  onLiveChange,
+  onCommit,
+  ariaLabel,
+}: {
+  value: string;
+  onLiveChange: (color: string) => void;
+  onCommit: (color: string) => void;
+  ariaLabel: string;
+}) {
+  const rafId = useRef(0);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const pendingColor = useRef<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Sync from external value changes (e.g. preset switch) without re-mounting
+  useEffect(() => {
+    if (inputRef.current && inputRef.current.value !== value) {
+      inputRef.current.value = value;
+    }
+  }, [value]);
+
+  useEffect(() => {
+    return () => {
+      cancelAnimationFrame(rafId.current);
+      clearTimeout(debounceTimer.current);
+    };
+  }, []);
+
+  const handleColorChange = useCallback((e: React.FormEvent<HTMLInputElement>) => {
+    const color = (e.target as HTMLInputElement).value;
+    pendingColor.current = color;
+
+    // Throttle visual CSS update to one per frame
+    if (!rafId.current) {
+      rafId.current = requestAnimationFrame(() => {
+        rafId.current = 0;
+        if (pendingColor.current !== null) {
+          onLiveChange(pendingColor.current);
+        }
+      });
+    }
+
+    // Debounce the heavy persist — resets on every change, fires 300ms after last one
+    clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      if (pendingColor.current !== null) {
+        onCommit(pendingColor.current);
+        pendingColor.current = null;
+      }
+    }, 300);
+  }, [onLiveChange, onCommit]);
+
+  return (
+    <input
+      ref={inputRef}
+      type="color"
+      defaultValue={value}
+      onInput={handleColorChange}
+      className="h-9 w-full cursor-pointer rounded-2xl border-0 bg-transparent p-1"
+      aria-label={ariaLabel}
+    />
   );
 }
