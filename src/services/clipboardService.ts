@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { ClipboardEntry, HistoryQuery, ClipboardStats, OcrResult, TagSummary, FilePreview, DirTreeNode, ArchiveEntry } from "@/types";
+import type { ClipboardEntry, HistoryQuery, ClipboardStats, OcrResult, TagSummary, FilePreview, DirTreeNode, ArchiveEntry, SearchHistoryItem } from "@/types";
 
 export async function getClipboardHistory(
   query: HistoryQuery = {}
@@ -165,4 +165,42 @@ export async function checkPathsExist(paths: string[]): Promise<boolean[]> {
 
 export async function ocrFromFilePath(path: string): Promise<OcrResult> {
   return invoke("ocr_from_file_path", { path });
+}
+
+export async function searchEntries(
+  keyword: string,
+  options: {
+    limit?: number;
+    offset?: number;
+    typeFilter?: string;
+    timeRange?: string;
+    tagFilter?: string;
+    taggedOnly?: boolean;
+  } = {}
+): Promise<ClipboardEntry[]> {
+  return invoke("search_entries", {
+    keyword,
+    limit: options.limit ?? 200,
+    offset: options.offset ?? 0,
+    typeFilter: options.typeFilter ?? null,
+    timeRange: options.timeRange ?? null,
+    tagFilter: options.tagFilter ?? null,
+    taggedOnly: options.taggedOnly ?? false,
+  });
+}
+
+export async function addSearchHistory(keyword: string): Promise<void> {
+  return invoke("add_search_history", { keyword });
+}
+
+export async function getSearchHistory(limit?: number): Promise<SearchHistoryItem[]> {
+  return invoke("get_search_history", { limit: limit ?? 8 });
+}
+
+export async function deleteSearchHistory(id: number): Promise<void> {
+  return invoke("delete_search_history", { id });
+}
+
+export async function clearSearchHistory(): Promise<void> {
+  return invoke("clear_search_history");
 }
