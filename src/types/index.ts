@@ -34,7 +34,17 @@ export interface HistoryQuery {
   keyword?: string;
   tag_filter?: string;
   tagged_only?: boolean;
+  time_range?: TimeRange;
 }
+
+export interface SearchHistoryItem {
+  id: number;
+  keyword: string;
+  search_count: number;
+  last_used_at: string;
+}
+
+export type TimeRange = "all" | "today" | "3days" | "week" | "month" | "3months";
 
 export interface TranslateResult {
   text: string;
