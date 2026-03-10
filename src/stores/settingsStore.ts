@@ -302,6 +302,9 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         ? resolvedThemeColorCustom
         : THEME_COLOR_PRESET_MAP[resolvedThemeColorPreset] ?? THEME_COLOR_PRESET_MAP.indigo;
       localStorage.setItem("theme-accent", accentColor);
+      // Cache UI scale and font family for instant application on next window open
+      localStorage.setItem("ui-scale", scale);
+      localStorage.setItem("font-family", ff);
 
       set({
         theme: resolvedTheme,
@@ -386,6 +389,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   setUIScale: async (scale: UIScale) => {
     applyUIScale(scale);
     set({ uiScale: scale });
+    localStorage.setItem("ui-scale", scale);
     try {
       await updateSetting("ui_scale", scale);
     } catch (err) {
@@ -396,6 +400,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   setFontFamily: async (family: FontFamily) => {
     applyFontFamily(family);
     set({ fontFamily: family });
+    localStorage.setItem("font-family", family);
     try {
       await updateSetting("font_family", family);
     } catch (err) {
