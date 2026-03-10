@@ -93,36 +93,36 @@
 }
 
 .dark {
-  --background: oklch(0.16 0 0);
-  --foreground: oklch(0.98 0 0);
-  --card: oklch(0.18 0 0);
-  --card-foreground: oklch(0.98 0 0);
-  --popover: oklch(0.18 0 0);
-  --popover-foreground: oklch(0.98 0 0);
+  --background: oklch(0.21 0 0);
+  --foreground: oklch(0.95 0 0);
+  --card: oklch(0.24 0 0);
+  --card-foreground: oklch(0.95 0 0);
+  --popover: oklch(0.24 0 0);
+  --popover-foreground: oklch(0.95 0 0);
   --primary: color-mix(in oklab, var(--theme-accent-source) 85%, white 15%);
   --primary-foreground: oklch(0.98 0 0);
-  --secondary: color-mix(in oklab, var(--theme-accent-source) 15%, oklch(0.2 0 0) 85%);
-  --secondary-foreground: oklch(0.98 0 0);
-  --muted: oklch(0.22 0 0);
-  --muted-foreground: oklch(0.65 0 0);
-  --accent: color-mix(in oklab, var(--theme-accent-source) 12%, oklch(0.2 0 0) 88%);
-  --accent-foreground: oklch(0.98 0 0);
+  --secondary: color-mix(in oklab, var(--theme-accent-source) 15%, oklch(0.25 0 0) 85%);
+  --secondary-foreground: oklch(0.95 0 0);
+  --muted: oklch(0.27 0 0);
+  --muted-foreground: oklch(0.72 0 0);
+  --accent: color-mix(in oklab, var(--theme-accent-source) 12%, oklch(0.26 0 0) 88%);
+  --accent-foreground: oklch(0.95 0 0);
   --destructive: oklch(0.65 0.2 25);
-  --border: oklch(0.26 0 0);
-  --input: oklch(0.26 0 0);
+  --border: oklch(0.32 0 0);
+  --input: oklch(0.32 0 0);
   --ring: color-mix(in oklab, var(--theme-accent-source) 60%, transparent 40%);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.18 0 0);
-  --sidebar-foreground: oklch(0.98 0 0);
+  --sidebar: oklch(0.23 0 0);
+  --sidebar-foreground: oklch(0.95 0 0);
   --sidebar-primary: oklch(0.73 0.1 270);
-  --sidebar-primary-foreground: oklch(0.16 0 0);
-  --sidebar-accent: oklch(0.24 0 0);
-  --sidebar-accent-foreground: oklch(0.98 0 0);
-  --sidebar-border: oklch(0.26 0 0);
+  --sidebar-primary-foreground: oklch(0.21 0 0);
+  --sidebar-accent: oklch(0.29 0 0);
+  --sidebar-accent-foreground: oklch(0.95 0 0);
+  --sidebar-border: oklch(0.32 0 0);
   --sidebar-ring: var(--primary);
   --app-surface: var(--background);
   --app-surface-strong: var(--card);
@@ -303,7 +303,9 @@ body {
   border-color: color-mix(in oklab, var(--primary) 18%, transparent);
 }
 .dark .filter-pill[data-active="true"] {
-  background: color-mix(in oklab, var(--primary) 20%, transparent);
+  background: color-mix(in oklab, var(--primary) 30%, oklch(0.4 0 0) 70%);
+  border-color: color-mix(in oklab, var(--primary) 40%, oklch(0.45 0 0) 60%);
+  color: oklch(0.93 0 0);
 }
 .filter-pill:hover:not([data-active="true"]) {
   background: color-mix(in oklab, var(--accent) 60%, transparent);
@@ -413,7 +415,7 @@ body {
 }
 
 .dark .settings-sidebar-item.is-active {
-  background: color-mix(in oklab, var(--accent) 92%, transparent);
+  background: color-mix(in oklab, var(--accent) 92%, oklch(0.35 0 0) 8%);
 }
 
 .settings-sidebar-icon {
