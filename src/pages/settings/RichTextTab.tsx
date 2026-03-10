@@ -2,11 +2,10 @@ import { useTranslation } from "react-i18next";
 import { useSettingsStore } from "@/stores/settingsStore";
 import type { RichTextPreviewOptions } from "@/lib/richText";
 import { cn } from "@/lib/utils";
+import { StyledSelect } from "@/components/ui/styled-select";
 import {
-  SettingsField,
   SettingsRow,
   SettingsSection,
-  SettingsSelect,
   Toggle,
 } from "./shared";
 
@@ -72,18 +71,15 @@ export function RichTextTab() {
           title={t("settings.richText.detailTitle")}
           description={t("settings.richText.detailDesc")}
           control={
-            <SettingsField className="w-[15rem]">
-              <SettingsSelect
-                value={richTextDetailMode}
-                onChange={(event) => void setRichTextDetailMode(event.target.value as "clean" | "full")}
-              >
-                {(["clean", "full"] as const).map((mode) => (
-                  <option key={mode} value={mode}>
-                    {t(`settings.richText.detailModes.${mode}.label`)}
-                  </option>
-                ))}
-              </SettingsSelect>
-            </SettingsField>
+            <StyledSelect
+              value={richTextDetailMode}
+              onChange={(v) => void setRichTextDetailMode(v as "clean" | "full")}
+              options={(["clean", "full"] as const).map((mode) => ({
+                value: mode,
+                label: t(`settings.richText.detailModes.${mode}.label`),
+              }))}
+              className="w-[15rem]"
+            />
           }
         />
       </SettingsSection>

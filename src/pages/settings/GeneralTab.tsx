@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, useMemo, type ReactNode } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { Moon, Monitor, Sun } from "lucide-react";
 import {
@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "@/lib/toast";
 import { usePlatform } from "@/contexts/PlatformContext";
 import { invoke } from "@tauri-apps/api/core";
+import { StyledSelect } from "@/components/ui/styled-select";
 import {
   buildShortcutFromKeyboardEvent,
   languages,
@@ -23,7 +24,6 @@ import {
   SettingsInput,
   SettingsRow,
   SettingsSection,
-  SettingsSelect,
   Toggle,
   type Theme,
 } from "./shared";
@@ -186,6 +186,39 @@ export function GeneralTab() {
     i18n.changeLanguage(newLocale);
   };
 
+  const languageOptions = useMemo(() => languages.map((l) => ({ value: l.value, label: l.label })), []);
+  const themeOptions = useMemo(() => themes.map((th) => ({ value: th.value, label: t(th.labelKey) })), [t]);
+  const themeColorOptions = useMemo(() => [
+    ...themeColors.map((tc) => ({ value: tc.value, label: t(tc.labelKey) })),
+    { value: "custom", label: t("settings.themeColor_custom") },
+  ], [t]);
+  const uiScaleOptions = useMemo(() => (["xs", "sm", "md", "lg", "xl"] as UIScale[]).map((s) => ({ value: s, label: t(`settings.uiScale_${s}`) })), [t]);
+  const fontFamilyOptions = useMemo(() => (["system", "microsoft-yahei", "noto-sans", "mono"] as FontFamily[]).map((f) => ({ value: f, label: t(`settings.fontFamily_${f}`) })), [t]);
+  const buttonPositionOptions = useMemo(() => [
+    { value: "left", label: t("settings.buttonPositionLeft") },
+    { value: "right", label: t("settings.buttonPositionRight") },
+  ], [t]);
+  const expireDaysOptions = useMemo(() => [
+    { value: "0", label: t("settings.expireNever") },
+    { value: "1", label: t("settings.expire1day") },
+    { value: "7", label: t("settings.expire7days") },
+    { value: "30", label: t("settings.expire30days") },
+    { value: "90", label: t("settings.expire90days") },
+  ], [t]);
+  const browserOptions = useMemo(() => {
+    const opts = [
+      { value: "system", label: t("settings.browserSystem") },
+      { value: "chrome", label: t("settings.browserChrome") },
+      { value: "firefox", label: t("settings.browserFirefox") },
+      { value: "edge", label: t("settings.browserEdge") },
+      { value: "brave", label: t("settings.browserBrave") },
+    ];
+    if (platform === "macos") {
+      opts.push({ value: "safari", label: t("settings.browserSafari") });
+    }
+    return opts;
+  }, [t, platform]);
+
   return (
     <div className="space-y-5">
       {/* ─── Language ─── */}
@@ -194,15 +227,7 @@ export function GeneralTab() {
           title={t("settings.language")}
           description={t("settings.languageDesc")}
           control={
-            <SettingsField className="w-[15rem]">
-              <SettingsSelect value={locale} onChange={(event) => handleLocaleChange(event.target.value)}>
-                {languages.map((lang) => (
-                  <option key={lang.value} value={lang.value}>
-                    {lang.label}
-                  </option>
-                ))}
-              </SettingsSelect>
-            </SettingsField>
+            <StyledSelect value={locale} onChange={handleLocaleChange} options={languageOptions} className="w-[15rem]" />
           }
         />
       </SettingsSection>
@@ -212,15 +237,7 @@ export function GeneralTab() {
         <SettingsRow
           title={t("settings.theme")}
           control={
-            <SettingsField className="w-[15rem]">
-              <SettingsSelect value={theme} onChange={(event) => setTheme(event.target.value as Theme)}>
-                {themes.map((themeItem) => (
-                  <option key={themeItem.value} value={themeItem.value}>
-                    {t(themeItem.labelKey)}
-                  </option>
-                ))}
-              </SettingsSelect>
-            </SettingsField>
+            <StyledSelect value={theme} onChange={(v) => setTheme(v as Theme)} options={themeOptions} className="w-[15rem]" />
           }
         />
 
@@ -229,19 +246,12 @@ export function GeneralTab() {
           description={t("settings.themeColorDesc")}
           control={
             <div className="flex flex-wrap items-center justify-end gap-3">
-              <SettingsField className="w-[15rem]">
-                <SettingsSelect
-                  value={themeColorPreset}
-                  onChange={(event) => setThemeColorPreset(event.target.value as ThemeColorPreset)}
-                >
-                  {themeColors.map((themeColor) => (
-                    <option key={themeColor.value} value={themeColor.value}>
-                      {t(themeColor.labelKey)}
-                    </option>
-                  ))}
-                  <option value="custom">{t("settings.themeColor_custom")}</option>
-                </SettingsSelect>
-              </SettingsField>
+              <StyledSelect
+                value={themeColorPreset}
+                onChange={(v) => setThemeColorPreset(v as ThemeColorPreset)}
+                options={themeColorOptions}
+                className="w-[15rem]"
+              />
               <SettingsField className="w-[6.5rem]">
                 <input
                   type="color"
@@ -261,15 +271,7 @@ export function GeneralTab() {
         <SettingsRow
           title={t("settings.uiScale")}
           control={
-            <SettingsField className="w-[15rem]">
-              <SettingsSelect value={uiScale} onChange={(event) => setUIScale(event.target.value as UIScale)}>
-                {(["xs", "sm", "md", "lg", "xl"] as UIScale[]).map((scale) => (
-                  <option key={scale} value={scale}>
-                    {t(`settings.uiScale_${scale}`)}
-                  </option>
-                ))}
-              </SettingsSelect>
-            </SettingsField>
+            <StyledSelect value={uiScale} onChange={(v) => setUIScale(v as UIScale)} options={uiScaleOptions} className="w-[15rem]" />
           }
         />
 
@@ -277,18 +279,7 @@ export function GeneralTab() {
           title={t("settings.fontFamily")}
           description={t("settings.fontFamilyDesc")}
           control={
-            <SettingsField className="w-[15rem]">
-              <SettingsSelect
-                value={fontFamily}
-                onChange={(event) => setFontFamily(event.target.value as FontFamily)}
-              >
-                {(["system", "microsoft-yahei", "noto-sans", "mono"] as FontFamily[]).map((family) => (
-                  <option key={family} value={family}>
-                    {t(`settings.fontFamily_${family}`)}
-                  </option>
-                ))}
-              </SettingsSelect>
-            </SettingsField>
+            <StyledSelect value={fontFamily} onChange={(v) => setFontFamily(v as FontFamily)} options={fontFamilyOptions} className="w-[15rem]" />
           }
         />
 
@@ -297,15 +288,7 @@ export function GeneralTab() {
             title={t("settings.buttonPosition")}
             description={t("settings.buttonPositionDesc")}
             control={
-              <SettingsField className="w-[15rem]">
-                <SettingsSelect
-                  value={buttonPosition}
-                  onChange={(event) => setButtonPosition(event.target.value as ButtonPosition)}
-                >
-                  <option value="left">{t("settings.buttonPositionLeft")}</option>
-                  <option value="right">{t("settings.buttonPositionRight")}</option>
-                </SettingsSelect>
-              </SettingsField>
+              <StyledSelect value={buttonPosition} onChange={(v) => setButtonPosition(v as ButtonPosition)} options={buttonPositionOptions} className="w-[15rem]" />
             }
           />
         ) : null}
@@ -338,18 +321,7 @@ export function GeneralTab() {
           title={t("settings.expireDays")}
           description={t("settings.expireDaysDesc")}
           control={
-            <SettingsField className="w-[15rem]">
-              <SettingsSelect
-                value={String(expireDays)}
-                onChange={(event) => setExpireDays(Number(event.target.value))}
-              >
-                <option value="0">{t("settings.expireNever")}</option>
-                <option value="1">{t("settings.expire1day")}</option>
-                <option value="7">{t("settings.expire7days")}</option>
-                <option value="30">{t("settings.expire30days")}</option>
-                <option value="90">{t("settings.expire90days")}</option>
-              </SettingsSelect>
-            </SettingsField>
+            <StyledSelect value={String(expireDays)} onChange={(v) => setExpireDays(Number(v))} options={expireDaysOptions} className="w-[15rem]" />
           }
         />
 
@@ -429,21 +401,7 @@ export function GeneralTab() {
           title={t("settings.defaultBrowser")}
           description={t("settings.defaultBrowserDesc")}
           control={
-            <SettingsField className="w-[15rem]">
-              <SettingsSelect
-                value={defaultBrowser}
-                onChange={(event) => setDefaultBrowser(event.target.value)}
-              >
-                <option value="system">{t("settings.browserSystem")}</option>
-                <option value="chrome">{t("settings.browserChrome")}</option>
-                <option value="firefox">{t("settings.browserFirefox")}</option>
-                <option value="edge">{t("settings.browserEdge")}</option>
-                <option value="brave">{t("settings.browserBrave")}</option>
-                {platform === "macos" ? (
-                  <option value="safari">{t("settings.browserSafari")}</option>
-                ) : null}
-              </SettingsSelect>
-            </SettingsField>
+            <StyledSelect value={defaultBrowser} onChange={setDefaultBrowser} options={browserOptions} className="w-[15rem]" />
           }
         />
       </SettingsSection>

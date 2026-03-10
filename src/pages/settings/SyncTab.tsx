@@ -15,13 +15,13 @@ import { useSyncStore } from "@/stores/syncStore";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { toast } from "@/lib/toast";
+import { StyledSelect } from "@/components/ui/styled-select";
 import {
   SettingsButton,
   SettingsField,
   SettingsInput,
   SettingsRow,
   SettingsSection,
-  SettingsSelect,
   SettingsSubsection,
   Toggle,
 } from "./shared";
@@ -336,19 +336,19 @@ export function SyncTab() {
             title={t("sync.syncMaxFileSize")}
             description={t("sync.syncMaxFileSizeDesc")}
             control={
-              <SettingsField className="w-[12rem]">
-                <SettingsSelect
-                  value={syncMaxFileSize}
-                  onChange={(e) => setSyncMaxFileSize(Number(e.target.value))}
-                >
-                  <option value={0}>{t("sync.syncMaxFileSizeUnlimited")}</option>
-                  <option value={1}>1 MB</option>
-                  <option value={5}>5 MB</option>
-                  <option value={10}>10 MB</option>
-                  <option value={50}>50 MB</option>
-                  <option value={100}>100 MB</option>
-                </SettingsSelect>
-              </SettingsField>
+              <StyledSelect
+                value={String(syncMaxFileSize)}
+                onChange={(v) => setSyncMaxFileSize(Number(v))}
+                options={[
+                  { value: "0", label: t("sync.syncMaxFileSizeUnlimited") },
+                  { value: "1", label: "1 MB" },
+                  { value: "5", label: "5 MB" },
+                  { value: "10", label: "10 MB" },
+                  { value: "50", label: "50 MB" },
+                  { value: "100", label: "100 MB" },
+                ]}
+                className="w-[12rem]"
+              />
             }
           />
         </SettingsSection>
@@ -372,24 +372,18 @@ export function SyncTab() {
           <SettingsRow
             title={t("sync.provider")}
             control={
-              <SettingsField className="w-[15rem]">
-                <SettingsSelect
-                  value={provider}
-                  onChange={(e) => {
-                    if (!editingAccountId) {
-                      setProvider(e.target.value as "webdav" | "google_drive" | "onedrive");
-                      setOauthTokens(null);
-                    }
-                  }}
-                  disabled={!!editingAccountId}
-                >
-                  {providers.map((p) => (
-                    <option key={p.key} value={p.key}>
-                      {p.label}
-                    </option>
-                  ))}
-                </SettingsSelect>
-              </SettingsField>
+              <StyledSelect
+                value={provider}
+                onChange={(v) => {
+                  if (!editingAccountId) {
+                    setProvider(v as "webdav" | "google_drive" | "onedrive");
+                    setOauthTokens(null);
+                  }
+                }}
+                disabled={!!editingAccountId}
+                options={providers.map((p) => ({ value: p.key, label: p.label }))}
+                className="w-[15rem]"
+              />
             }
           />
 
@@ -419,15 +413,12 @@ export function SyncTab() {
           <SettingsRow
             title={t("sync.syncFrequency")}
             control={
-              <SettingsField className="w-[15rem]">
-                <SettingsSelect value={syncFreq} onChange={(e) => setSyncFreq(e.target.value as "realtime" | "interval" | "manual")}>
-                  {freqOptions.map((f) => (
-                    <option key={f.key} value={f.key}>
-                      {f.label}
-                    </option>
-                  ))}
-                </SettingsSelect>
-              </SettingsField>
+              <StyledSelect
+                value={syncFreq}
+                onChange={(v) => setSyncFreq(v as "realtime" | "interval" | "manual")}
+                options={freqOptions.map((f) => ({ value: f.key, label: f.label }))}
+                className="w-[15rem]"
+              />
             }
           />
           {syncFreq === "interval" && (

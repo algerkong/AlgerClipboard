@@ -27,13 +27,12 @@ import type { ClipboardStats } from "@/types";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { toast } from "@/lib/toast";
+import { StyledSelect } from "@/components/ui/styled-select";
 import {
   formatBytes,
   SettingsButton,
-  SettingsField,
   SettingsRow,
   SettingsSection,
-  SettingsSelect,
 } from "./shared";
 
 /* ─── Stats Mini Chart Components ─── */
@@ -333,18 +332,12 @@ export function DataTab() {
             <SettingsRow
               title={t("settings.cacheMaxSize")}
               control={
-                <SettingsField className="w-[11rem]">
-                  <SettingsSelect
-                    value={cacheMaxSize}
-                    onChange={(e) => handleCacheMaxSizeChange(Number(e.target.value))}
-                  >
-                    {cacheSizeOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </SettingsSelect>
-                </SettingsField>
+                <StyledSelect
+                  value={String(cacheMaxSize)}
+                  onChange={(v) => handleCacheMaxSizeChange(Number(v))}
+                  options={cacheSizeOptions.map((opt) => ({ value: String(opt.value), label: opt.label }))}
+                  className="w-[11rem]"
+                />
               }
             />
 
