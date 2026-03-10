@@ -202,8 +202,12 @@ interface SettingsState {
   setIsPinned: (pinned: boolean) => void;
 }
 
+// Read cached theme from localStorage to match the inline script in index.html,
+// preventing a flash of wrong theme before settings load from SQLite.
+const cachedTheme = (localStorage.getItem("theme") as Theme) || "dark";
+
 export const useSettingsStore = create<SettingsState>((set) => ({
-  theme: "dark",
+  theme: cachedTheme,
   maxHistory: 500,
   expireDays: 0,
   autoStart: false,
@@ -291,8 +295,16 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       applyFontFamily(ff);
       applyThemeColor(resolvedThemeColorPreset, resolvedThemeColorCustom);
 
+      // Cache theme and accent to localStorage for instant application on next window open
+      const resolvedTheme = (theme as Theme) ?? "dark";
+      localStorage.setItem("theme", resolvedTheme);
+      const accentColor = resolvedThemeColorPreset === "custom"
+        ? resolvedThemeColorCustom
+        : THEME_COLOR_PRESET_MAP[resolvedThemeColorPreset] ?? THEME_COLOR_PRESET_MAP.indigo;
+      localStorage.setItem("theme-accent", accentColor);
+
       set({
-        theme: (theme as Theme) ?? "dark",
+        theme: resolvedTheme,
         maxHistory: maxHistory ? parseInt(maxHistory, 10) : 500,
         expireDays: expireDays ? parseInt(expireDays, 10) : 0,
         autoStart: autoStartEnabled,
@@ -318,6 +330,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
 
   setTheme: async (theme: Theme) => {
     set({ theme });
+    localStorage.setItem("theme", theme);
     try {
       await updateSetting("theme", theme);
     } catch (err) {
@@ -394,6 +407,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     const nextCustom = useSettingsStore.getState().themeColorCustom;
     applyThemeColor(preset, nextCustom);
     set({ themeColorPreset: preset });
+    const accentColor = preset === "custom" ? nextCustom : THEME_COLOR_PRESET_MAP[preset] ?? THEME_COLOR_PRESET_MAP.indigo;
+    localStorage.setItem("theme-accent", accentColor);
     try {
       await updateSetting("theme_color_preset", preset);
     } catch (err) {
@@ -405,6 +420,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     const normalized = normalizeThemeColor(color);
     applyThemeColor("custom", normalized);
     set({ themeColorPreset: "custom", themeColorCustom: normalized });
+    localStorage.setItem("theme-accent", normalized);
     try {
       await Promise.all([
         updateSetting("theme_color_preset", "custom"),

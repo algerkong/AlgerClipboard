@@ -121,10 +121,6 @@ export function DetailPage() {
   // AI state
   const [summarizing, setSummarizing] = useState(false);
 
-  useEffect(() => {
-    document.documentElement.classList.add("dark");
-  }, []);
-
   useEffect(() => trackWindowSize(DETAIL_SIZE_KEY), []);
 
   useEffect(() => {

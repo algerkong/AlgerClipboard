@@ -58,10 +58,6 @@ export function ImageViewerPage() {
     getThumbnailBase64(blobPath).then(setImageSrc).catch(() => {});
   }, [blobPath]);
 
-  useEffect(() => {
-    document.documentElement.classList.add("dark");
-  }, []);
-
   const updateImgSize = useCallback(() => {
     if (imgRef.current) {
       setImgSize({ width: imgRef.current.clientWidth, height: imgRef.current.clientHeight });
