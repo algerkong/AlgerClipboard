@@ -360,3 +360,89 @@ pub fn update_entry_text(
     let _ = app.emit("entry-updated", &id);
     Ok(())
 }
+
+#[tauri::command]
+pub fn write_export_file(path: String, content: String) -> Result<(), String> {
+    std::fs::write(&path, content.as_bytes()).map_err(|e| format!("Failed to write file: {}", e))
+}
+
+#[tauri::command]
+pub fn set_incognito(enabled: bool) {
+    crate::clipboard::monitor::set_incognito(enabled);
+}
+
+#[tauri::command]
+pub fn get_incognito() -> bool {
+    crate::clipboard::monitor::is_incognito()
+}
+
+#[tauri::command]
+pub fn save_temp_blob(
+    blob_store: State<'_, AppBlobStore>,
+    base64_data: String,
+) -> Result<String, String> {
+    let raw_b64 = if let Some(pos) = base64_data.find(',') {
+        &base64_data[pos + 1..]
+    } else {
+        &base64_data
+    };
+
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(raw_b64)
+        .map_err(|e| format!("Base64 decode error: {}", e))?;
+
+    let id = format!("qrcode-{}", uuid::Uuid::new_v4());
+    let relative_path = blob_store
+        .0
+        .save_blob(&id, &bytes, "png")
+        .map_err(|e| format!("Save blob error: {}", e))?;
+
+    Ok(relative_path)
+}
+
+#[tauri::command]
+pub fn copy_image_to_clipboard(base64_data: String) -> Result<(), String> {
+    let raw_b64 = if let Some(pos) = base64_data.find(',') {
+        &base64_data[pos + 1..]
+    } else {
+        &base64_data
+    };
+
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(raw_b64)
+        .map_err(|e| format!("Base64 decode error: {}", e))?;
+
+    let img = image::load_from_memory(&bytes)
+        .map_err(|e| format!("Image decode error: {}", e))?;
+    let rgba = img.to_rgba8();
+    let (w, h) = rgba.dimensions();
+
+    let img_data = arboard::ImageData {
+        width: w as usize,
+        height: h as usize,
+        bytes: std::borrow::Cow::Owned(rgba.into_raw()),
+    };
+
+    let mut clipboard = arboard::Clipboard::new()
+        .map_err(|e| format!("Clipboard error: {}", e))?;
+    clipboard
+        .set_image(img_data)
+        .map_err(|e| format!("Set image error: {}", e))?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn save_image_to_file(base64_data: String, path: String) -> Result<(), String> {
+    let raw_b64 = if let Some(pos) = base64_data.find(',') {
+        &base64_data[pos + 1..]
+    } else {
+        &base64_data
+    };
+
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(raw_b64)
+        .map_err(|e| format!("Base64 decode error: {}", e))?;
+
+    std::fs::write(&path, &bytes).map_err(|e| format!("Failed to write file: {}", e))
+}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, useMemo, useRef, type ReactNode } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { Moon, Monitor, Sun } from "lucide-react";
+import { useClipboardStore } from "@/stores/clipboardStore";
 import {
   useSettingsStore,
   type ButtonPosition,
@@ -62,9 +63,14 @@ export function GeneralTab() {
   const setSystemNotificationsEnabled = useSettingsStore((s) => s.setSystemNotificationsEnabled);
   const setButtonPosition = useSettingsStore((s) => s.setButtonPosition);
   const setDefaultBrowser = useSettingsStore((s) => s.setDefaultBrowser);
+  const isIncognito = useClipboardStore((s) => s.isIncognito);
+  const toggleIncognito = useClipboardStore((s) => s.toggleIncognito);
   const platform = usePlatform();
 
+  const incognitoShortcut = useSettingsStore((s) => s.incognitoShortcut);
+  const setIncognitoShortcut = useSettingsStore((s) => s.setIncognitoShortcut);
   const [isRecordingShortcut, setIsRecordingShortcut] = useState(false);
+  const [isRecordingIncognitoShortcut, setIsRecordingIncognitoShortcut] = useState(false);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [previewCloseShortcut, setPreviewCloseShortcutState] = useState("Escape");
   const [isRecordingCloseShortcut, setIsRecordingCloseShortcut] = useState(false);
@@ -109,6 +115,36 @@ export function GeneralTab() {
       window.removeEventListener("keydown", handleRecordShortcut, true);
     };
   }, [isRecordingShortcut, setToggleShortcut, t]);
+
+  useEffect(() => {
+    if (!isRecordingIncognitoShortcut) return;
+
+    const handleRecordShortcut = (event: KeyboardEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (event.key === "Escape") {
+        setIsRecordingIncognitoShortcut(false);
+        return;
+      }
+
+      if (MODIFIER_KEYS.has(event.key)) return;
+
+      const nextShortcut = buildShortcutFromKeyboardEvent(event);
+      if (!nextShortcut) {
+        toast.error(t("settings.shortcutInvalid"));
+        return;
+      }
+
+      setIsRecordingIncognitoShortcut(false);
+      setIncognitoShortcut(nextShortcut)
+        .then(() => toast.success(t("settings.shortcutSaved")))
+        .catch(() => toast.error(t("settings.shortcutInvalid")));
+    };
+
+    window.addEventListener("keydown", handleRecordShortcut, true);
+    return () => window.removeEventListener("keydown", handleRecordShortcut, true);
+  }, [isRecordingIncognitoShortcut, setIncognitoShortcut, t]);
 
   useEffect(() => {
     getVersion()
@@ -337,6 +373,17 @@ export function GeneralTab() {
           description={t("settings.hidePanel")}
           control={<Toggle value={pasteAndClose} onChange={setPasteAndClose} />}
         />
+
+        <SettingsRow
+          title={t("settings.incognitoMode")}
+          description={t("settings.incognitoModeDesc")}
+          control={
+            <Toggle
+              value={isIncognito}
+              onChange={() => toggleIncognito()}
+            />
+          }
+        />
       </SettingsSection>
 
       {/* ─── Shortcuts ─── */}
@@ -353,6 +400,25 @@ export function GeneralTab() {
               </SettingsField>
               <SettingsButton onClick={() => setIsRecordingShortcut((prev) => !prev)}>
                 {isRecordingShortcut ? t("template.cancel") : t("settings.shortcutRecord")}
+              </SettingsButton>
+            </div>
+          }
+        />
+
+        <SettingsRow
+          title={t("settings.incognitoShortcut")}
+          description={t("settings.incognitoShortcutDesc")}
+          control={
+            <div className="flex w-full max-w-[22rem] items-center gap-3">
+              <SettingsField className="flex-1">
+                <div className="flex h-9 items-center font-mono text-sm">
+                  {isRecordingIncognitoShortcut
+                    ? t("settings.shortcutRecording")
+                    : incognitoShortcut || t("settings.shortcutNotSet")}
+                </div>
+              </SettingsField>
+              <SettingsButton onClick={() => setIsRecordingIncognitoShortcut((prev) => !prev)}>
+                {isRecordingIncognitoShortcut ? t("template.cancel") : t("settings.shortcutRecord")}
               </SettingsButton>
             </div>
           }

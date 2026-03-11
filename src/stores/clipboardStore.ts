@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { create } from "zustand";
 import type { ClipboardEntry, ContentType, TagSummary, TimeRange } from "@/types";
@@ -53,6 +54,8 @@ interface ClipboardState {
   updateEntrySummary: (id: string, summary: string) => void;
   updateEntryText: (id: string, text: string) => void;
   resetView: () => void;
+  isIncognito: boolean;
+  toggleIncognito: () => Promise<void>;
 }
 
 interface TagChangeEvent {
@@ -329,6 +332,14 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
     set({ typeFilter: null, keyword: "", showFavoritesOnly: false, tagFilter: null, showTagPanel: false, selectedId: null, timeRange: "all" });
     get().fetchHistory();
   },
+
+  isIncognito: false,
+
+  toggleIncognito: async () => {
+    const next = !get().isIncognito;
+    await invoke("set_incognito", { enabled: next });
+    set({ isIncognito: next });
+  },
 }));
 
 // Refresh list when an entry is edited in the detail window
@@ -355,3 +366,8 @@ listen<TagChangeEvent>("tags-changed", (event) => {
   }
   void nextState.fetchHistory();
 }).catch(() => {});
+
+// Sync incognito state from backend on startup
+invoke<boolean>("get_incognito")
+  .then((v) => useClipboardStore.setState({ isIncognito: v }))
+  .catch(() => {});

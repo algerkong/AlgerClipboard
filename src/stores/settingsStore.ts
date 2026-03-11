@@ -5,6 +5,7 @@ import {
   setAutoStart as setAutoStartApi,
   getAutoStart,
   updateToggleShortcut,
+  updateIncognitoShortcut,
 } from "@/services/settingsService";
 import { listen } from "@tauri-apps/api/event";
 import {
@@ -167,6 +168,7 @@ interface SettingsState {
   themeColorPreset: ThemeColorPreset;
   themeColorCustom: string;
   toggleShortcut: string;
+  incognitoShortcut: string;
   autoCheckUpdate: boolean;
   autoDownloadUpdate: boolean;
   systemNotificationsEnabled: boolean;
@@ -188,6 +190,7 @@ interface SettingsState {
   setThemeColorPreset: (preset: ThemeColorPreset) => Promise<void>;
   setThemeColorCustom: (color: string) => Promise<void>;
   setToggleShortcut: (shortcut: string) => Promise<void>;
+  setIncognitoShortcut: (shortcut: string) => Promise<void>;
   setAutoCheckUpdate: (enabled: boolean) => Promise<void>;
   setAutoDownloadUpdate: (enabled: boolean) => Promise<void>;
   setSystemNotificationsEnabled: (enabled: boolean) => Promise<void>;
@@ -218,6 +221,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   themeColorPreset: "indigo",
   themeColorCustom: THEME_COLOR_PRESET_MAP.indigo,
   toggleShortcut: "CmdOrCtrl+Shift+V",
+  incognitoShortcut: "",
   autoCheckUpdate: true,
   autoDownloadUpdate: false,
   systemNotificationsEnabled: true,
@@ -242,6 +246,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         themeColorCustom,
         autoStartEnabled,
         toggleShortcut,
+        incognitoShortcut,
         autoCheckUpdate,
         autoDownloadUpdate,
         systemNotificationsEnabled,
@@ -262,6 +267,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         getSetting("theme_color_custom"),
         getAutoStart(),
         getSetting("toggle_shortcut"),
+        getSetting("incognito_shortcut"),
         getSetting("auto_check_update"),
         getSetting("auto_download_update"),
         getSetting("system_notifications_enabled"),
@@ -318,6 +324,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         themeColorPreset: resolvedThemeColorPreset,
         themeColorCustom: resolvedThemeColorCustom,
         toggleShortcut: toggleShortcut?.trim() || "CmdOrCtrl+Shift+V",
+        incognitoShortcut: incognitoShortcut?.trim() || "",
         autoCheckUpdate: autoCheckUpdate !== "false",
         autoDownloadUpdate: autoDownloadUpdate === "true",
         systemNotificationsEnabled: systemNotificationsEnabled !== "false",
@@ -446,6 +453,19 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     } catch (err) {
       set({ toggleShortcut: prev });
       console.error("Failed to save toggle_shortcut:", err);
+      throw err;
+    }
+  },
+
+  setIncognitoShortcut: async (shortcut: string) => {
+    const normalized = shortcut.trim();
+    const prev = useSettingsStore.getState().incognitoShortcut;
+    set({ incognitoShortcut: normalized });
+    try {
+      await updateIncognitoShortcut(normalized);
+    } catch (err) {
+      set({ incognitoShortcut: prev });
+      console.error("Failed to save incognito_shortcut:", err);
       throw err;
     }
   },
