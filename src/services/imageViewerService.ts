@@ -2,14 +2,14 @@ import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { getManagedWindowDecorations } from "@/services/windowOptions";
 import { getSavedWindowSize } from "@/lib/windowSize";
 
-export const IMAGE_VIEWER_SIZE_KEY = "image-viewer-size";
+export const IMAGE_VIEWER_SIZE_KEY = "image-viewer";
 
 let viewerCounter = 0;
 
 export async function openImageViewer(blobPath: string) {
   viewerCounter++;
   const label = `image-viewer-${viewerCounter}`;
-  const size = getSavedWindowSize(IMAGE_VIEWER_SIZE_KEY, { width: 900, height: 650 });
+  const size = await getSavedWindowSize(IMAGE_VIEWER_SIZE_KEY, { width: 900, height: 650 });
 
   const viewer = new WebviewWindow(label, {
     url: `index.html?window=image-viewer&blobPath=${encodeURIComponent(blobPath)}`,
@@ -19,6 +19,7 @@ export async function openImageViewer(blobPath: string) {
     minWidth: 500,
     minHeight: 400,
     ...getManagedWindowDecorations(),
+    visible: false,
     alwaysOnTop: true,
     center: true,
     shadow: true,

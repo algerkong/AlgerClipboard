@@ -509,3 +509,14 @@ pub fn focus_main_window(app: tauri::AppHandle) {
         focus_window_webview(&app, &window);
     }
 }
+
+#[tauri::command]
+pub fn get_window_size(
+    db: State<'_, AppDatabase>,
+    key: String,
+    default_width: f64,
+    default_height: f64,
+) -> Result<serde_json::Value, String> {
+    let (w, h) = crate::read_saved_window_size(&db.0, &key, default_width, default_height);
+    Ok(serde_json::json!({ "width": w, "height": h }))
+}

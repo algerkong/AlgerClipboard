@@ -81,6 +81,7 @@ pub async fn create_ask_ai_panel(
         .inner_size(w, h)
         .min_inner_size(600.0, 400.0)
         .resizable(true)
+        .visible(false)
         .center()
         .shadow(true)
         .build()

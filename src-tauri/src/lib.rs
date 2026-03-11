@@ -36,16 +36,44 @@ fn get_device_id() -> String {
     format!("{}-{}", hostname, &uuid::Uuid::new_v4().to_string()[..8])
 }
 
+pub fn read_saved_window_size(db: &Database, key: &str, default_w: f64, default_h: f64) -> (f64, f64) {
+    let size_key = format!("window_size_{}", key);
+    match db.get_setting(&size_key) {
+        Ok(Some(val)) => {
+            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&val) {
+                let w = parsed["width"].as_f64().unwrap_or(default_w);
+                let h = parsed["height"].as_f64().unwrap_or(default_h);
+                if w > 0.0 && h > 0.0 {
+                    return (w, h);
+                }
+            }
+            (default_w, default_h)
+        }
+        _ => (default_w, default_h),
+    }
+}
+
+fn save_window_size(db: &Database, key: &str, width: f64, height: f64) {
+    let size_key = format!("window_size_{}", key);
+    let val = serde_json::json!({ "width": width, "height": height }).to_string();
+    let _ = db.set_setting(&size_key, &val);
+}
+
 fn create_main_window<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
+    db: Option<&Database>,
 ) -> tauri::Result<tauri::WebviewWindow<R>> {
+    let (w, h) = db
+        .map(|d| read_saved_window_size(d, "main", 420.0, 480.0))
+        .unwrap_or((420.0, 480.0));
+
     let mut builder = tauri::WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
         .title("AlgerClipboard")
-        .inner_size(420.0, 480.0)
+        .inner_size(w, h)
         .min_inner_size(320.0, 400.0)
         .resizable(true)
         .always_on_top(true)
-        .visible(true)
+        .visible(false)
         .skip_taskbar(true)
         .center()
         .shadow(true);
@@ -73,19 +101,46 @@ pub fn run() {
     #[allow(unused_mut)]
     let mut builder = tauri::Builder::default()
         .on_window_event(|window, event| {
-            if window.label() == "main" {
-                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                    #[cfg(not(debug_assertions))]
-                    {
-                        api.prevent_close();
-                        let _ = window.hide();
-                    }
+            match event {
+                tauri::WindowEvent::CloseRequested { api, .. } => {
+                    if window.label() == "main" {
+                        #[cfg(not(debug_assertions))]
+                        {
+                            api.prevent_close();
+                            let _ = window.hide();
+                        }
 
-                    #[cfg(debug_assertions)]
-                    {
-                        let _ = api;
+                        #[cfg(debug_assertions)]
+                        {
+                            let _ = api;
+                        }
                     }
                 }
+                tauri::WindowEvent::Resized(size) => {
+                    // Save window size to DB on resize
+                    if let Ok(scale) = window.scale_factor() {
+                        let logical_w = size.width as f64 / scale;
+                        let logical_h = size.height as f64 / scale;
+                        // Skip saving if window is minimized (size 0)
+                        if logical_w > 0.0 && logical_h > 0.0 {
+                            // Map multi-instance labels (detail-1, detail-2, ...) to base key
+                            let label = window.label();
+                            let size_key = if label.starts_with("detail-") {
+                                "detail"
+                            } else if label.starts_with("image-viewer-") {
+                                "image-viewer"
+                            } else if label.starts_with("file-viewer-") {
+                                "file-viewer"
+                            } else {
+                                label
+                            };
+                            if let Some(db) = window.try_state::<AppDatabase>() {
+                                save_window_size(&db.0, size_key, logical_w, logical_h);
+                            }
+                        }
+                    }
+                }
+                _ => {}
             }
         })
         .plugin(tauri_plugin_autostart::init(
@@ -112,8 +167,7 @@ pub fn run() {
 
     builder
         .setup(|app| {
-            let main_window = create_main_window(&app.handle())?;
-
+            // Initialize database first so we can read saved window sizes
             let app_data_dir = app
                 .path()
                 .app_data_dir()
@@ -123,6 +177,8 @@ pub fn run() {
             let db_path = app_data_dir.join("clipboard.db");
             let db = Arc::new(Database::new(&db_path).expect("Failed to init database"));
             app.manage(AppDatabase(db.clone()));
+
+            let main_window = create_main_window(&app.handle(), Some(&db))?;
 
             // Initialize BlobStore: use custom cache_dir if set, otherwise default
             let blob_base = match db.get_setting("cache_dir") {
@@ -437,6 +493,7 @@ pub fn run() {
             commands::settings_cmd::set_auto_start,
             commands::settings_cmd::get_auto_start,
             commands::settings_cmd::focus_main_window,
+            commands::settings_cmd::get_window_size,
             commands::paste_cmd::paste_entry,
             commands::template_cmd::get_templates,
             commands::template_cmd::create_template,
@@ -459,6 +516,11 @@ pub fn run() {
             commands::sync_cmd::get_settings_sync_enabled,
             commands::sync_cmd::set_sync_max_file_size,
             commands::sync_cmd::get_sync_max_file_size,
+            commands::sync_cmd::set_sync_write_clipboard,
+            commands::sync_cmd::get_sync_write_clipboard,
+            commands::sync_cmd::set_sync_realtime_poll_seconds,
+            commands::sync_cmd::get_sync_realtime_poll_seconds,
+            commands::sync_cmd::write_to_system_clipboard,
             commands::ai_cmd::get_ai_providers,
             commands::ai_cmd::get_ai_config,
             commands::ai_cmd::save_ai_config,
