@@ -22,12 +22,14 @@ import {
   openInExplorer,
   type CacheInfo,
 } from "@/services/clipboardService";
-import { open as openFolderDialog } from "@tauri-apps/plugin-dialog";
+import { open as openFolderDialog, save as saveFileDialog } from "@tauri-apps/plugin-dialog";
+import { invoke } from "@tauri-apps/api/core";
 import type { ClipboardStats } from "@/types";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { toast } from "@/lib/toast";
 import { StyledSelect } from "@/components/ui/styled-select";
+import { exportAsCSV, exportAsText, exportAsHTML } from "@/services/exportService";
 import {
   formatBytes,
   SettingsButton,
@@ -215,14 +217,13 @@ export function DataTab() {
           <SettingsButton
             onClick={async () => {
               try {
+                const path = await saveFileDialog({
+                  defaultPath: `alger-clipboard-${new Date().toISOString().slice(0, 10)}.json`,
+                  filters: [{ name: "JSON", extensions: ["json"] }],
+                });
+                if (!path) return;
                 const json = await exportData();
-                const blob = new Blob([json], { type: "application/json" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `alger-clipboard-backup-${new Date().toISOString().slice(0, 10)}.json`;
-                a.click();
-                URL.revokeObjectURL(url);
+                await invoke("write_export_file", { path, content: json });
                 toast.success(t("toast.exported"));
               } catch {
                 toast.error(t("toast.exportFailed"));
@@ -230,7 +231,64 @@ export function DataTab() {
             }}
           >
             <Download className="h-3 w-3" />
-            {t("settings.export")}
+            JSON
+          </SettingsButton>
+          <SettingsButton
+            onClick={async () => {
+              try {
+                const path = await saveFileDialog({
+                  defaultPath: `alger-clipboard-${new Date().toISOString().slice(0, 10)}.csv`,
+                  filters: [{ name: "CSV", extensions: ["csv"] }],
+                });
+                if (!path) return;
+                const content = await exportAsCSV();
+                await invoke("write_export_file", { path, content });
+                toast.success(t("toast.exported"));
+              } catch {
+                toast.error(t("toast.exportFailed"));
+              }
+            }}
+          >
+            <Download className="h-3 w-3" />
+            CSV
+          </SettingsButton>
+          <SettingsButton
+            onClick={async () => {
+              try {
+                const path = await saveFileDialog({
+                  defaultPath: `alger-clipboard-${new Date().toISOString().slice(0, 10)}.txt`,
+                  filters: [{ name: "Text", extensions: ["txt"] }],
+                });
+                if (!path) return;
+                const content = await exportAsText();
+                await invoke("write_export_file", { path, content });
+                toast.success(t("toast.exported"));
+              } catch {
+                toast.error(t("toast.exportFailed"));
+              }
+            }}
+          >
+            <Download className="h-3 w-3" />
+            TXT
+          </SettingsButton>
+          <SettingsButton
+            onClick={async () => {
+              try {
+                const path = await saveFileDialog({
+                  defaultPath: `alger-clipboard-${new Date().toISOString().slice(0, 10)}.html`,
+                  filters: [{ name: "HTML", extensions: ["html"] }],
+                });
+                if (!path) return;
+                const content = await exportAsHTML();
+                await invoke("write_export_file", { path, content });
+                toast.success(t("toast.exported"));
+              } catch {
+                toast.error(t("toast.exportFailed"));
+              }
+            }}
+          >
+            <Download className="h-3 w-3" />
+            HTML
           </SettingsButton>
           <SettingsButton
             onClick={() => {
