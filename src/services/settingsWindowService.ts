@@ -3,7 +3,7 @@ import i18n from "@/i18n";
 import { getManagedWindowDecorations } from "@/services/windowOptions";
 import { getSavedWindowSize } from "@/lib/windowSize";
 
-export const SETTINGS_SIZE_KEY = "settings-window-size";
+export const SETTINGS_SIZE_KEY = "settings";
 
 const SETTINGS_LABEL = "settings";
 
@@ -19,7 +19,7 @@ export async function openSettingsWindow(tab?: string) {
     ? `index.html?window=settings&tab=${tab}`
     : `index.html?window=settings`;
 
-  const size = getSavedWindowSize(SETTINGS_SIZE_KEY, { width: 680, height: 560 });
+  const size = await getSavedWindowSize(SETTINGS_SIZE_KEY, { width: 820, height: 640 });
 
   const win = new WebviewWindow(SETTINGS_LABEL, {
     url,
@@ -29,6 +29,7 @@ export async function openSettingsWindow(tab?: string) {
     minWidth: 560,
     minHeight: 460,
     ...getManagedWindowDecorations(),
+    visible: false,
     alwaysOnTop: false,
     center: true,
     shadow: true,
