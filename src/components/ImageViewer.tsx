@@ -10,13 +10,16 @@ import {
   ScanSearch,
   ClipboardCopy,
   ChevronDown,
+  Download,
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { platform as getPlatform } from "@tauri-apps/plugin-os";
+import { save as saveFileDialog } from "@tauri-apps/plugin-dialog";
 import { cn } from "@/lib/utils";
 import { usePreviewCloseShortcut } from "@/hooks/usePreviewCloseShortcut";
 import { CloseConfirmDialog } from "@/components/CloseConfirmDialog";
+import { ContextMenu, type ContextMenuItem } from "@/components/ContextMenu";
 import { useTranslation } from "react-i18next";
 import { getThumbnailBase64 } from "@/services/clipboardService";
 import { getEnabledOcrEngines, getDefaultOcrEngine, ocrRecognize, type OcrEngineInfo } from "@/services/ocrService";
@@ -34,6 +37,7 @@ export function ImageViewerPage() {
   const [zoom, setZoom] = useState(1);
   const [bgMode, setBgMode] = useState<"checker-dark" | "checker-light" | "white" | "black">("black");
   const [fitMode, setFitMode] = useState<"fit" | "actual">("fit");
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
   const [ocrResult, setOcrResult] = useState<OcrResult | null>(null);
   const [ocrLoading, setOcrLoading] = useState(false);
@@ -166,6 +170,42 @@ export function ImageViewerPage() {
   }, []);
 
   const { showConfirm, handleConfirmYes, handleConfirmNo, closeKey } = usePreviewCloseShortcut();
+
+  const getImageContextMenuItems = useCallback((): ContextMenuItem[] => {
+    const items: ContextMenuItem[] = [];
+    if (imageSrc) {
+      items.push({
+        label: t("imageViewer.copyImage"),
+        icon: <ClipboardCopy className="h-4 w-4" />,
+        onClick: async () => {
+          try {
+            await invoke("copy_image_to_clipboard", { base64Data: imageSrc });
+            toast.success(t("imageViewer.imageCopied"));
+          } catch (err) {
+            toast.error(String(err));
+          }
+        },
+      });
+      items.push({
+        label: t("imageViewer.saveAs"),
+        icon: <Download className="h-4 w-4" />,
+        onClick: async () => {
+          try {
+            const path = await saveFileDialog({
+              defaultPath: "image.png",
+              filters: [{ name: "PNG Image", extensions: ["png"] }],
+            });
+            if (!path) return;
+            await invoke("save_image_to_file", { base64Data: imageSrc, path });
+            toast.success(t("imageViewer.imageSaved"));
+          } catch (err) {
+            toast.error(String(err));
+          }
+        },
+      });
+    }
+    return items;
+  }, [imageSrc, t]);
 
   const hasOcrText = ocrResult && ocrResult.lines.length > 0;
 
@@ -337,6 +377,10 @@ export function ImageViewerPage() {
           ...(isChecker ? { backgroundSize: `${16 * zoom}px ${16 * zoom}px` } : {}),
         }}
         onWheel={handleWheel}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          setContextMenu({ x: e.clientX, y: e.clientY });
+        }}
       >
         {imageSrc ? (
           <div
@@ -410,6 +454,14 @@ export function ImageViewerPage() {
           shortcutKey={closeKey}
           onConfirm={handleConfirmYes}
           onCancel={handleConfirmNo}
+        />
+      )}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={getImageContextMenuItems()}
+          onClose={() => setContextMenu(null)}
         />
       )}
     </div>
