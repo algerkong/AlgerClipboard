@@ -67,7 +67,11 @@
     "bgWhite": "白色背景",
     "bgBlack": "深色背景",
     "fitWindow": "适应窗口",
-    "actualSize": "实际大小"
+    "actualSize": "实际大小",
+    "copyImage": "复制图片",
+    "imageCopied": "图片已复制到剪贴板",
+    "saveAs": "另存为...",
+    "imageSaved": "图片已保存"
   },
   "fileViewer": {
     "title": "文件预览",

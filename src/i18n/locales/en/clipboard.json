@@ -67,7 +67,11 @@
     "bgWhite": "White background",
     "bgBlack": "Dark background",
     "fitWindow": "Fit to window",
-    "actualSize": "Actual size"
+    "actualSize": "Actual size",
+    "copyImage": "Copy Image",
+    "imageCopied": "Image copied to clipboard",
+    "saveAs": "Save As...",
+    "imageSaved": "Image saved"
   },
   "fileViewer": {
     "title": "File Preview",

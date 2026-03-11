@@ -1,5 +1,5 @@
 import { memo, useCallback, useState, useEffect, useMemo, useRef } from "react";
-import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages, Pin, Eye, Copy, ClipboardPaste, Maximize2, Cloud, Upload, CloudAlert, Code, Tag, X, ExternalLink, Brain, Sparkles, File, Video, Music, Archive, FileCode, FileType as FileTypeIcon, Folder } from "lucide-react";
+import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages, Pin, Eye, Copy, ClipboardPaste, Maximize2, Cloud, Upload, CloudAlert, Code, Tag, X, ExternalLink, Brain, Sparkles, File, Video, Music, Archive, FileCode, FileType as FileTypeIcon, Folder, QrCode } from "lucide-react";
 
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { useCapabilityStore } from "@/stores/capabilityStore";
@@ -7,6 +7,7 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { pasteEntry, getThumbnailBase64 } from "@/services/clipboardService";
 import { openUrl } from "@/services/settingsService";
 import type { ClipboardEntry, FileMeta } from "@/types";
+import { invoke } from "@tauri-apps/api/core";
 import { openFileViewer } from "@/services/fileViewerService";
 import { openInFileExplorer, openFileDefault } from "@/services/clipboardService";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ import { PresetSelector } from "@/components/PresetSelector";
 import { useAskAiStore } from "@/stores/askAiStore";
 import { toast } from "@/lib/toast";
 import { sanitizePreviewHtml } from "@/lib/richText";
+import QRCode from "qrcode";
 
 // In-memory cache: relative_path -> data URL
 const _thumbCache = new Map<string, string>();
@@ -419,6 +421,19 @@ export const EntryCard = memo(function EntryCard({
         onClick: async () => {
           await navigator.clipboard.writeText(entry.text_content!);
           toast.success(t("toast.copied"));
+        },
+      });
+      items.push({
+        label: t("contextMenu.generateQrCode"),
+        icon: <QrCode className="w-3.5 h-3.5" />,
+        onClick: async () => {
+          try {
+            const base64 = await QRCode.toDataURL(entry.text_content!, { width: 400, margin: 2 });
+            const relativePath = await invoke<string>("save_temp_blob", { base64Data: base64 });
+            await openImageViewer(relativePath);
+          } catch (err) {
+            toast.error(String(err));
+          }
         },
       });
       if (urls.length === 1) {
