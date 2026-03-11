@@ -81,7 +81,8 @@
     "openInExplorer": "Open in Explorer",
     "openDefault": "Open with Default App",
     "copyFilePath": "Copy File Path",
-    "delete": "Delete"
+    "delete": "Delete",
+    "generateQrCode": "Generate QR Code"
   },
   "viewer": {
     "fullText": "Full Text",

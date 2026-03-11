@@ -327,34 +327,77 @@ pub fn remember_current_foreground_window(app: &tauri::AppHandle) {
 }
 
 pub fn register_toggle_shortcut(app: &tauri::AppHandle, shortcut_str: &str) -> Result<(), String> {
-    let normalized = shortcut_str.trim();
-    if normalized.is_empty() {
-        return Err("Shortcut cannot be empty".to_string());
-    }
+    register_global_shortcuts(app, Some(shortcut_str), None)
+}
 
-    let shortcut = normalized
-        .parse::<Shortcut>()
-        .map_err(|e| format!("Invalid shortcut '{}': {:?}", normalized, e))?;
+/// Register all global shortcuts. Passing None for a shortcut means "keep current from DB".
+pub fn register_global_shortcuts(
+    app: &tauri::AppHandle,
+    toggle_shortcut: Option<&str>,
+    incognito_shortcut: Option<&str>,
+) -> Result<(), String> {
+    let db = app.state::<AppDatabase>();
+
+    let toggle_str = match toggle_shortcut {
+        Some(s) => s.trim().to_string(),
+        None => db.0.get_setting("toggle_shortcut")
+            .ok().flatten()
+            .filter(|s| !s.trim().is_empty())
+            .unwrap_or_else(|| DEFAULT_TOGGLE_SHORTCUT.to_string()),
+    };
+    let incognito_str = match incognito_shortcut {
+        Some(s) => s.trim().to_string(),
+        None => db.0.get_setting("incognito_shortcut")
+            .ok().flatten()
+            .unwrap_or_default(),
+    };
 
     app.global_shortcut()
         .unregister_all()
         .map_err(|e| format!("Failed to unregister existing shortcuts: {:?}", e))?;
 
-    app.global_shortcut()
-        .on_shortcut(shortcut, move |app, _shortcut, event| {
-            if event.state == ShortcutState::Pressed {
-                if let Some(window) = app.get_webview_window("main") {
-                    if window.is_visible().unwrap_or(false) {
-                        let _ = window.hide();
-                    } else {
-                        remember_current_foreground_window(app);
-                        position_near_caret(&window);
-                        show_and_focus_main_window(app, &window);
+    // Register toggle window shortcut
+    if !toggle_str.is_empty() {
+        let shortcut = toggle_str
+            .parse::<Shortcut>()
+            .map_err(|e| format!("Invalid shortcut '{}': {:?}", toggle_str, e))?;
+
+        app.global_shortcut()
+            .on_shortcut(shortcut, move |app, _shortcut, event| {
+                if event.state == ShortcutState::Pressed {
+                    if let Some(window) = app.get_webview_window("main") {
+                        if window.is_visible().unwrap_or(false) {
+                            let _ = window.hide();
+                        } else {
+                            remember_current_foreground_window(app);
+                            position_near_caret(&window);
+                            show_and_focus_main_window(app, &window);
+                        }
                     }
                 }
-            }
-        })
-        .map_err(|e| format!("Failed to register shortcut '{}': {:?}", normalized, e))
+            })
+            .map_err(|e| format!("Failed to register toggle shortcut '{}': {:?}", toggle_str, e))?;
+    }
+
+    // Register incognito mode shortcut
+    if !incognito_str.is_empty() {
+        let shortcut = incognito_str
+            .parse::<Shortcut>()
+            .map_err(|e| format!("Invalid incognito shortcut '{}': {:?}", incognito_str, e))?;
+
+        app.global_shortcut()
+            .on_shortcut(shortcut, move |app, _shortcut, event| {
+                if event.state == ShortcutState::Pressed {
+                    let current = crate::clipboard::monitor::is_incognito();
+                    let new_val = !current;
+                    crate::clipboard::monitor::set_incognito(new_val);
+                    let _ = app.emit("incognito-changed", new_val);
+                }
+            })
+            .map_err(|e| format!("Failed to register incognito shortcut '{}': {:?}", incognito_str, e))?;
+    }
+
+    Ok(())
 }
 
 // === Open URL in browser ===
@@ -475,9 +518,22 @@ pub fn update_toggle_shortcut(
     db: State<'_, AppDatabase>,
     shortcut: String,
 ) -> Result<(), String> {
-    let normalized = shortcut.trim();
-    register_toggle_shortcut(&app, normalized)?;
-    db.0.set_setting("toggle_shortcut", normalized)?;
+    let normalized = shortcut.trim().to_string();
+    register_global_shortcuts(&app, Some(&normalized), None)?;
+    db.0.set_setting("toggle_shortcut", &normalized)?;
+    let _ = app.emit("settings-changed", serde_json::json!({}));
+    Ok(())
+}
+
+#[tauri::command]
+pub fn update_incognito_shortcut(
+    app: tauri::AppHandle,
+    db: State<'_, AppDatabase>,
+    shortcut: String,
+) -> Result<(), String> {
+    let normalized = shortcut.trim().to_string();
+    register_global_shortcuts(&app, None, Some(&normalized))?;
+    db.0.set_setting("incognito_shortcut", &normalized)?;
     let _ = app.emit("settings-changed", serde_json::json!({}));
     Ok(())
 }

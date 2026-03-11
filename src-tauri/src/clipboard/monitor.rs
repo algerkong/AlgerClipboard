@@ -19,6 +19,17 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
 use std::time::Duration;
 
+/// Global incognito flag — when `true` the clipboard monitor skips recording.
+static INCOGNITO: AtomicBool = AtomicBool::new(false);
+
+pub fn set_incognito(enabled: bool) {
+    INCOGNITO.store(enabled, Ordering::SeqCst);
+}
+
+pub fn is_incognito() -> bool {
+    INCOGNITO.load(Ordering::SeqCst)
+}
+
 #[derive(Debug, Clone, Default)]
 struct ClipboardSource {
     app_name: Option<String>,
@@ -1560,6 +1571,12 @@ impl ClipboardMonitor {
             }
 
             while running.load(Ordering::SeqCst) {
+                // Skip recording when incognito mode is active
+                if INCOGNITO.load(Ordering::Relaxed) {
+                    thread::sleep(Duration::from_millis(500));
+                    continue;
+                }
+
                 let mut captured = false;
 
                 // 1. Check file paths FIRST (highest priority - file copies)

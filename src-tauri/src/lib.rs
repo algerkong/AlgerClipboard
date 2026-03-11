@@ -13,8 +13,8 @@ use clipboard::monitor::ClipboardMonitor;
 use commands::clipboard_cmd::AppDatabase;
 use commands::paste_cmd::{AppBlobStore, AppPasteTargetState, PasteTargetSnapshot};
 use commands::settings_cmd::{
-    register_toggle_shortcut, remember_current_foreground_window, show_and_focus_main_window,
-    DEFAULT_TOGGLE_SHORTCUT,
+    register_global_shortcuts, register_toggle_shortcut, remember_current_foreground_window,
+    show_and_focus_main_window, DEFAULT_TOGGLE_SHORTCUT,
 };
 use std::sync::Arc;
 use storage::blob::BlobStore;
@@ -364,13 +364,13 @@ pub fn run() {
                 .filter(|s| !s.trim().is_empty())
                 .unwrap_or_else(|| DEFAULT_TOGGLE_SHORTCUT.to_string());
 
-            match register_toggle_shortcut(app.handle(), &shortcut_str) {
+            match register_global_shortcuts(app.handle(), Some(&shortcut_str), None) {
                 Ok(_) => {
-                    log::info!("Global shortcut registered: {}", shortcut_str);
+                    log::info!("Global shortcuts registered: toggle={}", shortcut_str);
                 }
                 Err(e) => {
                     log::error!(
-                        "Failed to register global shortcut '{}': {}",
+                        "Failed to register global shortcuts '{}': {}",
                         shortcut_str,
                         e
                     );
@@ -500,10 +500,17 @@ pub fn run() {
             commands::clipboard_cmd::cleanup_cache_by_size,
             commands::clipboard_cmd::open_in_explorer,
             commands::clipboard_cmd::update_entry_text,
+            commands::clipboard_cmd::write_export_file,
+            commands::clipboard_cmd::set_incognito,
+            commands::clipboard_cmd::get_incognito,
+            commands::clipboard_cmd::save_temp_blob,
+            commands::clipboard_cmd::copy_image_to_clipboard,
+            commands::clipboard_cmd::save_image_to_file,
             commands::notification_cmd::show_system_notification,
             commands::settings_cmd::get_settings,
             commands::settings_cmd::update_settings,
             commands::settings_cmd::update_toggle_shortcut,
+            commands::settings_cmd::update_incognito_shortcut,
             commands::settings_cmd::open_url,
             commands::settings_cmd::set_auto_start,
             commands::settings_cmd::get_auto_start,

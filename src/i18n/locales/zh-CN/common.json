@@ -81,7 +81,8 @@
     "openInExplorer": "在资源管理器中打开",
     "openDefault": "用默认程序打开",
     "copyFilePath": "复制文件路径",
-    "delete": "删除"
+    "delete": "删除",
+    "generateQrCode": "生成二维码"
   },
   "viewer": {
     "fullText": "查看全文",
