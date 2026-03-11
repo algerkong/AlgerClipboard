@@ -42,9 +42,13 @@ export function SyncTab() {
   const setPassphrase = useSyncStore((s) => s.setPassphrase);
   const settingsSyncEnabled = useSyncStore((s) => s.settingsSyncEnabled);
   const syncMaxFileSize = useSyncStore((s) => s.syncMaxFileSize);
+  const syncWriteClipboard = useSyncStore((s) => s.syncWriteClipboard);
+  const syncRealtimePollSeconds = useSyncStore((s) => s.syncRealtimePollSeconds);
   const loadSyncSettings = useSyncStore((s) => s.loadSyncSettings);
   const setSettingsSyncEnabled = useSyncStore((s) => s.setSettingsSyncEnabled);
   const setSyncMaxFileSize = useSyncStore((s) => s.setSyncMaxFileSize);
+  const setSyncWriteClipboard = useSyncStore((s) => s.setSyncWriteClipboard);
+  const setSyncRealtimePollSeconds = useSyncStore((s) => s.setSyncRealtimePollSeconds);
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
@@ -349,6 +353,26 @@ export function SyncTab() {
                 ]}
                 className="w-[12rem]"
               />
+            }
+          />
+          <SettingsRow
+            title={t("sync.syncWriteClipboard")}
+            description={t("sync.syncWriteClipboardDesc")}
+            control={<Toggle value={syncWriteClipboard} onChange={setSyncWriteClipboard} size="sm" />}
+          />
+          <SettingsRow
+            title={t("sync.realtimePollSeconds")}
+            description={t("sync.realtimePollSecondsDesc")}
+            control={
+              <SettingsField className="w-[8rem]">
+                <SettingsInput
+                  type="number"
+                  min={5}
+                  max={3600}
+                  value={syncRealtimePollSeconds}
+                  onChange={(e) => setSyncRealtimePollSeconds(parseInt(e.target.value, 10) || 30)}
+                />
+              </SettingsField>
             }
           />
         </SettingsSection>

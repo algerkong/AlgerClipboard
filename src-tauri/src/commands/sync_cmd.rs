@@ -206,6 +206,64 @@ pub async fn trigger_sync(
                 }
             }
 
+            // Auto write latest pulled entry to system clipboard if enabled
+            if sync_result.pulled > 0 {
+                if let Some(ref entry_id) = sync_result.latest_pulled_entry_id {
+                    let write_clipboard = db
+                        .0
+                        .get_setting("sync_write_clipboard")
+                        .ok()
+                        .flatten()
+                        .map(|v| v == "true")
+                        .unwrap_or(false);
+                    if write_clipboard {
+                        if let Ok(Some(entry)) = db.0.get_entry(entry_id) {
+                            match entry.content_type {
+                                crate::clipboard::entry::ContentType::PlainText
+                                | crate::clipboard::entry::ContentType::RichText => {
+                                    if let Some(text) = &entry.text_content {
+                                        if let Ok(mut clipboard) = arboard::Clipboard::new() {
+                                            let _ = clipboard.set_text(text.clone());
+                                        }
+                                    }
+                                }
+                                crate::clipboard::entry::ContentType::Image => {
+                                    if let Some(ref blob_path) = entry.blob_path {
+                                        let full_path = blob_store.0.get_blob_path(blob_path);
+                                        if let Ok(blob_data) = std::fs::read(&full_path) {
+                                            if let Ok(img) =
+                                                image::load_from_memory(&blob_data)
+                                            {
+                                                let rgba = img.to_rgba8();
+                                                let img_data = arboard::ImageData {
+                                                    width: rgba.width() as usize,
+                                                    height: rgba.height() as usize,
+                                                    bytes: std::borrow::Cow::Owned(
+                                                        rgba.into_raw(),
+                                                    ),
+                                                };
+                                                if let Ok(mut clipboard) =
+                                                    arboard::Clipboard::new()
+                                                {
+                                                    let _ = clipboard.set_image(img_data);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                crate::clipboard::entry::ContentType::FilePaths => {
+                                    if let Some(text) = &entry.text_content {
+                                        if let Ok(mut clipboard) = arboard::Clipboard::new() {
+                                            let _ = clipboard.set_text(text.clone());
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             let _ = app.emit(
                 "sync-status-changed",
                 serde_json::json!({ "status": "synced" }),
@@ -254,6 +312,99 @@ pub fn get_sync_max_file_size(db: State<'_, AppDatabase>) -> Result<i64, String>
         .get_setting("sync_max_file_size_mb")?
         .and_then(|v| v.parse::<i64>().ok())
         .unwrap_or(0))
+}
+
+#[tauri::command]
+pub fn set_sync_write_clipboard(
+    db: State<'_, AppDatabase>,
+    enabled: bool,
+) -> Result<(), String> {
+    db.0.set_setting(
+        "sync_write_clipboard",
+        if enabled { "true" } else { "false" },
+    )
+}
+
+#[tauri::command]
+pub fn get_sync_write_clipboard(db: State<'_, AppDatabase>) -> Result<bool, String> {
+    Ok(db
+        .0
+        .get_setting("sync_write_clipboard")?
+        .map(|v| v == "true")
+        .unwrap_or(false))
+}
+
+#[tauri::command]
+pub fn set_sync_realtime_poll_seconds(
+    db: State<'_, AppDatabase>,
+    seconds: i64,
+) -> Result<(), String> {
+    db.0.set_setting("sync_realtime_poll_seconds", &seconds.to_string())
+}
+
+#[tauri::command]
+pub fn get_sync_realtime_poll_seconds(db: State<'_, AppDatabase>) -> Result<i64, String> {
+    Ok(db
+        .0
+        .get_setting("sync_realtime_poll_seconds")?
+        .and_then(|v| v.parse::<i64>().ok())
+        .unwrap_or(30))
+}
+
+#[tauri::command]
+pub fn write_to_system_clipboard(
+    db: State<'_, AppDatabase>,
+    blob_store: State<'_, crate::commands::paste_cmd::AppBlobStore>,
+    entry_id: String,
+) -> Result<(), String> {
+    let entry = db
+        .0
+        .get_entry(&entry_id)?
+        .ok_or_else(|| "Entry not found".to_string())?;
+
+    match entry.content_type {
+        crate::clipboard::entry::ContentType::PlainText
+        | crate::clipboard::entry::ContentType::RichText => {
+            if let Some(text) = &entry.text_content {
+                let mut clipboard = arboard::Clipboard::new()
+                    .map_err(|e| format!("Failed to open clipboard: {}", e))?;
+                clipboard
+                    .set_text(text.clone())
+                    .map_err(|e| format!("Failed to set clipboard text: {}", e))?;
+            }
+        }
+        crate::clipboard::entry::ContentType::Image => {
+            if let Some(ref blob_path) = entry.blob_path {
+                let full_path = blob_store.0.get_blob_path(blob_path);
+                let blob_data = std::fs::read(&full_path)
+                    .map_err(|e| format!("Failed to read blob: {}", e))?;
+                if let Ok(img) = image::load_from_memory(&blob_data) {
+                    let rgba = img.to_rgba8();
+                    let img_data = arboard::ImageData {
+                        width: rgba.width() as usize,
+                        height: rgba.height() as usize,
+                        bytes: std::borrow::Cow::Owned(rgba.into_raw()),
+                    };
+                    let mut clipboard = arboard::Clipboard::new()
+                        .map_err(|e| format!("Failed to open clipboard: {}", e))?;
+                    clipboard
+                        .set_image(img_data)
+                        .map_err(|e| format!("Failed to set clipboard image: {}", e))?;
+                }
+            }
+        }
+        crate::clipboard::entry::ContentType::FilePaths => {
+            if let Some(text) = &entry.text_content {
+                let mut clipboard = arboard::Clipboard::new()
+                    .map_err(|e| format!("Failed to open clipboard: {}", e))?;
+                clipboard
+                    .set_text(text.clone())
+                    .map_err(|e| format!("Failed to set clipboard text: {}", e))?;
+            }
+        }
+    }
+
+    Ok(())
 }
 
 #[tauri::command]

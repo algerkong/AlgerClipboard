@@ -49,6 +49,11 @@
     "settingsSyncDesc": "Sync preferences like theme and language",
     "syncMaxFileSize": "File Sync Size Limit",
     "syncMaxFileSizeDesc": "Files exceeding this size will skip sync",
-    "syncMaxFileSizeUnlimited": "Unlimited"
+    "syncMaxFileSizeUnlimited": "Unlimited",
+    "syncWriteClipboard": "Write to clipboard after sync",
+    "syncWriteClipboardDesc": "Auto-write latest pulled entry to system clipboard for Ctrl+V",
+    "realtimePollSeconds": "Realtime sync poll interval",
+    "realtimePollSecondsDesc": "Interval to check for remote changes (seconds)",
+    "realtimePollSecondsUnit": "seconds"
   }
 }

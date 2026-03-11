@@ -34,6 +34,8 @@ pub struct SyncResult {
     pub settings_pushed: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub settings_pulled: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub latest_pulled_entry_id: Option<String>,
 }
 
 pub struct SyncEngine {
@@ -69,6 +71,7 @@ impl SyncEngine {
             errors: vec![],
             settings_pushed: None,
             settings_pulled: None,
+            latest_pulled_entry_id: None,
         };
 
         // Ensure remote directory structure
@@ -125,7 +128,10 @@ impl SyncEngine {
                     } else if local.content_hash != manifest_entry.content_hash {
                         // Remote is newer, pull it
                         match self.pull_entry(entry_id).await {
-                            Ok(_) => result.pulled += 1,
+                            Ok(_) => {
+                                result.pulled += 1;
+                                result.latest_pulled_entry_id = Some(entry_id.clone());
+                            }
                             Err(e) => result.errors.push(format!("Pull {}: {}", entry_id, e)),
                         }
                     }
@@ -138,7 +144,10 @@ impl SyncEngine {
                     }
                     // Genuinely new remote entry, pull it
                     match self.pull_entry(entry_id).await {
-                        Ok(_) => result.pulled += 1,
+                        Ok(_) => {
+                            result.pulled += 1;
+                            result.latest_pulled_entry_id = Some(entry_id.clone());
+                        }
                         Err(e) => result.errors.push(format!("Pull {}: {}", entry_id, e)),
                     }
                 }
