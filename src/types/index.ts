@@ -85,6 +85,7 @@ export interface SyncResult {
   errors: string[];
   settings_pushed?: number;
   settings_pulled?: number;
+  latest_pulled_entry_id?: string;
 }
 
 export interface TypeCount {

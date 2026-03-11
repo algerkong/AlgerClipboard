@@ -90,3 +90,23 @@ export async function setSyncMaxFileSize(maxSizeMb: number): Promise<void> {
 export async function getSyncMaxFileSize(): Promise<number> {
   return invoke("get_sync_max_file_size");
 }
+
+export async function setSyncWriteClipboard(enabled: boolean): Promise<void> {
+  return invoke("set_sync_write_clipboard", { enabled });
+}
+
+export async function getSyncWriteClipboard(): Promise<boolean> {
+  return invoke("get_sync_write_clipboard");
+}
+
+export async function setSyncRealtimePollSeconds(seconds: number): Promise<void> {
+  return invoke("set_sync_realtime_poll_seconds", { seconds });
+}
+
+export async function getSyncRealtimePollSeconds(): Promise<number> {
+  return invoke("get_sync_realtime_poll_seconds");
+}
+
+export async function writeToSystemClipboard(entryId: string): Promise<void> {
+  return invoke("write_to_system_clipboard", { entryId });
+}

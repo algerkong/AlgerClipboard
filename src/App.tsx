@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
 import { TitleBar } from "@/components/TitleBar";
@@ -23,7 +23,7 @@ import { useSyncStore } from "@/stores/syncStore";
 import { startPeriodicUpdateCheck, stopPeriodicUpdateCheck } from "@/services/updateService";
 import { openUrl } from "@/services/settingsService";
 import type { ClipboardEntry } from "@/types";
-import { getSavedWindowSize, trackWindowSize } from "@/lib/windowSize";
+
 
 // Global safety net: intercept all <a> clicks and open in external browser
 document.addEventListener("click", (e) => {
@@ -70,6 +70,12 @@ function applyTheme(theme: "light" | "dark" | "system") {
 
 function App() {
   const loadAvailability = useCapabilityStore((s) => s.loadAvailability);
+
+  // Show window after React mounts to prevent flash of unstyled/unsized content.
+  // All windows are created with visible: false and shown here after content is ready.
+  useEffect(() => {
+    getCurrentWebviewWindow().show();
+  }, []);
 
   useEffect(() => {
     void loadAvailability();
@@ -409,8 +415,6 @@ function FileViewerWindow() {
   );
 }
 
-const MAIN_WINDOW_SIZE_KEY = "main-window-size";
-
 function MainApp() {
   const { i18n, t } = useTranslation();
   const shouldResetOnNextFocusRef = useRef(false);
@@ -420,19 +424,11 @@ function MainApp() {
   const locale = useSettingsStore((s) => s.locale);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
 
-  // Restore saved window size and track future resizes
-  useEffect(() => {
-    const saved = getSavedWindowSize(MAIN_WINDOW_SIZE_KEY, { width: 0, height: 0 });
-    if (saved.width > 0 && saved.height > 0) {
-      getCurrentWindow().setSize(new LogicalSize(saved.width, saved.height)).catch(() => {});
-    }
-    return trackWindowSize(MAIN_WINDOW_SIZE_KEY);
-  }, []);
-
   const loadAccounts = useSyncStore((s) => s.loadAccounts);
   const setSyncStatus = useSyncStore((s) => s.setSyncStatus);
   const triggerSync = useSyncStore((s) => s.triggerSync);
   const accounts = useSyncStore((s) => s.accounts);
+  const syncRealtimePollSeconds = useSyncStore((s) => s.syncRealtimePollSeconds);
 
   // Load settings, history, and sync accounts on mount
   useEffect(() => {
@@ -535,6 +531,25 @@ function MainApp() {
 
     return () => timers.forEach(clearInterval);
   }, [accounts, triggerSync]);
+
+  // Realtime polling: periodically pull remote changes for realtime sync accounts
+  useEffect(() => {
+    const realtimeAccounts = accounts.filter(
+      (a) => a.enabled && a.sync_frequency === "realtime"
+    );
+    if (realtimeAccounts.length === 0) return;
+
+    const ms = Math.max(syncRealtimePollSeconds, 5) * 1000;
+    const timer = setInterval(() => {
+      if (useSyncStore.getState().syncStatus !== "syncing") {
+        for (const acc of realtimeAccounts) {
+          triggerSync(acc.id);
+        }
+      }
+    }, ms);
+
+    return () => clearInterval(timer);
+  }, [accounts, syncRealtimePollSeconds, triggerSync]);
 
   // Listen for sync-status-changed events from Rust backend
   useEffect(() => {

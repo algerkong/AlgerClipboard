@@ -49,6 +49,11 @@
     "settingsSyncDesc": "同步主题、语言等用户偏好",
     "syncMaxFileSize": "文件同步大小上限",
     "syncMaxFileSizeDesc": "超过此大小的文件将跳过同步",
-    "syncMaxFileSizeUnlimited": "不限制"
+    "syncMaxFileSizeUnlimited": "不限制",
+    "syncWriteClipboard": "同步后写入剪贴板",
+    "syncWriteClipboardDesc": "拉取到新条目后自动写入系统剪贴板，Ctrl+V 可直接粘贴",
+    "realtimePollSeconds": "实时同步轮询间隔",
+    "realtimePollSecondsDesc": "自动检查远端变更的间隔（秒）",
+    "realtimePollSecondsUnit": "秒"
   }
 }

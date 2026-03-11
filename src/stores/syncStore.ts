@@ -12,6 +12,8 @@ interface SyncState {
   loading: boolean;
   settingsSyncEnabled: boolean;
   syncMaxFileSize: number; // 0 = unlimited, in MB
+  syncWriteClipboard: boolean;
+  syncRealtimePollSeconds: number;
 
   loadAccounts: () => Promise<void>;
   addAccount: (
@@ -41,6 +43,8 @@ interface SyncState {
   loadSyncSettings: () => Promise<void>;
   setSettingsSyncEnabled: (enabled: boolean) => Promise<void>;
   setSyncMaxFileSize: (maxSizeMb: number) => Promise<void>;
+  setSyncWriteClipboard: (enabled: boolean) => Promise<void>;
+  setSyncRealtimePollSeconds: (seconds: number) => Promise<void>;
 }
 
 export const useSyncStore = create<SyncState>((set, get) => ({
@@ -51,6 +55,8 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   loading: false,
   settingsSyncEnabled: false,
   syncMaxFileSize: 0,
+  syncWriteClipboard: false,
+  syncRealtimePollSeconds: 30,
 
   loadAccounts: async () => {
     set({ loading: true });
@@ -123,11 +129,18 @@ export const useSyncStore = create<SyncState>((set, get) => ({
 
   loadSyncSettings: async () => {
     try {
-      const [enabled, maxSize] = await Promise.all([
+      const [enabled, maxSize, writeClipboard, pollSeconds] = await Promise.all([
         syncService.getSettingsSyncEnabled(),
         syncService.getSyncMaxFileSize(),
+        syncService.getSyncWriteClipboard(),
+        syncService.getSyncRealtimePollSeconds(),
       ]);
-      set({ settingsSyncEnabled: enabled, syncMaxFileSize: maxSize });
+      set({
+        settingsSyncEnabled: enabled,
+        syncMaxFileSize: maxSize,
+        syncWriteClipboard: writeClipboard,
+        syncRealtimePollSeconds: pollSeconds,
+      });
     } catch (err) {
       console.error("Failed to load sync settings:", err);
     }
@@ -148,6 +161,24 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       await syncService.setSyncMaxFileSize(maxSizeMb);
     } catch (err) {
       console.error("Failed to save sync max file size:", err);
+    }
+  },
+
+  setSyncWriteClipboard: async (enabled) => {
+    set({ syncWriteClipboard: enabled });
+    try {
+      await syncService.setSyncWriteClipboard(enabled);
+    } catch (err) {
+      console.error("Failed to save sync write clipboard:", err);
+    }
+  },
+
+  setSyncRealtimePollSeconds: async (seconds) => {
+    set({ syncRealtimePollSeconds: seconds });
+    try {
+      await syncService.setSyncRealtimePollSeconds(seconds);
+    } catch (err) {
+      console.error("Failed to save sync realtime poll seconds:", err);
     }
   },
 }));
