@@ -9,10 +9,9 @@ import type { AiWebService } from "@/constants/aiServices";
 import { FaviconImg } from "@/pages/settings/AskAiTab";
 import { usePlatform } from "@/contexts/PlatformContext";
 import { cn } from "@/lib/utils";
-import { trackWindowSize } from "@/lib/windowSize";
 
 const TAB_BAR_HEIGHT = 44;
-export const ASK_AI_SIZE_KEY = "ask-ai-window-size";
+export const ASK_AI_SIZE_KEY = "ask-ai-panel";
 
 function getAskAiChromeMetrics(platform: "windows" | "macos" | "linux", isSingleService: boolean) {
   const topInset = isSingleService ? 0 : platform === "macos" ? 28 : 0;
@@ -94,9 +93,6 @@ export function AskAiPanel() {
       }
     }));
   }, [createdWebviews, resizeServiceWebview]);
-
-  // Save window size on resize
-  useEffect(() => trackWindowSize(ASK_AI_SIZE_KEY), []);
 
   // Load services and favicons on mount
   useEffect(() => {

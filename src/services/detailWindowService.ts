@@ -3,7 +3,7 @@ import i18n from "@/i18n";
 import { getManagedWindowDecorations } from "@/services/windowOptions";
 import { getSavedWindowSize } from "@/lib/windowSize";
 
-export const DETAIL_SIZE_KEY = "detail-window-size";
+export const DETAIL_SIZE_KEY = "detail";
 
 let windowCounter = 0;
 
@@ -13,7 +13,7 @@ export async function openDetailWindow(entryId: string, tab?: "view" | "translat
   let url = `index.html?window=detail&id=${encodeURIComponent(entryId)}`;
   if (tab) url += `&tab=${tab}`;
 
-  const size = getSavedWindowSize(DETAIL_SIZE_KEY, { width: 780, height: 580 });
+  const size = await getSavedWindowSize(DETAIL_SIZE_KEY, { width: 780, height: 580 });
 
   const win = new WebviewWindow(label, {
     url,
@@ -23,6 +23,7 @@ export async function openDetailWindow(entryId: string, tab?: "view" | "translat
     minWidth: 560,
     minHeight: 440,
     ...getManagedWindowDecorations(),
+    visible: false,
     alwaysOnTop: true,
     center: true,
     shadow: true,

@@ -30,7 +30,7 @@ export function serviceIdToDataStoreId(serviceId: string): number[] {
 export async function openAskAiPanel() {
   const enabledIds = useAskAiStore.getState().enabledServiceIds;
   const singleService = enabledIds.length <= 1;
-  const saved = getSavedWindowSize(ASK_AI_SIZE_KEY, { width: 1000, height: 700 });
+  const saved = await getSavedWindowSize(ASK_AI_SIZE_KEY, { width: 1000, height: 700 });
 
   await invoke("create_ask_ai_panel", {
     tabBarHeight: TAB_BAR_HEIGHT,

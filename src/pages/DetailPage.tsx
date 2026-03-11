@@ -46,8 +46,6 @@ import {
   mapLanguageToCodemirror,
   type ContentMode,
 } from "@/lib/contentDetect";
-import { trackWindowSize } from "@/lib/windowSize";
-import { DETAIL_SIZE_KEY } from "@/services/detailWindowService";
 
 const searchParams = new URLSearchParams(window.location.search);
 const entryId = searchParams.get("id") || "";
@@ -121,8 +119,6 @@ export function DetailPage() {
 
   // AI state
   const [summarizing, setSummarizing] = useState(false);
-
-  useEffect(() => trackWindowSize(DETAIL_SIZE_KEY), []);
 
   useEffect(() => {
     loadSettings();
