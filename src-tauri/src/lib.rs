@@ -213,6 +213,25 @@ pub fn run() {
                 }
             };
 
+            // Initialize excluded apps list
+            if let Ok(Some(json)) = db.get_setting("excluded_apps") {
+                if let Ok(apps) = serde_json::from_str::<Vec<String>>(&json) {
+                    clipboard::monitor::set_excluded_apps(apps);
+                }
+            }
+
+            // Initialize sensitive detection settings
+            if let Ok(Some(mode_str)) = db.get_setting("sensitive_mode") {
+                if let Ok(mode) = mode_str.parse::<u8>() {
+                    clipboard::monitor::set_sensitive_mode(mode);
+                }
+            }
+            if let Ok(Some(json)) = db.get_setting("sensitive_disabled_rules") {
+                if let Ok(rules) = serde_json::from_str::<Vec<String>>(&json) {
+                    clipboard::monitor::set_sensitive_disabled_rules(rules);
+                }
+            }
+
             let monitor = ClipboardMonitor::new(device_id);
             let app_handle = app.handle().clone();
             let db_for_ai = db.clone();
@@ -516,6 +535,11 @@ pub fn run() {
             commands::settings_cmd::get_auto_start,
             commands::settings_cmd::focus_main_window,
             commands::settings_cmd::get_window_size,
+            commands::settings_cmd::get_recent_source_apps,
+            commands::settings_cmd::update_excluded_apps,
+            commands::settings_cmd::update_sensitive_mode,
+            commands::settings_cmd::update_sensitive_disabled_rules,
+            commands::settings_cmd::get_sensitive_rules,
             commands::paste_cmd::paste_entry,
             commands::paste_cmd::paste_text_direct,
             commands::template_cmd::get_templates,

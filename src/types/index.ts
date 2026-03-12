@@ -26,6 +26,8 @@ export interface ClipboardEntry {
   detected_language: string | null;
   file_meta: string | null;
   ocr_text: string | null;
+  is_sensitive: boolean;
+  sensitive_types: string | null;
 }
 
 export interface HistoryQuery {

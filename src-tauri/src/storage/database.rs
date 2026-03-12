@@ -189,6 +189,16 @@ impl Database {
         let _ = conn.execute("ALTER TABLE entries ADD COLUMN file_meta TEXT", []);
         let _ = conn.execute("ALTER TABLE entries ADD COLUMN ocr_text TEXT", []);
 
+        // Migration: add sensitive detection columns
+        let _ = conn.execute(
+            "ALTER TABLE entries ADD COLUMN is_sensitive INTEGER DEFAULT 0",
+            [],
+        );
+        let _ = conn.execute(
+            "ALTER TABLE entries ADD COLUMN sensitive_types TEXT",
+            [],
+        );
+
         // OCR cache table
         conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS ocr_cache (
@@ -246,8 +256,8 @@ impl Database {
         let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
         conn.execute(
-            "INSERT OR REPLACE INTO entries (id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, source_icon, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language, file_meta, ocr_text, deleted)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, 0)",
+            "INSERT OR REPLACE INTO entries (id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, source_icon, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language, file_meta, ocr_text, is_sensitive, sensitive_types, deleted)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, 0)",
             params![
                 entry.id,
                 entry.content_type.as_str(),
@@ -272,6 +282,8 @@ impl Database {
                 entry.detected_language,
                 entry.file_meta,
                 entry.ocr_text,
+                entry.is_sensitive as i32,
+                entry.sensitive_types,
             ],
         )
         .map_err(|e| format!("Failed to insert entry: {}", e))?;
@@ -298,7 +310,7 @@ impl Database {
 
         let mut stmt = conn
             .prepare(
-                "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, source_icon, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language, file_meta, ocr_text
+                "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, source_icon, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language, file_meta, ocr_text, is_sensitive, sensitive_types
                  FROM entries WHERE content_hash = ?1 AND deleted = 0 LIMIT 1",
             )
             .map_err(|e| format!("Prepare error: {}", e))?;
@@ -331,7 +343,7 @@ impl Database {
         let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
         let mut sql = String::from(
-            "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, source_icon, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language, file_meta, ocr_text
+            "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, source_icon, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language, file_meta, ocr_text, is_sensitive, sensitive_types
              FROM entries WHERE deleted = 0",
         );
         let mut param_values: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
@@ -386,7 +398,7 @@ impl Database {
 
         let mut stmt = conn
             .prepare(
-                "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, source_icon, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language, file_meta, ocr_text
+                "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, source_icon, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language, file_meta, ocr_text, is_sensitive, sensitive_types
                  FROM entries WHERE id = ?1 AND deleted = 0",
             )
             .map_err(|e| format!("Prepare error: {}", e))?;
@@ -610,6 +622,19 @@ impl Database {
         .map_err(|e| format!("Failed to set setting: {}", e))?;
 
         Ok(())
+    }
+
+    pub fn get_distinct_source_apps(&self) -> Result<Vec<String>, String> {
+        let conn = self.conn.lock().map_err(|e| e.to_string())?;
+        let mut stmt = conn
+            .prepare("SELECT DISTINCT source_app FROM entries WHERE source_app IS NOT NULL AND deleted = 0 ORDER BY source_app")
+            .map_err(|e| e.to_string())?;
+        let apps = stmt
+            .query_map([], |row| row.get::<_, String>(0))
+            .map_err(|e| e.to_string())?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(apps)
     }
 
     // ── OCR cache ──
@@ -1096,7 +1121,7 @@ impl Database {
 
         let mut stmt = conn
             .prepare(
-                "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, source_icon, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language, file_meta, ocr_text
+                "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, source_icon, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language, file_meta, ocr_text, is_sensitive, sensitive_types
                  FROM entries WHERE deleted = 0 ORDER BY created_at DESC",
             )
             .map_err(|e| format!("Prepare error: {}", e))?;
@@ -1340,7 +1365,7 @@ impl Database {
         //   - have a sync_version greater than the last synced version, OR
         //   - have never been synced (sync_status = 'Local')
         let mut stmt = conn.prepare(
-            "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, source_icon, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language, file_meta, ocr_text
+            "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, source_icon, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language, file_meta, ocr_text, is_sensitive, sensitive_types
              FROM entries WHERE (sync_version > ?1 OR sync_status = 'local') AND deleted = 0 ORDER BY created_at ASC"
         ).map_err(|e| format!("Prepare error: {}", e))?;
 
@@ -1496,7 +1521,7 @@ impl Database {
         // Fetch full entries preserving FTS result order
         let placeholders: String = ids.iter().enumerate().map(|(i, _)| format!("?{}", i + 1)).collect::<Vec<_>>().join(",");
         let sql = format!(
-            "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, source_icon, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language, file_meta, ocr_text
+            "SELECT id, content_type, text_content, html_content, blob_path, thumbnail_path, content_hash, source_app, source_url, source_icon, device_id, is_favorite, is_pinned, created_at, updated_at, synced_at, sync_status, sync_version, ai_summary, content_category, detected_language, file_meta, ocr_text, is_sensitive, sensitive_types
              FROM entries WHERE id IN ({}) AND deleted = 0",
             placeholders
         );
@@ -1555,6 +1580,8 @@ fn row_to_entry_inner(row: &rusqlite::Row) -> ClipboardEntry {
         detected_language: row.get("detected_language").unwrap_or(None),
         file_meta: row.get("file_meta").unwrap_or(None),
         ocr_text: row.get("ocr_text").unwrap_or(None),
+        is_sensitive: row.get::<_, i32>("is_sensitive").unwrap_or(0) != 0,
+        sensitive_types: row.get("sensitive_types").unwrap_or(None),
     }
 }
 
@@ -1606,6 +1633,8 @@ mod tests {
             detected_language: Some("zh".into()),
             file_meta: None,
             ocr_text: None,
+            is_sensitive: false,
+            sensitive_types: None,
         };
 
         db.insert_entry(&entry)
