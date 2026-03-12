@@ -15,6 +15,7 @@ import {
   PanelLeft,
   Columns2,
   PanelRight,
+  Code,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { usePreviewCloseShortcut } from "@/hooks/usePreviewCloseShortcut";
@@ -46,6 +47,7 @@ import {
   mapLanguageToCodemirror,
   type ContentMode,
 } from "@/lib/contentDetect";
+import { transformGroups } from "@/services/textTransformService";
 
 const searchParams = new URLSearchParams(window.location.search);
 const entryId = searchParams.get("id") || "";
@@ -387,6 +389,10 @@ function ViewTab({
     useState<RichTextDetailMode>(defaultRenderMode);
   const [layout, setLayout] = useState<ViewLayout>("preview");
   const [editHtml, setEditHtml] = useState(entry.html_content || "");
+  const [transformMode, setTransformMode] = useState(false);
+  const [activeGroupIndex, setActiveGroupIndex] = useState(0);
+  const [activeTransformIndex, setActiveTransformIndex] = useState(-1);
+  const [transformResult, setTransformResult] = useState<string | null>(null);
 
   const contentMode: ContentMode = useMemo(
     () =>
@@ -413,6 +419,24 @@ function ViewTab({
     if (!entry.html_content) return "";
     return sanitizeDetailHtml(entry.html_content, renderMode);
   }, [entry.html_content, renderMode]);
+
+  const handleSelectTransform = useCallback(
+    (groupIndex: number, transformIndex: number) => {
+      const sourceText = isEditing ? editText : entry.text_content;
+      if (!sourceText) return;
+      setActiveGroupIndex(groupIndex);
+      setActiveTransformIndex(transformIndex);
+      const fn = transformGroups[groupIndex].transforms[transformIndex].fn;
+      setTransformResult(fn(sourceText));
+    },
+    [isEditing, editText, entry.text_content],
+  );
+
+  const exitTransformMode = useCallback(() => {
+    setTransformMode(false);
+    setActiveTransformIndex(-1);
+    setTransformResult(null);
+  }, []);
 
   // Ctrl+S to save when editing
   useEffect(() => {
@@ -552,14 +576,29 @@ function ViewTab({
           ? "Code"
           : "Text";
 
+  const activeGroup = transformGroups[activeGroupIndex];
+
   return (
     <div className="flex flex-col h-full">
-      {hasText && (
+      {hasText && !transformMode && (
         <div className="detail-toolbar">
           <div className="flex items-center gap-1">
             <span className="detail-status-pill px-2 py-0.5 text-2xs">
               {contentModeLabel}
             </span>
+
+            {/* Text transform toggle */}
+            <button
+              onClick={() => {
+                setTransformMode(true);
+                setActiveTransformIndex(-1);
+                setTransformResult(null);
+              }}
+              title={t("contextMenu.textTransform")}
+              className="filter-pill min-h-0 p-1 transition-colors text-muted-foreground hover:text-foreground hover:bg-accent/50"
+            >
+              <Code className="w-3 h-3" />
+            </button>
 
             {/* RichText render mode toggle (clean/full) */}
             {contentMode === "richtext" &&
@@ -658,17 +697,137 @@ function ViewTab({
         </div>
       )}
 
-      <div className="flex-1 min-h-0 overflow-hidden">
-        {hasText ? (
-          renderContent()
-        ) : (
-          <div className="flex items-center justify-center h-full p-3 text-sm2 text-muted-foreground">
-            {entry.content_type === "Image"
-              ? "Image content"
-              : entry.content_type}
+      {/* ── Transform mode ── */}
+      {hasText && transformMode && (
+        <div className="flex flex-col h-full animate-fade-in">
+          {/* Transform toolbar: group tabs + close */}
+          <div className="detail-toolbar">
+            <div className="flex items-center gap-0.5 min-w-0 overflow-x-auto tab-scroll-area">
+              {transformGroups.map((group, gi) => (
+                <button
+                  key={gi}
+                  onClick={() => {
+                    setActiveGroupIndex(gi);
+                    setActiveTransformIndex(-1);
+                    setTransformResult(null);
+                  }}
+                  data-active={activeGroupIndex === gi}
+                  className={cn(
+                    "filter-pill shrink-0 px-2 text-2xs font-medium transition-colors whitespace-nowrap",
+                    activeGroupIndex === gi
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {t(group.labelKey)}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={exitTransformMode}
+              className="filter-pill min-h-0 p-1 shrink-0 text-muted-foreground transition-colors hover:text-foreground hover:bg-accent/50"
+              title={t("detail.cancel")}
+            >
+              <X className="w-3 h-3" />
+            </button>
           </div>
-        )}
-      </div>
+
+          {/* Transform items row */}
+          <div className="flex items-center gap-1 px-2.5 py-1.5 overflow-x-auto tab-scroll-area shrink-0" style={{ borderBottom: "1px solid var(--border)" }}>
+            {activeGroup.transforms.map((tr, ti) => (
+              <button
+                key={ti}
+                onClick={() => handleSelectTransform(activeGroupIndex, ti)}
+                className={cn(
+                  "shrink-0 rounded-md px-2 py-1 text-2xs font-medium transition-all",
+                  activeTransformIndex === ti
+                    ? "bg-primary/15 text-primary shadow-sm"
+                    : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                )}
+                style={activeTransformIndex === ti ? {
+                  border: "1px solid color-mix(in oklab, var(--primary) 25%, transparent)",
+                } : {
+                  border: "1px solid transparent",
+                }}
+              >
+                {t(tr.labelKey)}
+              </button>
+            ))}
+          </div>
+
+          {/* Preview area: original vs transformed */}
+          {transformResult !== null ? (
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+              {/* Original text — compact */}
+              <div className="shrink-0 px-3 pt-2.5 pb-1.5">
+                <p className="text-2xs text-muted-foreground/50 uppercase tracking-wider mb-1">
+                  {t("contextMenu.transformOriginal")}
+                </p>
+                <pre className="max-h-[72px] overflow-y-auto rounded-lg px-2.5 py-1.5 text-xs leading-relaxed text-muted-foreground whitespace-pre-wrap break-all select-text" style={{ background: "color-mix(in oklab, var(--muted) 40%, transparent)" }}>
+                  {(isEditing ? editText : entry.text_content) || ""}
+                </pre>
+              </div>
+
+              {/* Transformed result — main area */}
+              <div className="flex-1 min-h-0 flex flex-col px-3 pb-2">
+                <p className="text-2xs text-primary/60 uppercase tracking-wider mb-1 shrink-0">
+                  {t("contextMenu.transformResult")}
+                </p>
+                <pre className="flex-1 min-h-0 overflow-y-auto rounded-lg px-2.5 py-1.5 text-sm2 leading-relaxed text-foreground whitespace-pre-wrap break-all select-text" style={{ background: "color-mix(in oklab, var(--primary) 6%, transparent)", border: "1px solid color-mix(in oklab, var(--primary) 15%, transparent)" }}>
+                  {transformResult}
+                </pre>
+              </div>
+
+              {/* Action bar */}
+              <div className="shrink-0 flex items-center justify-end gap-1 px-3 pb-2">
+                <button
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(transformResult);
+                    toast.success(t("contextMenu.transformCopied"));
+                  }}
+                  className="filter-pill flex items-center gap-1 px-2.5 text-2xs font-medium text-muted-foreground transition-colors hover:border-primary/20 hover:bg-accent/50 hover:text-foreground"
+                >
+                  <Copy className="w-2.5 h-2.5" />
+                  {t("detail.copy")}
+                </button>
+                {isEditing && (
+                  <button
+                    onClick={() => {
+                      onEditTextChange(transformResult);
+                      exitTransformMode();
+                      toast.success(t("contextMenu.transformApplied"));
+                    }}
+                    className="filter-pill flex items-center gap-1 border-primary/60 bg-primary px-2.5 text-2xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                  >
+                    <Check className="w-2.5 h-2.5" />
+                    {t("contextMenu.transformApply")}
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            /* No transform selected yet — prompt */
+            <div className="flex-1 flex items-center justify-center text-muted-foreground/40">
+              <p className="text-xs2">{t("contextMenu.transformSelectHint")}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Normal content (hidden when transform mode) ── */}
+      {!transformMode && (
+        <div className="flex-1 min-h-0 overflow-hidden">
+          {hasText ? (
+            renderContent()
+          ) : (
+            <div className="flex items-center justify-center h-full p-3 text-sm2 text-muted-foreground">
+              {entry.content_type === "Image"
+                ? "Image content"
+                : entry.content_type}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
