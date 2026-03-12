@@ -502,6 +502,7 @@ pub fn run() {
             commands::settings_cmd::focus_main_window,
             commands::settings_cmd::get_window_size,
             commands::paste_cmd::paste_entry,
+            commands::paste_cmd::paste_text_direct,
             commands::template_cmd::get_templates,
             commands::template_cmd::create_template,
             commands::template_cmd::update_template,

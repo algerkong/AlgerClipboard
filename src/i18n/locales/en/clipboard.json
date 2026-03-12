@@ -14,7 +14,13 @@
     "statusSelect": "Select",
     "statusToggle": "Switch",
     "statusPaste": "Paste",
-    "statusPreview": "Preview"
+    "statusPreview": "Preview",
+    "multiSelect": "Multi-select",
+    "multiSelectExit": "Cancel",
+    "multiSelectCount": "{{count}} selected",
+    "mergePaste": "Merge & Paste",
+    "batchDelete": "Delete",
+    "selectAll": "Select All"
   },
   "detail": {
     "title": "Detail",
@@ -117,6 +123,20 @@
     "resetConfirm": "Reset confirmation",
     "resetConfirmDesc": "Show the first-time close confirmation dialog again",
     "resetDone": "Reset done"
+  },
+  "merge": {
+    "title": "Merge & Paste",
+    "preview": "Preview",
+    "separator": "Separator",
+    "separatorNewline": "Newline",
+    "separatorDoubleNewline": "Double Newline",
+    "separatorNone": "None",
+    "separatorCustom": "Custom",
+    "customSeparator": "Custom separator",
+    "paste": "Merge & Paste",
+    "copy": "Merge & Copy",
+    "itemCount": "{{count}} items selected",
+    "textOnlyHint": "Only text entries will be merged"
   },
   "search": {
     "timeAll": "All Time",

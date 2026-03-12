@@ -56,6 +56,12 @@ interface ClipboardState {
   resetView: () => void;
   isIncognito: boolean;
   toggleIncognito: () => Promise<void>;
+  isMultiSelectMode: boolean;
+  selectedIds: string[];
+  setMultiSelectMode: (enabled: boolean) => void;
+  toggleSelect: (id: string) => void;
+  selectAll: () => void;
+  clearSelection: () => void;
 }
 
 interface TagChangeEvent {
@@ -339,6 +345,31 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
     const next = !get().isIncognito;
     await invoke("set_incognito", { enabled: next });
     set({ isIncognito: next });
+  },
+
+  isMultiSelectMode: false,
+  selectedIds: [],
+
+  setMultiSelectMode: (enabled) => {
+    set({ isMultiSelectMode: enabled, selectedIds: [] });
+  },
+  toggleSelect: (id) => {
+    set((state) => {
+      const exists = state.selectedIds.includes(id);
+      return {
+        selectedIds: exists
+          ? state.selectedIds.filter((i) => i !== id)
+          : [...state.selectedIds, id],
+      };
+    });
+  },
+  selectAll: () => {
+    set((state) => ({
+      selectedIds: state.entries.map((e) => e.id),
+    }));
+  },
+  clearSelection: () => {
+    set({ selectedIds: [] });
   },
 }));
 

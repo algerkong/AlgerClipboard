@@ -14,7 +14,13 @@
     "statusSelect": "选择",
     "statusToggle": "切换",
     "statusPaste": "粘贴",
-    "statusPreview": "预览"
+    "statusPreview": "预览",
+    "multiSelect": "多选",
+    "multiSelectExit": "取消",
+    "multiSelectCount": "已选 {{count}} 项",
+    "mergePaste": "合并粘贴",
+    "batchDelete": "删除",
+    "selectAll": "全选"
   },
   "detail": {
     "title": "详情",
@@ -117,6 +123,20 @@
     "resetConfirm": "重置确认提示",
     "resetConfirmDesc": "重新显示首次关闭确认对话框",
     "resetDone": "已重置"
+  },
+  "merge": {
+    "title": "合并粘贴",
+    "preview": "预览",
+    "separator": "分隔符",
+    "separatorNewline": "换行",
+    "separatorDoubleNewline": "双换行",
+    "separatorNone": "无",
+    "separatorCustom": "自定义",
+    "customSeparator": "自定义分隔符",
+    "paste": "合并粘贴",
+    "copy": "合并复制",
+    "itemCount": "已选择 {{count}} 条",
+    "textOnlyHint": "仅文本类条目会被合并"
   },
   "search": {
     "timeAll": "全部时间",

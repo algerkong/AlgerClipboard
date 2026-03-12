@@ -3,6 +3,7 @@ import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import {
   ClipboardList,
   FileText,
+  ListChecks,
   Loader2,
   Settings,
 } from "lucide-react";
@@ -16,6 +17,7 @@ import { openImageViewer } from "@/services/imageViewerService";
 import { openFileViewer } from "@/services/fileViewerService";
 import { openDetailWindow } from "@/services/detailWindowService";
 import { openUrl } from "@/services/settingsService";
+import { MergeDialog } from "@/components/MergeDialog";
 import { useTranslation } from "react-i18next";
 import { toast } from "@/lib/toast";
 import { usePlatform } from "@/contexts/PlatformContext";
@@ -37,8 +39,15 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
   const showTagPanel = useClipboardStore((s) => s.showTagPanel);
   const selectedId = useClipboardStore((s) => s.selectedId);
   const selectEntry = useClipboardStore((s) => s.selectEntry);
+  const deleteEntries = useClipboardStore((s) => s.deleteEntries);
+  const isMultiSelectMode = useClipboardStore((s) => s.isMultiSelectMode);
+  const setMultiSelectMode = useClipboardStore((s) => s.setMultiSelectMode);
+  const selectedIds = useClipboardStore((s) => s.selectedIds);
+  const selectAll = useClipboardStore((s) => s.selectAll);
+  const clearSelection = useClipboardStore((s) => s.clearSelection);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const [showMergeDialog, setShowMergeDialog] = useState(false);
   const [shortcutModifierPressed, setShortcutModifierPressed] = useState(false);
   const [visibleRange, setVisibleRange] = useState({ startIndex: 0, endIndex: 0 });
   const shortcutModifierKey = platform === "macos" ? "Meta" : "Control";
@@ -89,6 +98,12 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (displayEntries.length === 0) return;
+      if (isMultiSelectMode && e.key === "a" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        selectAll();
+        return;
+      }
+
       if (e.key === shortcutModifierKey) {
         setShortcutModifierPressed(true);
         return;
@@ -172,7 +187,7 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("blur", handleWindowBlur);
     };
-  }, [displayEntries, platform, selectedId, selectEntry, shortcutModifierKey, shortcutTargets, t]);
+  }, [displayEntries, platform, selectedId, selectEntry, shortcutModifierKey, shortcutTargets, t, isMultiSelectMode, selectAll]);
 
   useEffect(() => {
     if (!selectedId && displayEntries.length > 0) {
@@ -199,6 +214,14 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
             <TemplateQuickPicker onClose={() => setShowTemplatePicker(false)} />
           )}
         </div>
+        <button
+          onClick={() => setMultiSelectMode(!isMultiSelectMode)}
+          className={cn("header-action-btn shrink-0", isMultiSelectMode && "text-primary")}
+          title={isMultiSelectMode ? t("clipboardPanel.multiSelectExit") : t("clipboardPanel.multiSelect")}
+          aria-label={isMultiSelectMode ? t("clipboardPanel.multiSelectExit") : t("clipboardPanel.multiSelect")}
+        >
+          <ListChecks className="h-[15px] w-[15px]" />
+        </button>
         <button
           onClick={onOpenSettings}
           className="header-action-btn shrink-0"
@@ -271,22 +294,71 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
       </div>
 
       {/* Status bar */}
-      <div className="status-bar-panel flex shrink-0 items-center justify-between px-2.5 py-1.5 text-xs2 text-muted-foreground/80">
-        <span>{t("clipboardPanel.items", { count: totalCount })}</span>
-        <div className="flex items-center gap-1.5">
-          <kbd className="status-kbd">↑↓</kbd>
-          <span>{t("clipboardPanel.statusSelect")}</span>
-          <span className="text-border">·</span>
-          <kbd className="status-kbd">←→</kbd>
-          <span>{t("clipboardPanel.statusToggle")}</span>
-          <span className="text-border">·</span>
-          <kbd className="status-kbd">↵</kbd>
-          <span>{t("clipboardPanel.statusPaste")}</span>
-          <span className="text-border">·</span>
-          <kbd className="status-kbd">␣</kbd>
-          <span>{t("clipboardPanel.statusPreview")}</span>
+      {isMultiSelectMode ? (
+        <div className="status-bar-panel flex shrink-0 items-center justify-between px-2.5 py-1.5">
+          <span className="text-xs text-muted-foreground">
+            {t("clipboardPanel.multiSelectCount", { count: selectedIds.length })}
+          </span>
+          <div className="flex gap-1.5">
+            <button
+              className="text-xs px-2 py-0.5 rounded hover:bg-muted"
+              onClick={selectAll}
+            >
+              {t("clipboardPanel.selectAll")}
+            </button>
+            <button
+              className="text-xs px-2 py-0.5 rounded bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              disabled={selectedIds.length < 2}
+              onClick={() => setShowMergeDialog(true)}
+            >
+              {t("clipboardPanel.mergePaste")}
+            </button>
+            <button
+              className="text-xs px-2 py-0.5 rounded text-destructive hover:bg-destructive/10 disabled:opacity-50"
+              disabled={selectedIds.length === 0}
+              onClick={async () => {
+                await deleteEntries(selectedIds);
+                clearSelection();
+              }}
+            >
+              {t("clipboardPanel.batchDelete")}
+            </button>
+            <button
+              className="text-xs px-2 py-0.5 rounded hover:bg-muted"
+              onClick={() => setMultiSelectMode(false)}
+            >
+              {t("clipboardPanel.multiSelectExit")}
+            </button>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="status-bar-panel flex shrink-0 items-center justify-between px-2.5 py-1.5 text-xs2 text-muted-foreground/80">
+          <span>{t("clipboardPanel.items", { count: totalCount })}</span>
+          <div className="flex items-center gap-1.5">
+            <kbd className="status-kbd">↑↓</kbd>
+            <span>{t("clipboardPanel.statusSelect")}</span>
+            <span className="text-border">·</span>
+            <kbd className="status-kbd">←→</kbd>
+            <span>{t("clipboardPanel.statusToggle")}</span>
+            <span className="text-border">·</span>
+            <kbd className="status-kbd">↵</kbd>
+            <span>{t("clipboardPanel.statusPaste")}</span>
+            <span className="text-border">·</span>
+            <kbd className="status-kbd">␣</kbd>
+            <span>{t("clipboardPanel.statusPreview")}</span>
+          </div>
+        </div>
+      )}
+
+      {showMergeDialog && (
+        <MergeDialog
+          entries={entries.filter(e => selectedIds.includes(e.id))}
+          onClose={() => {
+            setShowMergeDialog(false);
+            setMultiSelectMode(false);
+          }}
+        />
+      )}
     </div>
   );
 }
