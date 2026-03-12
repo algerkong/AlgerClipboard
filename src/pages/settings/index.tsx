@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   ArrowLeft,
   Brain,
@@ -20,6 +20,8 @@ import { AiTab } from "./AiTab";
 import { RichTextTab } from "./RichTextTab";
 import { AskAiTab } from "./AskAiTab";
 import { OcrTab } from "./OcrTab";
+import { trackWindowSize } from "@/lib/windowSize";
+import { SETTINGS_SIZE_KEY } from "@/services/settingsWindowService";
 import { SettingsHero } from "./shared";
 
 type SettingsTab =
@@ -107,6 +109,8 @@ export function SettingsPage({ onBack, initialTab }: Props) {
   const [activeTab, setActiveTab] = useState<SettingsTab>(
     (initialTab as SettingsTab) || "general",
   );
+
+  useEffect(() => trackWindowSize(SETTINGS_SIZE_KEY), []);
 
   const currentTab = TABS.find((tab) => tab.key === activeTab) ?? TABS[0];
 

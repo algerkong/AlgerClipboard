@@ -14,6 +14,8 @@ import { AudioPreview } from "@/components/file-preview/AudioPreview";
 import { DirectoryPreview } from "@/components/file-preview/DirectoryPreview";
 import { GenericPreview } from "@/components/file-preview/GenericPreview";
 import { ArchivePreview } from "@/components/file-preview/ArchivePreview";
+import { trackWindowSize } from "@/lib/windowSize";
+import { FILE_VIEWER_SIZE_KEY } from "@/services/fileViewerService";
 
 const HTML5_VIDEO_EXTS = ["mp4", "webm", "ogg"];
 const HTML5_AUDIO_EXTS = ["mp3", "wav", "ogg", "m4a", "aac"];
@@ -60,6 +62,10 @@ export function FileViewerPage() {
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [existsMap, setExistsMap] = useState<boolean[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  useEffect(() => {
+    return trackWindowSize(FILE_VIEWER_SIZE_KEY);
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);

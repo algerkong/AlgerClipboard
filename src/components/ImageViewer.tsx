@@ -26,6 +26,8 @@ import { getEnabledOcrEngines, getDefaultOcrEngine, ocrRecognize, type OcrEngine
 import { translateText } from "@/services/translateService";
 import { toast } from "@/lib/toast";
 import type { OcrResult, OcrTextLine } from "@/types";
+import { trackWindowSize } from "@/lib/windowSize";
+import { IMAGE_VIEWER_SIZE_KEY } from "@/services/imageViewerService";
 
 export function ImageViewerPage() {
   const { t } = useTranslation();
@@ -54,6 +56,9 @@ export function ImageViewerPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [imgSize, setImgSize] = useState({ width: 0, height: 0 });
   const userChangedEngine = useRef(false);
+
+  // Save window size on resize (debounced), restored by imageViewerService on next open
+  useEffect(() => trackWindowSize(IMAGE_VIEWER_SIZE_KEY), []);
 
   useEffect(() => {
     getEnabledOcrEngines().then(setAvailableEngines).catch(() => {});

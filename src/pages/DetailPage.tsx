@@ -26,6 +26,7 @@ import {
   getEntry,
   pasteEntry,
   updateEntryText,
+  handlePasteError,
 } from "@/services/clipboardService";
 import { aiSummarize, updateAiSummary } from "@/services/aiService";
 import { openSettingsWindow } from "@/services/settingsWindowService";
@@ -47,6 +48,8 @@ import {
   type ContentMode,
 } from "@/lib/contentDetect";
 import { transformGroups } from "@/services/textTransformService";
+import { trackWindowSize } from "@/lib/windowSize";
+import { DETAIL_SIZE_KEY } from "@/services/detailWindowService";
 
 const searchParams = new URLSearchParams(window.location.search);
 const entryId = searchParams.get("id") || "";
@@ -121,6 +124,8 @@ export function DetailPage() {
   // AI state
   const [summarizing, setSummarizing] = useState(false);
 
+  useEffect(() => trackWindowSize(DETAIL_SIZE_KEY), []);
+
   useEffect(() => {
     loadSettings();
   }, [loadSettings]);
@@ -160,8 +165,8 @@ export function DetailPage() {
     try {
       await pasteEntry(entry.id);
       toast.success(t("toast.pasted"));
-    } catch {
-      toast.error(t("toast.pasteFailed"));
+    } catch (err) {
+      handlePasteError(err, t);
     }
   }, [entry, t]);
 
@@ -436,7 +441,6 @@ function ViewTab({
     setActiveTransformIndex(-1);
     setTransformResult(null);
   }, []);
-
   // Ctrl+S to save when editing
   useEffect(() => {
     if (!isEditing) return;
@@ -757,7 +761,7 @@ function ViewTab({
           {/* Preview area: original vs transformed */}
           {transformResult !== null ? (
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-              {/* Original text — compact */}
+              {/* Original text -- compact */}
               <div className="shrink-0 px-3 pt-2.5 pb-1.5">
                 <p className="text-2xs text-muted-foreground/50 uppercase tracking-wider mb-1">
                   {t("contextMenu.transformOriginal")}
@@ -767,7 +771,7 @@ function ViewTab({
                 </pre>
               </div>
 
-              {/* Transformed result — main area */}
+              {/* Transformed result -- main area */}
               <div className="flex-1 min-h-0 flex flex-col px-3 pb-2">
                 <p className="text-2xs text-primary/60 uppercase tracking-wider mb-1 shrink-0">
                   {t("contextMenu.transformResult")}
@@ -805,7 +809,7 @@ function ViewTab({
               </div>
             </div>
           ) : (
-            /* No transform selected yet — prompt */
+            /* No transform selected yet -- prompt */
             <div className="flex-1 flex items-center justify-center text-muted-foreground/40">
               <p className="text-xs2">{t("contextMenu.transformSelectHint")}</p>
             </div>

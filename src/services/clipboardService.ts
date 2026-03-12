@@ -1,5 +1,23 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { ClipboardEntry, HistoryQuery, ClipboardStats, OcrResult, TagSummary, FilePreview, DirTreeNode, ArchiveEntry, SearchHistoryItem } from "@/types";
+import { toast } from "@/lib/toast";
+import { openUrl } from "@/services/settingsService";
+
+/**
+ * Handle paste errors uniformly across all call sites.
+ * On macOS, detects missing Accessibility permission and auto-opens System Settings.
+ */
+export function handlePasteError(err: unknown, t: (key: string) => string): void {
+  const msg = typeof err === "string" ? err : String(err);
+  if (msg.includes("ACCESSIBILITY_REQUIRED")) {
+    toast.error(t("toast.accessibilityRequired"));
+    void openUrl(
+      "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+    );
+  } else {
+    toast.error(t("toast.pasteFailed"));
+  }
+}
 
 export async function getClipboardHistory(
   query: HistoryQuery = {}

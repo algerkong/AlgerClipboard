@@ -46,6 +46,8 @@
     "copied": "Copied",
     "pasted": "Pasted",
     "pasteFailed": "Paste failed",
+    "accessibilityRequired": "Paste requires Accessibility permission. Please grant it in System Settings.",
+    "openSettings": "Open Settings",
     "exported": "Export successful",
     "exportFailed": "Export failed",
     "imported": "Imported {{count}} entries",

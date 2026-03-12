@@ -83,26 +83,35 @@ pub fn paste_entry(
     // CRITICAL: Transfer focus to target BEFORE hiding our window.
     // We must still be the foreground process for SetForegroundWindow to succeed.
     // If we hide first, we lose foreground status and SetForegroundWindow silently fails.
+    //
+    // On macOS: hide the window first so that any pending async set_focus pulses
+    // (from show_and_focus_main_window) see an invisible window and abort, preventing
+    // them from stealing focus back from the paste target during prepare_paste_target.
+    // macOS does NOT require us to be the foreground process to call osascript activate.
     #[cfg(target_os = "windows")]
     {
         let target_hwnd = paste_target.take_windows_hwnd();
         let source_hwnd = window.hwnd().ok().map(|h| h.0 as isize);
         simulator::prepare_paste_target(target_hwnd, source_hwnd);
+        let _ = window.hide();
+        thread::sleep(Duration::from_millis(30));
     }
     #[cfg(target_os = "macos")]
     {
         let target_bundle_id = paste_target.take_macos_bundle_id();
+        // Hide our window first so the async focus-pulse task (in show_and_focus_main_window)
+        // detects the invisible window and aborts before stealing focus from the target app.
+        let _ = window.hide();
+        thread::sleep(Duration::from_millis(30));
         simulator::prepare_paste_target(target_bundle_id);
     }
     #[cfg(target_os = "linux")]
     {
         let target_window_id = paste_target.take_linux_window_id();
         simulator::prepare_paste_target(target_window_id);
+        let _ = window.hide();
+        thread::sleep(Duration::from_millis(30));
     }
-
-    // Now hide our window (target already has focus, so this won't disrupt it)
-    let _ = window.hide();
-    thread::sleep(Duration::from_millis(30));
 
     let _mode = mode.unwrap_or_else(|| "default".to_string());
 

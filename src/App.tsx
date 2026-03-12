@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
 import { TitleBar } from "@/components/TitleBar";
@@ -23,6 +23,7 @@ import { useSyncStore } from "@/stores/syncStore";
 import { startPeriodicUpdateCheck, stopPeriodicUpdateCheck } from "@/services/updateService";
 import { openUrl } from "@/services/settingsService";
 import type { ClipboardEntry } from "@/types";
+import { getSavedWindowSize, trackWindowSize } from "@/lib/windowSize";
 
 
 // Global safety net: intercept all <a> clicks and open in external browser
@@ -415,6 +416,8 @@ function FileViewerWindow() {
   );
 }
 
+const MAIN_WINDOW_SIZE_KEY = "main-window-size";
+
 function MainApp() {
   const { i18n, t } = useTranslation();
   const shouldResetOnNextFocusRef = useRef(false);
@@ -423,6 +426,16 @@ function MainApp() {
   const theme = useSettingsStore((s) => s.theme);
   const locale = useSettingsStore((s) => s.locale);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
+
+  // Restore saved window size and track future resizes
+  useEffect(() => {
+    getSavedWindowSize(MAIN_WINDOW_SIZE_KEY, { width: 0, height: 0 }).then((saved) => {
+      if (saved.width > 0 && saved.height > 0) {
+        getCurrentWindow().setSize(new LogicalSize(saved.width, saved.height)).catch(() => {});
+      }
+    });
+    return trackWindowSize(MAIN_WINDOW_SIZE_KEY);
+  }, []);
 
   const loadAccounts = useSyncStore((s) => s.loadAccounts);
   const setSyncStatus = useSyncStore((s) => s.setSyncStatus);
@@ -501,12 +514,19 @@ function MainApp() {
   }, []);
 
   useEffect(() => {
-    const unlisten = listen<ClipboardEntry>("clipboard-changed", (event) => {
-      addEntry(event.payload);
-      toast.success(t("toast.copied"));
-      // Trigger realtime sync after a short debounce
-      setTimeout(() => realtimeSyncRef.current(), 500);
-    });
+    const unlisten = listen<{ entry: ClipboardEntry; from_paste: boolean }>(
+      "clipboard-changed",
+      (event) => {
+        addEntry(event.payload.entry);
+        // Suppress the "Copied" toast when the clipboard change was caused by
+        // our own paste operation — the user will already see a "Pasted" toast.
+        if (!event.payload.from_paste) {
+          toast.success(t("toast.copied"));
+        }
+        // Trigger realtime sync after a short debounce
+        setTimeout(() => realtimeSyncRef.current(), 500);
+      }
+    );
 
     return () => {
       unlisten.then((fn) => fn());
