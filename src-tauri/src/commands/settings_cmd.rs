@@ -567,6 +567,45 @@ pub fn focus_main_window(app: tauri::AppHandle) {
 }
 
 #[tauri::command]
+pub fn get_recent_source_apps(db: State<'_, AppDatabase>) -> Result<Vec<String>, String> {
+    db.0.get_distinct_source_apps()
+}
+
+#[tauri::command]
+pub fn update_excluded_apps(db: State<'_, AppDatabase>, apps: Vec<String>) -> Result<(), String> {
+    let json = serde_json::to_string(&apps).map_err(|e| e.to_string())?;
+    db.0.set_setting("excluded_apps", &json)?;
+    crate::clipboard::monitor::set_excluded_apps(apps);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn update_sensitive_mode(db: State<'_, AppDatabase>, mode: u8) -> Result<(), String> {
+    db.0.set_setting("sensitive_mode", &mode.to_string())?;
+    crate::clipboard::monitor::set_sensitive_mode(mode);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn update_sensitive_disabled_rules(
+    db: State<'_, AppDatabase>,
+    rules: Vec<String>,
+) -> Result<(), String> {
+    let json = serde_json::to_string(&rules).map_err(|e| e.to_string())?;
+    db.0.set_setting("sensitive_disabled_rules", &json)?;
+    crate::clipboard::monitor::set_sensitive_disabled_rules(rules);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_sensitive_rules() -> Vec<String> {
+    crate::clipboard::sensitive::available_rules()
+        .iter()
+        .map(|s| s.to_string())
+        .collect()
+}
+
+#[tauri::command]
 pub fn get_window_size(
     db: State<'_, AppDatabase>,
     key: String,

@@ -7,6 +7,7 @@ import {
   updateToggleShortcut,
   updateIncognitoShortcut,
 } from "@/services/settingsService";
+import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
   DEFAULT_RICH_TEXT_DETAIL_MODE,
@@ -176,9 +177,15 @@ interface SettingsState {
   defaultBrowser: string;
   richTextPreview: RichTextPreviewOptions;
   richTextDetailMode: RichTextDetailMode;
+  excludedApps: string[];
+  sensitiveMode: number; // 0=off, 1=mark, 2=auto-delete
+  sensitiveDisabledRules: string[];
   isPinned: boolean; // non-persisted, controls auto-hide on blur
 
   loadSettings: () => Promise<void>;
+  setExcludedApps: (apps: string[]) => Promise<void>;
+  setSensitiveMode: (mode: number) => Promise<void>;
+  setSensitiveDisabledRules: (rules: string[]) => Promise<void>;
   setTheme: (theme: Theme) => Promise<void>;
   setMaxHistory: (max: number) => Promise<void>;
   setExpireDays: (days: number) => Promise<void>;
@@ -229,6 +236,9 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   defaultBrowser: "system",
   richTextPreview: DEFAULT_RICH_TEXT_PREVIEW_OPTIONS,
   richTextDetailMode: DEFAULT_RICH_TEXT_DETAIL_MODE,
+  excludedApps: [],
+  sensitiveMode: 0,
+  sensitiveDisabledRules: [],
   isPinned: true,
 
   loadSettings: async () => {
@@ -333,6 +343,26 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         richTextPreview: parsedRichTextPreview,
         richTextDetailMode: resolvedDetailMode,
       });
+
+      // Load excluded apps
+      try {
+        const excludedAppsJson = await getSetting("excluded_apps");
+        if (excludedAppsJson) {
+          set({ excludedApps: JSON.parse(excludedAppsJson) });
+        }
+      } catch { /* ignore */ }
+
+      // Load sensitive detection settings
+      try {
+        const modeStr = await getSetting("sensitive_mode");
+        if (modeStr) {
+          set({ sensitiveMode: parseInt(modeStr, 10) || 0 });
+        }
+        const disabledJson = await getSetting("sensitive_disabled_rules");
+        if (disabledJson) {
+          set({ sensitiveDisabledRules: JSON.parse(disabledJson) });
+        }
+      } catch { /* ignore */ }
     } catch (err) {
       console.error("Failed to load settings:", err);
     }
@@ -553,6 +583,33 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       await updateSetting("rich_text_detail_mode", mode);
     } catch (err) {
       console.error("Failed to save rich_text_detail_mode:", err);
+    }
+  },
+
+  setExcludedApps: async (apps: string[]) => {
+    set({ excludedApps: apps });
+    try {
+      await invoke("update_excluded_apps", { apps });
+    } catch (err) {
+      console.error("Failed to save excluded_apps:", err);
+    }
+  },
+
+  setSensitiveMode: async (mode: number) => {
+    set({ sensitiveMode: mode });
+    try {
+      await invoke("update_sensitive_mode", { mode });
+    } catch (err) {
+      console.error("Failed to save sensitive_mode:", err);
+    }
+  },
+
+  setSensitiveDisabledRules: async (rules: string[]) => {
+    set({ sensitiveDisabledRules: rules });
+    try {
+      await invoke("update_sensitive_disabled_rules", { rules });
+    } catch (err) {
+      console.error("Failed to save sensitive_disabled_rules:", err);
     }
   },
 

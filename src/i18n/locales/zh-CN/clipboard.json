@@ -124,6 +124,16 @@
     "resetConfirmDesc": "重新显示首次关闭确认对话框",
     "resetDone": "已重置"
   },
+  "sensitiveTypes": {
+    "bank_card": "银行卡号",
+    "api_key_openai": "OpenAI API 密钥",
+    "api_key_aws": "AWS API 密钥",
+    "api_key_github": "GitHub Token",
+    "private_key": "私钥",
+    "password_pattern": "密码/密钥",
+    "id_card_cn": "身份证号",
+    "phone_cn": "手机号"
+  },
   "merge": {
     "title": "合并粘贴",
     "preview": "预览",

@@ -15,10 +15,10 @@
     "statusToggle": "Switch",
     "statusPaste": "Paste",
     "statusPreview": "Preview",
-    "multiSelect": "Multi-select",
+    "multiSelect": "Select",
     "multiSelectExit": "Cancel",
     "multiSelectCount": "{{count}} selected",
-    "mergePaste": "Merge & Paste",
+    "mergePaste": "Merge Paste",
     "batchDelete": "Delete",
     "selectAll": "Select All"
   },
@@ -124,8 +124,18 @@
     "resetConfirmDesc": "Show the first-time close confirmation dialog again",
     "resetDone": "Reset done"
   },
+  "sensitiveTypes": {
+    "bank_card": "Bank Card Number",
+    "api_key_openai": "OpenAI API Key",
+    "api_key_aws": "AWS API Key",
+    "api_key_github": "GitHub Token",
+    "private_key": "Private Key",
+    "password_pattern": "Password/Secret",
+    "id_card_cn": "CN ID Card",
+    "phone_cn": "CN Phone Number"
+  },
   "merge": {
-    "title": "Merge & Paste",
+    "title": "Merge Paste",
     "preview": "Preview",
     "separator": "Separator",
     "separatorNewline": "Newline",

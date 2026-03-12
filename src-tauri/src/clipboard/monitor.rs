@@ -6,7 +6,8 @@ use crate::storage::blob::BlobStore;
 use crate::storage::database::{compute_hash, Database};
 use base64::Engine;
 use image::DynamicImage;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::sync::RwLock;
 #[cfg(target_os = "linux")]
 use std::fs;
 use std::io::Cursor;
@@ -14,7 +15,7 @@ use std::io::Cursor;
 use std::path::Path;
 #[cfg(target_os = "linux")]
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
 use std::time::Duration;
@@ -28,6 +29,52 @@ pub fn set_incognito(enabled: bool) {
 
 pub fn is_incognito() -> bool {
     INCOGNITO.load(Ordering::SeqCst)
+}
+
+/// Global excluded apps set — apps in this set are skipped during recording.
+static EXCLUDED_APPS: OnceLock<RwLock<HashSet<String>>> = OnceLock::new();
+
+fn excluded_apps() -> &'static RwLock<HashSet<String>> {
+    EXCLUDED_APPS.get_or_init(|| RwLock::new(HashSet::new()))
+}
+
+pub fn set_excluded_apps(apps: Vec<String>) {
+    if let Ok(mut set) = excluded_apps().write() {
+        set.clear();
+        for app in apps {
+            set.insert(app.to_lowercase());
+        }
+    }
+}
+
+fn is_app_excluded(source_app: Option<&str>) -> bool {
+    let app = match source_app {
+        Some(a) if !a.is_empty() => a,
+        _ => return false,
+    };
+    if let Ok(set) = excluded_apps().read() {
+        set.contains(&app.to_lowercase())
+    } else {
+        false
+    }
+}
+
+/// Sensitive detection mode: 0 = disabled, 1 = mark mode, 2 = auto-delete mode
+static SENSITIVE_MODE: AtomicU8 = AtomicU8::new(0);
+static SENSITIVE_DISABLED_RULES: OnceLock<RwLock<Vec<String>>> = OnceLock::new();
+
+fn sensitive_disabled_rules() -> &'static RwLock<Vec<String>> {
+    SENSITIVE_DISABLED_RULES.get_or_init(|| RwLock::new(Vec::new()))
+}
+
+pub fn set_sensitive_mode(mode: u8) {
+    SENSITIVE_MODE.store(mode, Ordering::SeqCst);
+}
+
+pub fn set_sensitive_disabled_rules(rules: Vec<String>) {
+    if let Ok(mut r) = sensitive_disabled_rules().write() {
+        *r = rules;
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -1589,9 +1636,15 @@ impl ClipboardMonitor {
                         last_image_hash.clear();
                         last_text_hash.clear();
 
+                        // Check app exclusion
+                        let source = get_clipboard_source();
+                        if is_app_excluded(source.display_name().as_deref()) {
+                            thread::sleep(Duration::from_millis(500));
+                            continue;
+                        }
+
                         match db.find_by_hash(&hash) {
                             Ok(Some(existing)) => {
-                                let source = get_clipboard_source();
                                 let source_label = source.display_name();
                                 let _ = db.update_entry_timestamp(
                                     &existing.id,
@@ -1604,7 +1657,6 @@ impl ClipboardMonitor {
                                 }
                             }
                             Ok(None) => {
-                                let source = get_clipboard_source();
                                 let source_label = source.display_name();
 
                                 let file_metas = file_meta::collect_all_meta(&paths);
@@ -1671,6 +1723,8 @@ impl ClipboardMonitor {
                                     detected_language: None,
                                     file_meta: file_meta_json,
                                     ocr_text: None,
+                                    is_sensitive: false,
+                                    sensitive_types: None,
                                 };
 
                                 if let Err(e) = db.insert_entry(&entry) {
@@ -1707,9 +1761,15 @@ impl ClipboardMonitor {
                             last_text_hash.clear();
                             captured = true;
 
+                            // Check app exclusion
+                            let source = get_clipboard_source();
+                            if is_app_excluded(source.display_name().as_deref()) {
+                                thread::sleep(Duration::from_millis(500));
+                                continue;
+                            }
+
                             match db.find_by_hash(&hash) {
                                 Ok(Some(existing)) => {
-                                    let source = get_clipboard_source();
                                     let source_label = source.display_name();
                                     let _ = db.update_entry_timestamp(
                                         &existing.id,
@@ -1722,7 +1782,6 @@ impl ClipboardMonitor {
                                     }
                                 }
                                 Ok(None) => {
-                                    let source = get_clipboard_source();
                                     let source_label = source.display_name();
                                     let entry_id = uuid::Uuid::new_v4().to_string();
 
@@ -1781,6 +1840,8 @@ impl ClipboardMonitor {
                                         detected_language: None,
                                         file_meta: None,
                                         ocr_text: None,
+                                        is_sensitive: false,
+                                        sensitive_types: None,
                                     };
 
                                     if let Err(e) = db.insert_entry(&entry) {
@@ -1814,9 +1875,15 @@ impl ClipboardMonitor {
                                     last_files_hash.clear();
                                     last_image_hash.clear();
 
+                                    // Check app exclusion
+                                    let source = get_clipboard_source();
+                                    if is_app_excluded(source.display_name().as_deref()) {
+                                        thread::sleep(Duration::from_millis(500));
+                                        continue;
+                                    }
+
                                     match db.find_by_hash(&hash) {
                                         Ok(Some(existing)) => {
-                                            let source = get_clipboard_source();
                                             let source_label = source.display_name();
                                             let source_url = source
                                                 .url
@@ -1833,7 +1900,6 @@ impl ClipboardMonitor {
                                             }
                                         }
                                         Ok(None) => {
-                                            let source = get_clipboard_source();
                                             let source_label = source.display_name();
                                             // Check if HTML content is available
                                             let html_content = get_clipboard_html();
@@ -1864,6 +1930,25 @@ impl ClipboardMonitor {
                                             };
                                             let category_str = Some(format!("{:?}", category));
 
+                                            // Sensitive data detection
+                                            let sensitive_mode = SENSITIVE_MODE.load(Ordering::Relaxed);
+                                            let (is_sensitive, sensitive_types_json) = if sensitive_mode > 0 {
+                                                let disabled = sensitive_disabled_rules().read().map(|r| r.clone()).unwrap_or_default();
+                                                let types = crate::clipboard::sensitive::check_sensitive(&text, &disabled);
+                                                if !types.is_empty() {
+                                                    if sensitive_mode == 2 {
+                                                        log::info!("Sensitive content detected ({}), skipping", types.join(", "));
+                                                        thread::sleep(Duration::from_millis(500));
+                                                        continue;
+                                                    }
+                                                    (true, Some(serde_json::to_string(&types).unwrap_or_default()))
+                                                } else {
+                                                    (false, None)
+                                                }
+                                            } else {
+                                                (false, None)
+                                            };
+
                                             let now = chrono::Utc::now().to_rfc3339();
                                             let entry = ClipboardEntry {
                                                 id: uuid::Uuid::new_v4().to_string(),
@@ -1890,6 +1975,8 @@ impl ClipboardMonitor {
                                                 detected_language: language,
                                                 file_meta: None,
                                                 ocr_text: None,
+                                                is_sensitive,
+                                                sensitive_types: sensitive_types_json,
                                             };
 
                                             if let Err(e) = db.insert_entry(&entry) {

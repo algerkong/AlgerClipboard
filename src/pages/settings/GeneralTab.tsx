@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, useMemo, useRef, type ReactNode } from "react";
 import { getVersion } from "@tauri-apps/api/app";
-import { Moon, Monitor, Sun } from "lucide-react";
+import { Moon, Monitor, Sun, X } from "lucide-react";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import {
   useSettingsStore,
@@ -63,6 +63,12 @@ export function GeneralTab() {
   const setSystemNotificationsEnabled = useSettingsStore((s) => s.setSystemNotificationsEnabled);
   const setButtonPosition = useSettingsStore((s) => s.setButtonPosition);
   const setDefaultBrowser = useSettingsStore((s) => s.setDefaultBrowser);
+  const excludedApps = useSettingsStore((s) => s.excludedApps);
+  const setExcludedApps = useSettingsStore((s) => s.setExcludedApps);
+  const sensitiveMode = useSettingsStore((s) => s.sensitiveMode);
+  const setSensitiveMode = useSettingsStore((s) => s.setSensitiveMode);
+  const sensitiveDisabledRules = useSettingsStore((s) => s.sensitiveDisabledRules);
+  const setSensitiveDisabledRules = useSettingsStore((s) => s.setSensitiveDisabledRules);
   const isIncognito = useClipboardStore((s) => s.isIncognito);
   const toggleIncognito = useClipboardStore((s) => s.toggleIncognito);
   const platform = usePlatform();
@@ -75,6 +81,9 @@ export function GeneralTab() {
   const [previewCloseShortcut, setPreviewCloseShortcutState] = useState("Escape");
   const [isRecordingCloseShortcut, setIsRecordingCloseShortcut] = useState(false);
   const [appVersion, setAppVersion] = useState("...");
+  const [newExcludedApp, setNewExcludedApp] = useState("");
+  const [recentApps, setRecentApps] = useState<string[]>([]);
+  const [sensitiveRules, setSensitiveRules] = useState<string[]>([]);
 
   useEffect(() => {
     if (!isRecordingShortcut) {
@@ -162,6 +171,8 @@ export function GeneralTab() {
         }
       })
       .catch(() => {});
+    invoke<string[]>("get_recent_source_apps").then(setRecentApps).catch(() => {});
+    invoke<string[]>("get_sensitive_rules").then(setSensitiveRules).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -252,6 +263,12 @@ export function GeneralTab() {
     { value: "30", label: t("settings.expire30days") },
     { value: "90", label: t("settings.expire90days") },
   ], [t]);
+  const sensitiveModeOptions = useMemo(() => [
+    { value: "0", label: t("settings.sensitiveModeOff") },
+    { value: "1", label: t("settings.sensitiveModeLabel") },
+    { value: "2", label: t("settings.sensitiveModeDelete") },
+  ], [t]);
+
   const browserOptions = useMemo(() => {
     const opts = [
       { value: "system", label: t("settings.browserSystem") },
@@ -384,6 +401,100 @@ export function GeneralTab() {
             />
           }
         />
+      </SettingsSection>
+
+      {/* ─── Excluded Apps ─── */}
+      <SettingsSection title={t("settings.excludedApps")} description={t("settings.excludedAppsDesc")}>
+        <div className="space-y-1.5">
+          {excludedApps.length === 0 && (
+            <p className="text-xs text-muted-foreground">{t("settings.noExcludedApps")}</p>
+          )}
+          {excludedApps.map((app) => (
+            <div key={app} className="flex items-center justify-between rounded-md bg-muted/50 px-2.5 py-1.5">
+              <span className="text-sm">{app}</span>
+              <button
+                className="text-muted-foreground hover:text-destructive transition-colors"
+                onClick={() => setExcludedApps(excludedApps.filter(a => a !== app))}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2 mt-2">
+          <div className="relative flex-1">
+            <input
+              className="settings-input w-full"
+              placeholder={t("settings.excludedAppPlaceholder")}
+              value={newExcludedApp}
+              onChange={(e) => setNewExcludedApp(e.target.value)}
+              list="recent-apps-list"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newExcludedApp.trim()) {
+                  const app = newExcludedApp.trim();
+                  if (!excludedApps.includes(app)) {
+                    setExcludedApps([...excludedApps, app]);
+                  }
+                  setNewExcludedApp("");
+                }
+              }}
+            />
+            <datalist id="recent-apps-list">
+              {recentApps
+                .filter(a => !excludedApps.includes(a))
+                .map(a => <option key={a} value={a} />)}
+            </datalist>
+          </div>
+          <SettingsButton
+            onClick={() => {
+              const app = newExcludedApp.trim();
+              if (app && !excludedApps.includes(app)) {
+                setExcludedApps([...excludedApps, app]);
+              }
+              setNewExcludedApp("");
+            }}
+            disabled={!newExcludedApp.trim()}
+          >
+            {t("settings.addExcludedApp")}
+          </SettingsButton>
+        </div>
+      </SettingsSection>
+
+      {/* ─── Sensitive Data Detection ─── */}
+      <SettingsSection title={t("settings.sensitiveDetection")} description={t("settings.sensitiveDetectionDesc")}>
+        <SettingsRow
+          title={t("settings.sensitiveMode")}
+          control={
+            <StyledSelect
+              value={String(sensitiveMode)}
+              onChange={(v) => setSensitiveMode(Number(v))}
+              options={sensitiveModeOptions}
+              className="w-[15rem]"
+            />
+          }
+        />
+        {sensitiveMode > 0 && sensitiveRules.length > 0 && (
+          <div className="px-5 py-3 space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">{t("settings.sensitiveRules")}</p>
+            {sensitiveRules.map((rule) => (
+              <label key={rule} className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!sensitiveDisabledRules.includes(rule)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSensitiveDisabledRules(sensitiveDisabledRules.filter(r => r !== rule));
+                    } else {
+                      setSensitiveDisabledRules([...sensitiveDisabledRules, rule]);
+                    }
+                  }}
+                  className="rounded border-border"
+                />
+                <span>{t(`sensitiveTypes.${rule}`, rule)}</span>
+              </label>
+            ))}
+          </div>
+        )}
       </SettingsSection>
 
       {/* ─── Shortcuts ─── */}

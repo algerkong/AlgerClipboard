@@ -1,5 +1,5 @@
 import { memo, useCallback, useState, useEffect, useMemo, useRef } from "react";
-import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages, Pin, Eye, Copy, ClipboardPaste, Maximize2, Cloud, Upload, CloudAlert, Code, Tag, X, ExternalLink, Brain, Sparkles, File, Video, Music, Archive, FileCode, FileType as FileTypeIcon, Folder, QrCode, Check } from "lucide-react";
+import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages, Pin, Eye, Copy, ClipboardPaste, Maximize2, Cloud, Upload, CloudAlert, Code, Tag, X, ExternalLink, Brain, Sparkles, File, Video, Music, Archive, FileCode, FileType as FileTypeIcon, Folder, QrCode, Ban, ShieldAlert, Check } from "lucide-react";
 
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { useCapabilityStore } from "@/stores/capabilityStore";
@@ -268,6 +268,7 @@ export const EntryCard = memo(function EntryCard({
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [showTagInput, setShowTagInput] = useState(false);
   const [tagInputValue, setTagInputValue] = useState("");
+  const [sensitiveRevealed, setSensitiveRevealed] = useState(false);
   const tagInputRef = useRef<HTMLInputElement>(null);
   const tagEditorRef = useRef<HTMLDivElement>(null);
   const hasText = entry.content_type === "PlainText" || entry.content_type === "RichText";
@@ -461,6 +462,7 @@ export const EntryCard = memo(function EntryCard({
           onClick: () => setShowUrlPicker(true),
         });
       }
+
     }
 
     items.push({
@@ -505,6 +507,20 @@ export const EntryCard = memo(function EntryCard({
       divider: true,
     });
 
+    if (entry.source_app) {
+      items.push({
+        label: t("contextMenu.excludeApp", { app: entry.source_app }),
+        icon: <Ban className="w-3.5 h-3.5" />,
+        onClick: async () => {
+          const { excludedApps, setExcludedApps } = useSettingsStore.getState();
+          if (!excludedApps.includes(entry.source_app!)) {
+            await setExcludedApps([...excludedApps, entry.source_app!]);
+            toast.success(t("contextMenu.excludeAppSuccess", { app: entry.source_app }));
+          }
+        },
+      });
+    }
+
     items.push({
       label: t("contextMenu.delete"),
       icon: <Trash2 className="w-3.5 h-3.5" />,
@@ -517,6 +533,20 @@ export const EntryCard = memo(function EntryCard({
   };
 
   const renderContent = () => {
+    // Sensitive content mask
+    if (entry.is_sensitive && !sensitiveRevealed) {
+      return (
+        <div
+          className="flex flex-col items-center justify-center gap-1 py-3 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+          onClick={(e) => { e.stopPropagation(); setSensitiveRevealed(true); }}
+        >
+          <ShieldAlert className="h-5 w-5 text-amber-500" />
+          <span className="text-xs">{t("contextMenu.sensitiveContent")}</span>
+          <span className="text-[10px]">{t("contextMenu.sensitiveReveal")}</span>
+        </div>
+      );
+    }
+
     // File paths with image thumbnail
     if (isFilePaths && fileMetas.length === 1 && fileMetas[0].file_type === "Image" && imageSrc) {
       return (
@@ -631,6 +661,7 @@ export const EntryCard = memo(function EntryCard({
           </div>
         </div>
       )}
+
       {shortcutNumber !== null && (
         <div className="absolute right-2.5 top-2.5 z-20 flex h-5 min-w-5 items-center justify-center rounded-md border border-primary/35 bg-card/95 px-1 text-2xs font-semibold text-primary shadow-sm">
           {shortcutNumber}
