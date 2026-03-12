@@ -1,5 +1,5 @@
 import { memo, useCallback, useState, useEffect, useMemo, useRef } from "react";
-import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages, Pin, Eye, Copy, ClipboardPaste, Maximize2, Cloud, Upload, CloudAlert, Code, Tag, X, ExternalLink, Brain, Sparkles, File, Video, Music, Archive, FileCode, FileType as FileTypeIcon, Folder, QrCode } from "lucide-react";
+import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages, Pin, Eye, Copy, ClipboardPaste, Maximize2, Cloud, Upload, CloudAlert, Code, Tag, X, ExternalLink, Brain, Sparkles, File, Video, Music, Archive, FileCode, FileType as FileTypeIcon, Folder, QrCode, Check } from "lucide-react";
 
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { useCapabilityStore } from "@/stores/capabilityStore";
@@ -247,6 +247,10 @@ export const EntryCard = memo(function EntryCard({
   const selectedId = useClipboardStore((s) => s.selectedId);
   const keyword = useClipboardStore((s) => s.keyword);
   const selectEntry = useClipboardStore((s) => s.selectEntry);
+  const isMultiSelectMode = useClipboardStore((s) => s.isMultiSelectMode);
+  const multiSelectedIds = useClipboardStore((s) => s.selectedIds);
+  const toggleSelect = useClipboardStore((s) => s.toggleSelect);
+  const isMultiSelected = multiSelectedIds.includes(entry.id);
   const toggleFavorite = useClipboardStore((s) => s.toggleFavorite);
   const togglePin = useClipboardStore((s) => s.togglePin);
   const deleteEntries = useClipboardStore((s) => s.deleteEntries);
@@ -303,7 +307,13 @@ export const EntryCard = memo(function EntryCard({
     }).slice(0, 8);
   }, [allTags, entry.tags, tagInputValue]);
 
-  const handleClick = useCallback(() => selectEntry(entry.id), [entry.id, selectEntry]);
+  const handleClick = useCallback(() => {
+    if (isMultiSelectMode) {
+      toggleSelect(entry.id);
+      return;
+    }
+    selectEntry(entry.id);
+  }, [entry.id, selectEntry, isMultiSelectMode, toggleSelect]);
   const handlePaste = useCallback(() => {
     pasteEntry(entry.id)
       .then(() => toast.success(t("toast.pasted")))
@@ -602,11 +612,25 @@ export const EntryCard = memo(function EntryCard({
       onContextMenu={handleContextMenu}
       className={cn(
         "group relative cursor-pointer overflow-hidden rounded-lg border-[1.5px] border-transparent px-2.5 py-1.5 transition-all duration-200",
-        isSelected
-          ? "border-border/60 bg-accent/70"
-          : "hover:border-border/60 hover:bg-accent/25"
+        isMultiSelectMode && isMultiSelected
+          ? "ring-1 ring-primary/50 bg-primary/5"
+          : isSelected
+            ? "border-border/60 bg-accent/70"
+            : "hover:border-border/60 hover:bg-accent/25"
       )}
     >
+      {isMultiSelectMode && (
+        <div className="absolute left-1 top-1/2 -translate-y-1/2 z-20">
+          <div className={cn(
+            "h-4 w-4 rounded border flex items-center justify-center transition-colors",
+            isMultiSelected
+              ? "bg-primary border-primary text-primary-foreground"
+              : "border-muted-foreground/40"
+          )}>
+            {isMultiSelected && <Check className="h-3 w-3" />}
+          </div>
+        </div>
+      )}
       {shortcutNumber !== null && (
         <div className="absolute right-2.5 top-2.5 z-20 flex h-5 min-w-5 items-center justify-center rounded-md border border-primary/35 bg-card/95 px-1 text-2xs font-semibold text-primary shadow-sm">
           {shortcutNumber}

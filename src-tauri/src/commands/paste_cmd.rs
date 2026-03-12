@@ -150,3 +150,32 @@ pub fn paste_entry(
 
     Ok(())
 }
+
+#[tauri::command]
+pub fn paste_text_direct(
+    window: tauri::WebviewWindow,
+    paste_target: State<'_, AppPasteTargetState>,
+    text: String,
+) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        let target_hwnd = paste_target.take_windows_hwnd();
+        let source_hwnd = window.hwnd().ok().map(|h| h.0 as isize);
+        simulator::prepare_paste_target(target_hwnd, source_hwnd);
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let target_bundle_id = paste_target.take_macos_bundle_id();
+        simulator::prepare_paste_target(target_bundle_id);
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let target_window_id = paste_target.take_linux_window_id();
+        simulator::prepare_paste_target(target_window_id);
+    }
+
+    let _ = window.hide();
+    thread::sleep(Duration::from_millis(30));
+
+    simulator::paste_text(&text)
+}
