@@ -48,11 +48,21 @@ impl OcrEngine for RapidOcrEngine {
         std::fs::write(&temp_file, image_data)
             .map_err(|e| format!("Failed to write temp image file: {}", e))?;
 
-        let output = Command::new(&self.executable_path)
-            .arg("--input")
+        let mut cmd = Command::new(&self.executable_path);
+        cmd.arg("--input")
             .arg(&temp_file)
             .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped());
+
+        // Hide the console window on Windows
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
+
+        let output = cmd
             .output()
             .await
             .map_err(|e| format!("Failed to start RapidOCR runtime: {}", e))?;
