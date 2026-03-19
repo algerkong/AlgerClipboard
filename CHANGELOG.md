@@ -1,5 +1,65 @@
 # Changelog
 
+## [1.7.0] - 2026-03-19
+
+### New Features
+
+- **Incognito Mode**: Global shortcut to temporarily pause clipboard monitoring, with tray icon toggle
+- **Multi-Select Mode**: Select multiple clipboard entries and merge-paste them with customizable separator
+- **Context Menu Submenu**: Reorganized context menu with submenu support; added text transform tools (uppercase, lowercase, trim, etc.)
+- **Export Formats**: Export clipboard history to CSV, TXT, and HTML formats
+- **QR Code Generation**: Generate QR codes from text entries via context menu, viewable in image viewer
+- **App Exclusion**: Exclude specific applications from clipboard monitoring
+- **Sensitive Data Detection**: Detect and handle sensitive content (passwords, keys, tokens) with configurable rules
+- **Realtime Sync Polling**: Cloud sync now supports realtime polling and auto-write clipboard after sync
+
+### Improvements
+
+- **Window size persistence in Rust backend**: Window sizes are now saved/restored from the Rust backend, eliminating flash on open
+- **macOS close behavior**: Main window hides on close instead of quitting (standard macOS behavior)
+- **macOS paste improvements**: Fixed paste focus race, duplicate notification, and accessibility prompt
+- **Paste simulator refactor**: Split paste simulator into per-platform files for better maintainability
+
+### Bug Fixes
+
+- **Minimize restore**: Fixed window not responding to tray icon click or shortcut after being minimized (Ref #1)
+- **Window size corruption on minimize**: Fixed minimized window saving tiny dimensions, causing unusable window on restart (Ref #1)
+- **Pin state persistence**: Pin/unpin preference now persists across restarts (Ref #1)
+- **Settings window size**: Increased default settings window size to prevent sidebar collapse
+- **ALT key system menu**: Removed ALT key trick that triggered system menu and broke maximized window state
+
+---
+
+## [1.7.0] - 2026-03-19 (中文)
+
+### 新功能
+
+- **无痕模式**: 全局快捷键临时暂停剪贴板监听，托盘图标可切换
+- **多选模式**: 选择多条剪贴板记录，自定义分隔符合并粘贴
+- **右键菜单子菜单**: 重构右键菜单支持子菜单；新增文本转换工具（大小写、去空格等）
+- **导出格式**: 支持导出剪贴板历史为 CSV、TXT、HTML 格式
+- **二维码生成**: 右键菜单生成文本条目的二维码，在图片查看器中显示
+- **应用排除**: 排除指定应用程序的剪贴板监听
+- **敏感数据检测**: 检测并处理敏感内容（密码、密钥、令牌），规则可配置
+- **实时同步轮询**: 云同步支持实时轮询，同步后自动写入剪贴板
+
+### 改进
+
+- **Rust 后端窗口尺寸持久化**: 窗口尺寸在 Rust 后端保存/恢复，消除打开时的尺寸闪烁
+- **macOS 关闭行为**: 主窗口关闭时隐藏而非退出（标准 macOS 行为）
+- **macOS 粘贴改进**: 修复粘贴焦点竞争、重复通知和辅助功能提示
+- **粘贴模拟器重构**: 按平台拆分粘贴模拟器文件，提升可维护性
+
+### Bug 修复
+
+- **最小化后无法呼出**: 修复最小化后托盘图标和快捷键无法恢复窗口的问题 (Ref #1)
+- **最小化导致窗口尺寸损坏**: 修复最小化时保存极小尺寸导致重启后窗口不可用的问题 (Ref #1)
+- **置顶状态持久化**: 固定/取消固定的偏好设置现在可跨重启保留 (Ref #1)
+- **设置窗口尺寸**: 增大设置窗口默认尺寸，防止侧边栏折叠
+- **ALT 键系统菜单**: 移除触发系统菜单并破坏最大化窗口状态的 ALT 键技巧
+
+---
+
 ## [1.6.3] - 2026-03-10
 
 ### New Features
