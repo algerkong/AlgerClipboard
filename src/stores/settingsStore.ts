@@ -344,6 +344,14 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         richTextDetailMode: resolvedDetailMode,
       });
 
+      // Load pin state
+      try {
+        const pinnedStr = await getSetting("is_pinned");
+        if (pinnedStr !== null && pinnedStr !== undefined) {
+          set({ isPinned: pinnedStr !== "false" });
+        }
+      } catch { /* ignore */ }
+
       // Load excluded apps
       try {
         const excludedAppsJson = await getSetting("excluded_apps");
@@ -615,6 +623,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
 
   setIsPinned: (pinned: boolean) => {
     set({ isPinned: pinned });
+    updateSetting("is_pinned", String(pinned)).catch(() => {});
   },
 }));
 

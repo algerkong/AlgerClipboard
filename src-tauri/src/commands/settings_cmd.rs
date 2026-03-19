@@ -67,6 +67,10 @@ pub fn show_and_focus_main_window(app: &tauri::AppHandle, window: &tauri::Webvie
     let app_handle = app.clone();
     let window_label = window.label().to_string();
 
+    // Restore window if it was minimized — show() alone won't work on Windows
+    if window.is_minimized().unwrap_or(false) {
+        let _ = window.unminimize();
+    }
     let _ = window.show();
     let _ = window.set_focus();
     force_window_focus(window);

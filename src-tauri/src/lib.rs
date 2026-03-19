@@ -122,11 +122,15 @@ pub fn run() {
                 }
                 tauri::WindowEvent::Resized(size) => {
                     // Save window size to DB on resize
-                    if let Ok(scale) = window.scale_factor() {
+                    // Skip if window is minimized — Windows may report a tiny
+                    // non-zero size that would corrupt the saved dimensions.
+                    if window.is_minimized().unwrap_or(false) {
+                        // do nothing
+                    } else if let Ok(scale) = window.scale_factor() {
                         let logical_w = size.width as f64 / scale;
                         let logical_h = size.height as f64 / scale;
-                        // Skip saving if window is minimized (size 0)
-                        if logical_w > 0.0 && logical_h > 0.0 {
+                        // Only save reasonable sizes (at least min_inner_size 320x400)
+                        if logical_w >= 320.0 && logical_h >= 400.0 {
                             // Map multi-instance labels (detail-1, detail-2, ...) to base key
                             let label = window.label();
                             let size_key = if label.starts_with("detail-") {
