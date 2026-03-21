@@ -57,6 +57,11 @@ fn force_window_focus(_window: &tauri::WebviewWindow) {
     // On macOS/Linux, Tauri's set_focus() works reliably
 }
 
+/// Public wrapper for force_window_focus, used by spotlight window management.
+pub fn force_window_focus_pub(window: &tauri::WebviewWindow) {
+    force_window_focus(window);
+}
+
 fn focus_window_webview(app: &tauri::AppHandle, window: &tauri::WebviewWindow) {
     if let Some(webview) = app.get_webview(window.label()) {
         let _ = webview.set_focus();
@@ -401,6 +406,80 @@ pub fn register_global_shortcuts(
             .map_err(|e| format!("Failed to register incognito shortcut '{}': {:?}", incognito_str, e))?;
     }
 
+    // Register Spotlight shortcuts (clipboard search, app search, translate)
+    let spotlight_enabled = db.0.get_setting("spotlight_enabled")
+        .ok().flatten()
+        .map(|v| v != "false")
+        .unwrap_or(true);
+
+    if spotlight_enabled {
+        register_spotlight_shortcut(
+            app,
+            &db,
+            "spotlight_clipboard_shortcut",
+            "Alt+Shift+F",
+            "clipboard",
+        )?;
+        register_spotlight_shortcut(
+            app,
+            &db,
+            "spotlight_app_shortcut",
+            "Alt+Shift+A",
+            "app",
+        )?;
+        register_spotlight_shortcut(
+            app,
+            &db,
+            "spotlight_translate_shortcut",
+            "Alt+Shift+T",
+            "translate",
+        )?;
+    }
+
+    Ok(())
+}
+
+/// Register a single Spotlight mode shortcut that emits "spotlight-activate" with the mode.
+fn register_spotlight_shortcut(
+    app: &tauri::AppHandle,
+    db: &AppDatabase,
+    setting_key: &str,
+    default_shortcut: &str,
+    mode: &str,
+) -> Result<(), String> {
+    let shortcut_str = db.0.get_setting(setting_key)
+        .ok().flatten()
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| default_shortcut.to_string());
+
+    if shortcut_str.is_empty() {
+        return Ok(());
+    }
+
+    let shortcut = match shortcut_str.parse::<Shortcut>() {
+        Ok(s) => s,
+        Err(e) => {
+            log::warn!("Invalid spotlight shortcut '{}' for {}: {:?}", shortcut_str, setting_key, e);
+            return Ok(());
+        }
+    };
+
+    let mode_str = mode.to_string();
+    app.global_shortcut()
+        .on_shortcut(shortcut, move |app, _shortcut, event| {
+            if event.state == ShortcutState::Pressed {
+                // Show and focus the spotlight window from Rust
+                if let Some(window) = app.get_webview_window("spotlight") {
+                    crate::show_and_focus_spotlight(app, &window);
+                }
+                // Emit mode event so frontend can switch modes
+                let _ = app.emit("spotlight-activate", serde_json::json!({
+                    "mode": mode_str
+                }));
+            }
+        })
+        .map_err(|e| format!("Failed to register spotlight shortcut '{}': {:?}", shortcut_str, e))?;
+
     Ok(())
 }
 
@@ -543,6 +622,29 @@ pub fn update_incognito_shortcut(
 }
 
 #[tauri::command]
+pub fn update_spotlight_shortcuts(
+    app: tauri::AppHandle,
+    db: State<'_, AppDatabase>,
+    clipboard_shortcut: Option<String>,
+    app_shortcut: Option<String>,
+    translate_shortcut: Option<String>,
+) -> Result<(), String> {
+    if let Some(ref s) = clipboard_shortcut {
+        db.0.set_setting("spotlight_clipboard_shortcut", s.trim())?;
+    }
+    if let Some(ref s) = app_shortcut {
+        db.0.set_setting("spotlight_app_shortcut", s.trim())?;
+    }
+    if let Some(ref s) = translate_shortcut {
+        db.0.set_setting("spotlight_translate_shortcut", s.trim())?;
+    }
+    // Re-register all shortcuts (including spotlight)
+    register_global_shortcuts(&app, None, None)?;
+    let _ = app.emit("settings-changed", serde_json::json!({}));
+    Ok(())
+}
+
+#[tauri::command]
 pub fn set_auto_start(app: tauri::AppHandle, enabled: bool) -> Result<(), String> {
     let autostart = app.autolaunch();
     if enabled {
@@ -573,6 +675,23 @@ pub fn focus_main_window(app: tauri::AppHandle) {
         let _ = window.show();
         let _ = window.set_focus();
         focus_window_webview(&app, &window);
+    }
+}
+
+// === Spotlight window management ===
+
+#[tauri::command]
+pub fn hide_spotlight_window(app: tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("spotlight") {
+        let _ = window.hide();
+    }
+}
+
+#[tauri::command]
+pub fn resize_spotlight_window(app: tauri::AppHandle, height: f64) {
+    if let Some(window) = app.get_webview_window("spotlight") {
+        let h = if height < 68.0 { 68.0 } else { height };
+        let _ = window.set_size(tauri::LogicalSize::new(680.0, h));
     }
 }
 

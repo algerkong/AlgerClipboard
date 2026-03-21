@@ -240,6 +240,19 @@ impl Database {
         )
         .map_err(|e| format!("Failed to create sync_accounts table: {}", e))?;
 
+        // Custom apps table for Spotlight app launcher
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS custom_apps (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                path TEXT NOT NULL,
+                icon_path TEXT,
+                launch_count INTEGER DEFAULT 0,
+                created_at TEXT NOT NULL
+            );",
+        )
+        .map_err(|e| format!("Failed to create custom_apps table: {}", e))?;
+
         conn.execute(
             "INSERT OR IGNORE INTO tag_catalog (name, created_at)
              SELECT DISTINCT tag, DATETIME('now')
@@ -1546,6 +1559,67 @@ impl Database {
         }
 
         Ok(result)
+    }
+
+    // === Custom Apps (Spotlight) ===
+
+    pub fn get_custom_apps(&self) -> Result<Vec<crate::app_launcher::AppEntry>, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        let mut stmt = conn
+            .prepare("SELECT id, name, path, icon_path, launch_count FROM custom_apps ORDER BY launch_count DESC")
+            .map_err(|e| format!("Failed to prepare: {}", e))?;
+
+        let rows = stmt
+            .query_map([], |row| {
+                Ok(crate::app_launcher::AppEntry {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    path: row.get(2)?,
+                    icon_base64: None, // icon loaded separately
+                    source: crate::app_launcher::AppSource::Custom,
+                    launch_count: row.get::<_, u32>(4).unwrap_or(0),
+                })
+            })
+            .map_err(|e| format!("Failed to query: {}", e))?;
+
+        let mut apps = Vec::new();
+        for row in rows {
+            apps.push(row.map_err(|e| format!("Row error: {}", e))?);
+        }
+        Ok(apps)
+    }
+
+    pub fn add_custom_app(
+        &self,
+        id: &str,
+        name: &str,
+        path: &str,
+        icon_path: Option<&str>,
+    ) -> Result<(), String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        conn.execute(
+            "INSERT OR REPLACE INTO custom_apps (id, name, path, icon_path, launch_count, created_at) VALUES (?1, ?2, ?3, ?4, 0, ?5)",
+            params![id, name, path, icon_path, now_iso()],
+        )
+        .map_err(|e| format!("Failed to add custom app: {}", e))?;
+        Ok(())
+    }
+
+    pub fn remove_custom_app(&self, id: &str) -> Result<(), String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        conn.execute("DELETE FROM custom_apps WHERE id = ?1", params![id])
+            .map_err(|e| format!("Failed to remove custom app: {}", e))?;
+        Ok(())
+    }
+
+    pub fn increment_app_launch_count(&self, id: &str) -> Result<(), String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+        conn.execute(
+            "UPDATE custom_apps SET launch_count = launch_count + 1 WHERE id = ?1",
+            params![id],
+        )
+        .map_err(|e| format!("Failed to increment launch count: {}", e))?;
+        Ok(())
     }
 }
 

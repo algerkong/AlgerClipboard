@@ -1,0 +1,45 @@
+{
+  "spotlight": {
+    "title": "聚焦搜索",
+    "mode": {
+      "clipboard": "剪贴板",
+      "app": "应用",
+      "translate": "翻译"
+    },
+    "placeholder": {
+      "clipboard": "搜索剪贴板内容...",
+      "app": "搜索应用程序...",
+      "translate": "输入文字翻译..."
+    },
+    "empty": {
+      "clipboard": "未找到匹配的剪贴板记录",
+      "app": "未找到匹配的应用",
+      "translate": "输入内容开始翻译",
+      "noResults": "无结果"
+    },
+    "footer": {
+      "execute": "执行",
+      "switchMode": "切换模式",
+      "close": "关闭"
+    },
+    "settings": {
+      "title": "聚焦搜索",
+      "enable": "启用聚焦搜索",
+      "shortcut_clipboard": "剪贴板搜索快捷键",
+      "shortcut_app": "应用搜索快捷键",
+      "shortcut_translate": "翻译快捷键",
+      "clear_on_hide": "隐藏时清空输入",
+      "enter_behavior": "回车行为",
+      "paste": "粘贴",
+      "copy_only": "仅复制",
+      "max_results": "最大结果数",
+      "custom_apps": "自定义应用",
+      "add_app": "添加应用",
+      "remove_app": "移除",
+      "app_name": "应用名称",
+      "app_path": "应用路径",
+      "browse": "浏览",
+      "refresh_apps": "刷新应用列表"
+    }
+  }
+}

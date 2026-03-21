@@ -8,6 +8,7 @@ import {
   Globe,
   Languages,
   ScanText,
+  Search,
   Settings2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ import { AiTab } from "./AiTab";
 import { RichTextTab } from "./RichTextTab";
 import { AskAiTab } from "./AskAiTab";
 import { OcrTab } from "./OcrTab";
+import { SpotlightTab } from "./SpotlightTab";
 import { SettingsHero } from "./shared";
 
 type SettingsTab =
@@ -30,7 +32,8 @@ type SettingsTab =
   | "ocr"
   | "data"
   | "ai"
-  | "askAi";
+  | "askAi"
+  | "spotlight";
 
 interface Props {
   onBack: () => void;
@@ -100,6 +103,13 @@ const TABS: {
     eyebrow: "Assistant",
     descriptionKey: "settingsLayout.askAiDesc",
   },
+  {
+    key: "spotlight",
+    labelKey: "spotlight.settings.title",
+    icon: <Search className="h-4 w-4" />,
+    eyebrow: "Search",
+    descriptionKey: "spotlight.settings.enable",
+  },
 ];
 
 export function SettingsPage({ onBack, initialTab }: Props) {
@@ -157,6 +167,7 @@ export function SettingsPage({ onBack, initialTab }: Props) {
             {activeTab === "data" && <DataTab />}
             {activeTab === "ai" && <AiTab />}
             {activeTab === "askAi" && <AskAiTab />}
+            {activeTab === "spotlight" && <SpotlightTab />}
           </div>
         </div>
       </main>

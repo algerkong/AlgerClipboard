@@ -1,4 +1,5 @@
 pub mod ai_cmd;
+pub mod app_launcher_cmd;
 pub mod clipboard_cmd;
 pub mod favicon_cmd;
 pub mod file_cmd;
