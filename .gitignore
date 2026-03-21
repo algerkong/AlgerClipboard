@@ -21,3 +21,4 @@ docs/technical-design.md
 *.key
 *.key.pub
 .planning/
+plugins/*/target/
