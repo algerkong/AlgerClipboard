@@ -2,14 +2,16 @@ import { useState, type ReactNode } from "react";
 import {
   ArrowLeft,
   Brain,
-  Brush,
+  PaintBrush,
   Cloud,
   Database,
   Globe,
-  Languages,
-  ScanText,
-  Settings2,
-} from "lucide-react";
+  Translate,
+  PuzzlePiece,
+  Scan,
+  MagnifyingGlass,
+  Gear,
+} from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { GeneralTab } from "./GeneralTab";
@@ -20,6 +22,8 @@ import { AiTab } from "./AiTab";
 import { RichTextTab } from "./RichTextTab";
 import { AskAiTab } from "./AskAiTab";
 import { OcrTab } from "./OcrTab";
+import { SpotlightTab } from "./SpotlightTab";
+import { PluginsTab } from "./PluginsTab";
 import { SettingsHero } from "./shared";
 
 type SettingsTab =
@@ -30,7 +34,9 @@ type SettingsTab =
   | "ocr"
   | "data"
   | "ai"
-  | "askAi";
+  | "askAi"
+  | "spotlight"
+  | "plugins";
 
 interface Props {
   onBack: () => void;
@@ -47,58 +53,72 @@ const TABS: {
   {
     key: "general",
     labelKey: "settings.tabGeneral",
-    icon: <Settings2 className="h-4 w-4" />,
+    icon: <Gear size={16} />,
     eyebrow: "Core",
     descriptionKey: "settingsLayout.generalDesc",
   },
   {
     key: "richText",
     labelKey: "settings.tabRichText",
-    icon: <Brush className="h-4 w-4" />,
+    icon: <PaintBrush size={16} />,
     eyebrow: "Display",
     descriptionKey: "settingsLayout.richTextDesc",
   },
   {
     key: "sync",
     labelKey: "settings.tabSync",
-    icon: <Cloud className="h-4 w-4" />,
+    icon: <Cloud size={16} />,
     eyebrow: "Cloud",
     descriptionKey: "settingsLayout.syncDesc",
   },
   {
     key: "translate",
     labelKey: "settings.tabTranslate",
-    icon: <Languages className="h-4 w-4" />,
+    icon: <Translate size={16} />,
     eyebrow: "Language",
     descriptionKey: "settingsLayout.translateDesc",
   },
   {
     key: "ocr",
     labelKey: "settings.tabOcr",
-    icon: <ScanText className="h-4 w-4" />,
+    icon: <Scan size={16} />,
     eyebrow: "Capture",
     descriptionKey: "settingsLayout.ocrDesc",
   },
   {
     key: "data",
     labelKey: "settings.tabData",
-    icon: <Database className="h-4 w-4" />,
+    icon: <Database size={16} />,
     eyebrow: "Storage",
     descriptionKey: "settingsLayout.dataDesc",
   },
   {
     key: "ai",
     labelKey: "settings.tabAi",
-    icon: <Brain className="h-4 w-4" />,
+    icon: <Brain size={16} />,
     eyebrow: "Model",
     descriptionKey: "settingsLayout.aiDesc",
   },
   {
     key: "askAi",
     labelKey: "settings.tabAskAi",
-    icon: <Globe className="h-4 w-4" />,
+    icon: <Globe size={16} />,
     eyebrow: "Assistant",
     descriptionKey: "settingsLayout.askAiDesc",
+  },
+  {
+    key: "spotlight",
+    labelKey: "spotlight.settings.title",
+    icon: <MagnifyingGlass size={16} />,
+    eyebrow: "Search",
+    descriptionKey: "spotlight.settings.enable",
+  },
+  {
+    key: "plugins",
+    labelKey: "settings.tabPlugins",
+    icon: <PuzzlePiece size={16} />,
+    eyebrow: "Extensions",
+    descriptionKey: "settingsLayout.pluginsDesc",
   },
 ];
 
@@ -114,7 +134,7 @@ export function SettingsPage({ onBack, initialTab }: Props) {
     <div className="settings-layout">
       <aside className="settings-sidebar">
         <button onClick={onBack} className="settings-back-button">
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft size={16} />
           <span>{t("settings.title")}</span>
         </button>
 
@@ -157,6 +177,8 @@ export function SettingsPage({ onBack, initialTab }: Props) {
             {activeTab === "data" && <DataTab />}
             {activeTab === "ai" && <AiTab />}
             {activeTab === "askAi" && <AskAiTab />}
+            {activeTab === "spotlight" && <SpotlightTab />}
+            {activeTab === "plugins" && <PluginsTab />}
           </div>
         </div>
       </main>

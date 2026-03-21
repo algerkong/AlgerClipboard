@@ -11,10 +11,10 @@ import { TableHeader } from "@tiptap/extension-table-header";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { common, createLowlight } from "lowlight";
 import {
-  Bold, Italic, Underline as UnderlineIcon, Strikethrough,
-  Code, List, ListOrdered, Quote, Heading1, Heading2,
-  Link as LinkIcon, Table as TableIcon, ListTodo, Minus,
-} from "lucide-react";
+  TextB, TextItalic, TextUnderline as UnderlineIcon, TextStrikethrough,
+  Code, List, ListNumbers, Quotes, TextHOne, TextHTwo,
+  Link as LinkIcon, Table as TableIcon, CheckSquare, Minus,
+} from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
 
@@ -104,37 +104,37 @@ export function RichEditor({ content, readOnly = false, onChange, onSave, classN
       {!readOnly && (
         <div className="flex flex-wrap items-center gap-0.5 border-b border-border/30 px-2 py-1.5 shrink-0">
           <ToolbarButton active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()} title="Bold">
-            <Bold className={iconSize} />
+            <TextB className={iconSize} />
           </ToolbarButton>
           <ToolbarButton active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic">
-            <Italic className={iconSize} />
+            <TextItalic className={iconSize} />
           </ToolbarButton>
           <ToolbarButton active={editor.isActive("underline")} onClick={() => editor.chain().focus().toggleUnderline().run()} title="Underline">
             <UnderlineIcon className={iconSize} />
           </ToolbarButton>
           <ToolbarButton active={editor.isActive("strike")} onClick={() => editor.chain().focus().toggleStrike().run()} title="Strikethrough">
-            <Strikethrough className={iconSize} />
+            <TextStrikethrough className={iconSize} />
           </ToolbarButton>
           <div className="mx-1 h-4 w-px bg-border/30" />
           <ToolbarButton active={editor.isActive("heading", { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} title="Heading 1">
-            <Heading1 className={iconSize} />
+            <TextHOne className={iconSize} />
           </ToolbarButton>
           <ToolbarButton active={editor.isActive("heading", { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title="Heading 2">
-            <Heading2 className={iconSize} />
+            <TextHTwo className={iconSize} />
           </ToolbarButton>
           <div className="mx-1 h-4 w-px bg-border/30" />
           <ToolbarButton active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()} title="Bullet list">
             <List className={iconSize} />
           </ToolbarButton>
           <ToolbarButton active={editor.isActive("orderedList")} onClick={() => editor.chain().focus().toggleOrderedList().run()} title="Numbered list">
-            <ListOrdered className={iconSize} />
+            <ListNumbers className={iconSize} />
           </ToolbarButton>
           <ToolbarButton active={editor.isActive("taskList")} onClick={() => editor.chain().focus().toggleTaskList().run()} title="Task list">
-            <ListTodo className={iconSize} />
+            <CheckSquare className={iconSize} />
           </ToolbarButton>
           <div className="mx-1 h-4 w-px bg-border/30" />
           <ToolbarButton active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()} title="Blockquote">
-            <Quote className={iconSize} />
+            <Quotes className={iconSize} />
           </ToolbarButton>
           <ToolbarButton active={editor.isActive("codeBlock")} onClick={() => editor.chain().focus().toggleCodeBlock().run()} title="Code block">
             <Code className={iconSize} />

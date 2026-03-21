@@ -1,0 +1,48 @@
+{
+  "spotlight": {
+    "title": "Spotlight",
+    "mode": {
+      "clipboard": "Clipboard",
+      "app": "Apps",
+      "translate": "Translate"
+    },
+    "placeholder": {
+      "clipboard": "Search clipboard...",
+      "app": "Search applications...",
+      "translate": "Type to translate..."
+    },
+    "empty": {
+      "clipboard": "No matching clipboard entries",
+      "app": "No matching applications",
+      "translate": "Type something to translate",
+      "noResults": "No results"
+    },
+    "footer": {
+      "execute": "Execute",
+      "switchMode": "Switch mode",
+      "close": "Close"
+    },
+    "settings": {
+      "title": "Spotlight",
+      "enable": "Enable Spotlight",
+      "shortcut_clipboard": "Clipboard search shortcut",
+      "shortcut_app": "App search shortcut",
+      "shortcut_translate": "Translate shortcut",
+      "clear_on_hide": "Clear input on hide",
+      "enter_behavior": "Enter behavior",
+      "paste": "Paste",
+      "copy_only": "Copy only",
+      "max_results": "Max results",
+      "custom_apps": "Custom apps",
+      "add_app": "Add app",
+      "remove_app": "Remove",
+      "app_name": "App name",
+      "app_path": "App path",
+      "browse": "Browse",
+      "refresh_apps": "Refresh app list",
+      "auto_translate_clipboard": "Auto-translate clipboard on open",
+      "prefixes": "Prefix triggers",
+      "prefixes_desc": "Type prefix + space to switch mode"
+    }
+  }
+}

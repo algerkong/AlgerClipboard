@@ -1,17 +1,17 @@
 import { useState, useCallback, useEffect, useRef, useLayoutEffect } from "react";
 import {
   X,
-  ZoomIn,
-  ZoomOut,
-  RotateCcw,
-  Languages,
-  Loader2,
-  Maximize,
-  ScanSearch,
-  ClipboardCopy,
-  ChevronDown,
+  MagnifyingGlassPlus,
+  MagnifyingGlassMinus,
+  ArrowCounterClockwise,
+  Translate,
+  SpinnerGap,
+  ArrowsOut,
+  Scan,
+  ClipboardText,
+  CaretDown,
   Download,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { platform as getPlatform } from "@tauri-apps/plugin-os";
@@ -176,7 +176,7 @@ export function ImageViewerPage() {
     if (imageSrc) {
       items.push({
         label: t("imageViewer.copyImage"),
-        icon: <ClipboardCopy className="h-4 w-4" />,
+        icon: <ClipboardText size={16} />,
         onClick: async () => {
           try {
             await invoke("copy_image_to_clipboard", { base64Data: imageSrc });
@@ -188,7 +188,7 @@ export function ImageViewerPage() {
       });
       items.push({
         label: t("imageViewer.saveAs"),
-        icon: <Download className="h-4 w-4" />,
+        icon: <Download size={16} />,
         onClick: async () => {
           try {
             const path = await saveFileDialog({
@@ -235,14 +235,14 @@ export function ImageViewerPage() {
           </span>
           <div className="flex items-center gap-0.5">
             <button onClick={handleZoomOut} className={cn("p-0.5 rounded hover:opacity-80 transition-colors cursor-pointer", textClass)} title={t("imageViewer.zoomOut")}>
-              <ZoomOut className="w-2.5 h-2.5" />
+              <MagnifyingGlassMinus size={10} />
             </button>
             <span className={cn("text-[10px] min-w-[28px] text-center", textClass)}>{Math.round(zoom * 100)}%</span>
             <button onClick={handleZoomIn} className={cn("p-0.5 rounded hover:opacity-80 transition-colors cursor-pointer", textClass)} title={t("imageViewer.zoomIn")}>
-              <ZoomIn className="w-2.5 h-2.5" />
+              <MagnifyingGlassPlus size={10} />
             </button>
             <button onClick={handleResetZoom} className={cn("p-0.5 rounded hover:opacity-80 transition-colors cursor-pointer", textClass)} title={t("imageViewer.resetZoom")}>
-              <RotateCcw className="w-2 h-2" />
+              <ArrowCounterClockwise size={8} />
             </button>
           </div>
           {/* Fit mode toggle */}
@@ -251,7 +251,7 @@ export function ImageViewerPage() {
             className={cn("p-0.5 rounded hover:opacity-80 transition-colors cursor-pointer", textClass)}
             title={fitMode === "fit" ? t("imageViewer.actualSize") : t("imageViewer.fitWindow")}
           >
-            {fitMode === "fit" ? <ScanSearch className="w-2.5 h-2.5" /> : <Maximize className="w-2.5 h-2.5" />}
+            {fitMode === "fit" ? <Scan size={10} /> : <ArrowsOut size={10} />}
           </button>
           {availableEngines.length > 1 && (
             <OcrEngineDropdown
@@ -275,7 +275,7 @@ export function ImageViewerPage() {
               )}
               title={t("imageViewer.bgBlack")}
             >
-              <span className="w-2 h-2 rounded-sm bg-neutral-700 border border-neutral-600" />
+              <span className="h-2 w-2 rounded-sm bg-neutral-700 border border-neutral-600" />
             </button>
             <button
               onClick={() => setBgMode("checker-dark")}
@@ -286,7 +286,7 @@ export function ImageViewerPage() {
               )}
               title={t("imageViewer.bgCheckerDark")}
             >
-              <svg viewBox="0 0 8 8" className="w-2.5 h-2.5" shapeRendering="crispEdges">
+              <svg viewBox="0 0 8 8" className="h-2.5 w-2.5" shapeRendering="crispEdges">
                 <rect width="8" height="8" fill="#2a2a2a" />
                 <rect x="0" y="0" width="4" height="4" fill="#3a3a3a" />
                 <rect x="4" y="4" width="4" height="4" fill="#3a3a3a" />
@@ -301,7 +301,7 @@ export function ImageViewerPage() {
               )}
               title={t("imageViewer.bgCheckerLight")}
             >
-              <svg viewBox="0 0 8 8" className="w-2.5 h-2.5" shapeRendering="crispEdges">
+              <svg viewBox="0 0 8 8" className="h-2.5 w-2.5" shapeRendering="crispEdges">
                 <rect width="8" height="8" fill="#ffffff" />
                 <rect x="0" y="0" width="4" height="4" fill="#c8c8c8" />
                 <rect x="4" y="4" width="4" height="4" fill="#c8c8c8" />
@@ -315,7 +315,7 @@ export function ImageViewerPage() {
               )}
               title={t("imageViewer.bgWhite")}
             >
-              <span className="w-2 h-2 rounded-sm bg-white border border-neutral-300" />
+              <span className="h-2 w-2 rounded-sm bg-white border border-neutral-300" />
             </button>
           </div>
         </div>
@@ -323,7 +323,7 @@ export function ImageViewerPage() {
         <div className="flex items-center gap-0.5 -mr-1">
           {ocrLoading && (
             <span className={cn("flex items-center gap-1 px-1 h-4.5 text-[10px]", textClass)}>
-              <Loader2 className="w-2.5 h-2.5 animate-spin" />
+              <SpinnerGap size={10} className="animate-spin" />
               {t("imageViewer.extracting")}
             </span>
           )}
@@ -336,7 +336,7 @@ export function ImageViewerPage() {
               )}
               title={t("imageViewer.copyText")}
             >
-              <ClipboardCopy className="w-2.5 h-2.5" />
+              <ClipboardText size={10} />
               {t("imageViewer.copyText")}
             </button>
           )}
@@ -352,13 +352,13 @@ export function ImageViewerPage() {
               )}
               title={t("imageViewer.translateText")}
             >
-              {translateLoading ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Languages className="w-2.5 h-2.5" />}
+              {translateLoading ? <SpinnerGap size={10} className="animate-spin" /> : <Translate size={10} />}
               {t("imageViewer.translateText")}
             </button>
           )}
           {!isMacOS && (
             <button onClick={handleClose} className={cn("flex items-center justify-center w-5 h-5 rounded-md hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer", textClass)}>
-              <X className="w-2.5 h-2.5" />
+              <X size={10} />
             </button>
           )}
         </div>
@@ -440,7 +440,7 @@ export function ImageViewerPage() {
             )}
           </div>
         ) : (
-          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          <SpinnerGap size={24} className="animate-spin text-muted-foreground" />
         )}
       </div>
 
@@ -564,7 +564,7 @@ function OcrEngineDropdown({
         )}
       >
         <span className="truncate max-w-[80px]">{currentLabel}</span>
-        <ChevronDown className={cn("w-2 h-2 shrink-0 transition-transform", open && "rotate-180")} />
+        <CaretDown className={cn("w-2 h-2 shrink-0 transition-transform", open && "rotate-180")} />
       </button>
       {open && (
         <div

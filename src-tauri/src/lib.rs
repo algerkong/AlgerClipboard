@@ -1,4 +1,5 @@
 mod ai;
+mod app_launcher;
 mod clipboard;
 mod commands;
 mod ocr;
@@ -7,6 +8,7 @@ mod storage;
 mod sync;
 mod translate;
 mod search;
+mod plugin_system;
 
 use clipboard::entry::ContentType;
 use clipboard::monitor::ClipboardMonitor;
@@ -94,6 +96,57 @@ fn create_main_window<R: tauri::Runtime>(
     builder.build()
 }
 
+fn create_spotlight_window<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+) -> tauri::Result<tauri::WebviewWindow<R>> {
+    let url = WebviewUrl::App("index.html?window=spotlight".into());
+    // Extra 80px on each axis for CSS shadow to render without clipping
+    let builder = tauri::WebviewWindowBuilder::new(app, "spotlight", url)
+        .title("Spotlight")
+        .inner_size(840.0, 680.0)
+        .resizable(false)
+        .always_on_top(true)
+        .visible(false)
+        .skip_taskbar(true)
+        .center()
+        .decorations(false)
+        .transparent(true)
+        .shadow(false);
+
+    builder.build()
+}
+
+/// Show and focus the Spotlight window, applying platform-specific focus tricks.
+fn show_and_focus_spotlight(app: &tauri::AppHandle, window: &tauri::WebviewWindow) {
+    if window.is_minimized().unwrap_or(false) {
+        let _ = window.unminimize();
+    }
+    let _ = window.show();
+    let _ = window.set_focus();
+
+    // Also focus the webview so the input gets keyboard focus
+    if let Some(webview) = app.get_webview(window.label()) {
+        let _ = webview.set_focus();
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        commands::settings_cmd::force_window_focus_pub(window);
+        // Delayed re-focus to win focus race on Windows
+        let app2 = app.clone();
+        let label = window.label().to_string();
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(50));
+            if let Some(w) = app2.get_webview_window(&label) {
+                let _ = w.set_focus();
+                if let Some(wv) = app2.get_webview(&label) {
+                    let _ = wv.set_focus();
+                }
+            }
+        });
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     env_logger::init();
@@ -118,6 +171,12 @@ pub fn run() {
                         {
                             let _ = api;
                         }
+                    }
+
+                    // Spotlight window should never be destroyed, only hidden
+                    if window.label() == "spotlight" {
+                        api.prevent_close();
+                        let _ = window.hide();
                     }
                 }
                 tauri::WindowEvent::Resized(size) => {
@@ -188,6 +247,9 @@ pub fn run() {
 
             let main_window = create_main_window(&app.handle(), Some(&db))?;
 
+            // Create Spotlight window (transparent, initially hidden)
+            let _spotlight_window = create_spotlight_window(&app.handle())?;
+
             // Initialize BlobStore: use custom cache_dir if set, otherwise default
             let blob_base = match db.get_setting("cache_dir") {
                 Ok(Some(custom_dir)) => {
@@ -207,6 +269,24 @@ pub fn run() {
             app.manage(AppPasteTargetState(std::sync::Mutex::new(
                 PasteTargetSnapshot::default(),
             )));
+
+            // Spotlight app launcher scanner
+            let scanner = Arc::new(app_launcher::scanner::AppScanner::new());
+            app.manage::<commands::app_launcher_cmd::AppScannerState>(scanner);
+
+            let plugin_dir = app_data_dir.join("plugins");
+            let mut plugin_manager = plugin_system::manager::PluginManager::new(plugin_dir, db.clone());
+            plugin_manager.set_app_handle(app.handle().clone());
+            plugin_manager.scan();
+            for info in plugin_manager.list_plugins() {
+                if info.enabled {
+                    if let Err(e) = plugin_manager.load(&info.id) {
+                        log::warn!("Failed to auto-load plugin '{}': {}", info.id, e);
+                    }
+                }
+            }
+            let plugin_manager_state: commands::plugin_cmd::PluginManagerState = Arc::new(std::sync::Mutex::new(plugin_manager));
+            app.manage(plugin_manager_state);
 
             let device_id = match db.get_setting("device_id") {
                 Ok(Some(id)) => id,
@@ -467,26 +547,73 @@ pub fn run() {
             // Apply rounded corners and remove system menu on Windows 11+
             #[cfg(target_os = "windows")]
             {
+                use windows_sys::Win32::Graphics::Dwm::DwmSetWindowAttribute;
+                use windows_sys::Win32::UI::WindowsAndMessaging::{
+                    GetWindowLongW, SetWindowLongW, GWL_STYLE, GWL_EXSTYLE,
+                    WS_SYSMENU, WS_EX_LAYERED, WS_EX_TOOLWINDOW,
+                };
+                const DWMWA_TRANSITIONS_FORCEDISABLED: u32 = 3;
+                const DWMWA_WINDOW_CORNER_PREFERENCE: u32 = 33;
+                const DWMWCP_ROUND: u32 = 2;
+                const DWMWCP_DONOTROUND: u32 = 1;
+                const DWMWA_BORDER_COLOR: u32 = 34;
+                const DWMWA_COLOR_NONE: u32 = 0xFFFFFFFE;
+
+                // Main window: rounded corners + remove system menu + disable show/hide animation
                 if let Some(win) = app.get_webview_window("main") {
                     if let Ok(hwnd) = win.hwnd() {
-                        use windows_sys::Win32::Graphics::Dwm::DwmSetWindowAttribute;
-                        use windows_sys::Win32::UI::WindowsAndMessaging::{
-                            GetWindowLongW, SetWindowLongW, GWL_STYLE, WS_SYSMENU,
-                        };
-                        const DWMWA_WINDOW_CORNER_PREFERENCE: u32 = 33;
-                        const DWMWCP_ROUND: u32 = 2;
                         unsafe {
+                            // Disable DWM show/hide transition animation
+                            let disable: windows_sys::Win32::Foundation::BOOL = 1;
+                            let _ = DwmSetWindowAttribute(
+                                hwnd.0,
+                                DWMWA_TRANSITIONS_FORCEDISABLED,
+                                &disable as *const _ as *const std::ffi::c_void,
+                                std::mem::size_of_val(&disable) as u32,
+                            );
                             let _ = DwmSetWindowAttribute(
                                 hwnd.0,
                                 DWMWA_WINDOW_CORNER_PREFERENCE,
                                 &DWMWCP_ROUND as *const u32 as *const std::ffi::c_void,
                                 std::mem::size_of::<u32>() as u32,
                             );
-
-                            // Remove WS_SYSMENU to prevent the system menu from
-                            // appearing when ALT + arrow keys are pressed.
                             let style = GetWindowLongW(hwnd.0, GWL_STYLE);
                             SetWindowLongW(hwnd.0, GWL_STYLE, style & !(WS_SYSMENU as i32));
+                        }
+                    }
+                }
+
+                // Spotlight window: no DWM corners, no border, tool window, no animations
+                if let Some(win) = app.get_webview_window("spotlight") {
+                    if let Ok(hwnd) = win.hwnd() {
+                        unsafe {
+                            // Disable DWM show/hide transition animation
+                            let disable: windows_sys::Win32::Foundation::BOOL = 1;
+                            let _ = DwmSetWindowAttribute(
+                                hwnd.0,
+                                DWMWA_TRANSITIONS_FORCEDISABLED,
+                                &disable as *const _ as *const std::ffi::c_void,
+                                std::mem::size_of_val(&disable) as u32,
+                            );
+                            // Disable DWM rounded corners
+                            let _ = DwmSetWindowAttribute(
+                                hwnd.0,
+                                DWMWA_WINDOW_CORNER_PREFERENCE,
+                                &DWMWCP_DONOTROUND as *const u32 as *const std::ffi::c_void,
+                                std::mem::size_of::<u32>() as u32,
+                            );
+                            // Remove DWM border color
+                            let _ = DwmSetWindowAttribute(
+                                hwnd.0,
+                                DWMWA_BORDER_COLOR,
+                                &DWMWA_COLOR_NONE as *const u32 as *const std::ffi::c_void,
+                                std::mem::size_of::<u32>() as u32,
+                            );
+                            // Remove system menu + add WS_EX_TOOLWINDOW
+                            let style = GetWindowLongW(hwnd.0, GWL_STYLE);
+                            SetWindowLongW(hwnd.0, GWL_STYLE, style & !(WS_SYSMENU as i32));
+                            let ex_style = GetWindowLongW(hwnd.0, GWL_EXSTYLE);
+                            SetWindowLongW(hwnd.0, GWL_EXSTYLE, ex_style | WS_EX_TOOLWINDOW as i32);
                         }
                     }
                 }
@@ -534,6 +661,8 @@ pub fn run() {
             commands::settings_cmd::update_settings,
             commands::settings_cmd::update_toggle_shortcut,
             commands::settings_cmd::update_incognito_shortcut,
+            commands::settings_cmd::update_spotlight_shortcuts,
+            commands::settings_cmd::hide_spotlight_window,
             commands::settings_cmd::open_url,
             commands::settings_cmd::set_auto_start,
             commands::settings_cmd::get_auto_start,
@@ -552,6 +681,7 @@ pub fn run() {
             commands::template_cmd::delete_template,
             commands::template_cmd::apply_template,
             commands::translate_cmd::translate_text,
+            commands::translate_cmd::translate_all,
             commands::translate_cmd::get_translate_engines,
             commands::translate_cmd::configure_translate_engine,
             commands::sync_cmd::get_sync_accounts,
@@ -615,11 +745,28 @@ pub fn run() {
             commands::ocr_cmd::clear_ocr_cache,
             commands::ocr_cmd::get_ocr_trigger_mode,
             commands::ocr_cmd::set_ocr_trigger_mode,
+            commands::app_launcher_cmd::scan_applications,
+            commands::app_launcher_cmd::search_applications,
+            commands::app_launcher_cmd::launch_application,
+            commands::app_launcher_cmd::add_custom_app,
+            commands::app_launcher_cmd::remove_custom_app,
+            commands::app_launcher_cmd::get_custom_apps,
             commands::search_cmd::search_entries,
             commands::search_cmd::add_search_history,
             commands::search_cmd::get_search_history,
             commands::search_cmd::delete_search_history,
             commands::search_cmd::clear_search_history,
+            commands::plugin_cmd::list_plugins,
+            commands::plugin_cmd::scan_plugins,
+            commands::plugin_cmd::enable_plugin,
+            commands::plugin_cmd::disable_plugin,
+            commands::plugin_cmd::remove_plugin,
+            commands::plugin_cmd::invoke_plugin_command,
+            commands::plugin_cmd::get_plugin_settings,
+            commands::plugin_cmd::set_plugin_setting,
+            commands::plugin_cmd::grant_plugin_permissions,
+            commands::plugin_cmd::get_plugin_permissions,
+            commands::plugin_cmd::get_plugin_dir,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -4,7 +4,7 @@
 
 **A smart clipboard manager built with Tauri 2 + React 19**
 
-Cloud Sync &bull; AI Summary &bull; Translation &bull; Rich Text Editing &bull; Templates
+Cloud Sync &bull; AI Summary &bull; Translation &bull; Spotlight &bull; Plugin System &bull; Rich Text Editing
 
 [![GitHub Release](https://img.shields.io/github/v/release/algerkong/AlgerClipboard?style=flat-square&color=blue)](https://github.com/algerkong/AlgerClipboard/releases)
 [![License](https://img.shields.io/github/license/algerkong/AlgerClipboard?style=flat-square&color=green)](LICENSE)
@@ -48,6 +48,22 @@ CodeMirror 6 code editor with 12+ language syntax highlighting, TipTap 2 WYSIWYG
 
 </td>
 </tr>
+<tr>
+<td width="50%">
+
+### Spotlight
+
+Global search panel (`Alt+Shift+F/A/T`) with prefix routing. Built-in clipboard search, app launcher, and multi-engine translation with TTS. Extensible via plugin system.
+
+</td>
+<td width="50%">
+
+### Plugin System
+
+Load plugins from local folders with frontend JS + Rust native backend (.dll/.so/.dylib). Permission-based security, lifecycle hooks, context menu extensions, and Spotlight mode registration. Includes IDE Projects plugin for searching recent projects across VS Code, Cursor, Windsurf, Trae, Zed, and more.
+
+</td>
+</tr>
 </table>
 
 ## Features
@@ -62,9 +78,61 @@ CodeMirror 6 code editor with 12+ language syntax highlighting, TipTap 2 WYSIWYG
 | **Translation** | Baidu / Youdao / Google engines &bull; AI translation mode &bull; Language auto-detect &bull; One-click copy |
 | **Templates** | Reusable templates with variable substitution |
 | **Organization** | Pin & favorites &bull; Tag system with CRUD &bull; Content categories &bull; Language detection (19 languages) |
+| **Spotlight** | Global search panel &bull; Prefix routing (`cc`/`tt`/`aa`/`\|`) &bull; Clipboard search &bull; App launcher &bull; Multi-engine translation with TTS |
+| **Plugins** | Local folder loading &bull; JS frontend + Rust native backend &bull; Permission system &bull; Lifecycle hooks &bull; Context menu / tray extensions &bull; IDE Projects plugin |
 | **UX** | Global hotkey (`Ctrl+Shift+V`) &bull; Arrow key navigation &bull; Smart window positioning &bull; Window size memory &bull; OCR |
 | **Personalization** | Dark / Light / System theme &bull; Custom fonts &bull; UI scaling &bull; i18n (中文 / English) &bull; Auto-start |
 | **Privacy** | All data stored locally &bull; Optional encrypted sync &bull; No telemetry |
+
+## Spotlight
+
+A global search panel activated by hotkeys, supporting multiple modes with prefix routing:
+
+| Mode | Hotkey | Prefix | Description |
+|------|--------|--------|-------------|
+| Clipboard | `Alt+Shift+F` | `cc` | Search clipboard history, paste or copy on Enter |
+| App Launcher | `Alt+Shift+A` | `aa` | Search installed applications, launch on Enter |
+| Translate | `Alt+Shift+T` | `tt` | Multi-engine parallel translation with TTS playback |
+| IDE Projects | - | `\|` | Search recent projects from VS Code, Cursor, Windsurf, Trae, Zed (plugin) |
+
+Type a prefix followed by a space to switch modes inline (e.g., `tt hello` translates "hello"). Use `Tab` to cycle modes, `Esc` to close.
+
+## Plugin System
+
+Extend AlgerClipboard with plugins loaded from `{app_data_dir}/plugins/`. Plugins can include:
+
+- **Frontend JS bundle** — register Spotlight modes, context menus, settings sections, tray items, lifecycle hooks
+- **Rust native backend** (.dll/.so/.dylib) — access filesystem, network, clipboard via host API with C ABI
+
+### Plugin Structure
+
+```
+plugins/my-plugin/
+├── manifest.json           # Metadata, permissions, mode declarations
+├── frontend/
+│   └── index.js            # JS bundle loaded at runtime
+└── backend/
+    └── my_plugin.dll       # Optional native library
+```
+
+### Developing Plugins
+
+Plugins interact with the host through `window.AlgerPlugin.create("plugin-id")`:
+
+```javascript
+var api = window.AlgerPlugin.create("my-plugin");
+
+api.registerMode({
+  id: "my-mode",
+  name: "My Mode",
+  icon: "ph:star",
+  placeholder: "Search...",
+  onQuery: function(query) { return api.invokeBackend("search", { query }); },
+  onSelect: function(result) { return api.invokeBackend("open", { id: result.id }); },
+});
+```
+
+Manage plugins in **Settings > Plugins** (enable/disable/remove, permission grants).
 
 ## Installation
 
@@ -120,7 +188,9 @@ src/                    # React frontend
 ├── components/         # UI components
 │   ├── editor/         # CodeMirror, RichEditor, MarkdownPreview, SplitView
 │   └── ui/             # shadcn/ui base components
-├── pages/              # ClipboardPanel, DetailPage, Settings, AskAiPanel
+├── pages/              # ClipboardPanel, DetailPage, Settings, AskAiPanel, SpotlightPanel
+├── spotlight/          # Spotlight mode definitions (clipboard, app, translate)
+├── plugin_system/      # Plugin loader, API, registry
 ├── stores/             # Zustand state management
 ├── services/           # Tauri IPC service layer
 ├── lib/                # Utilities (contentDetect, windowSize, richText)
@@ -135,8 +205,13 @@ src-tauri/              # Rust backend
 │   ├── sync/           # Cloud sync engine, adapters, encryption
 │   ├── translate/      # Translation engine integrations
 │   ├── ocr/            # Windows OCR (Windows.Media.Ocr API)
-│   └── paste/          # System paste simulation
+│   ├── paste/          # System paste simulation
+│   ├── plugin_system/  # Plugin manager, host API, FFI, permissions
+│   └── app_launcher/   # Application scanner and launcher
 └── icons/              # App icons
+
+plugins/                # Plugin source code (buildable)
+├── ide-projects/       # IDE Projects plugin (VS Code, Cursor, Windsurf, Trae, Zed)
 ```
 
 ## Search

@@ -16,7 +16,8 @@
     "ask-ai-panel",
     "ask-ai-tab-bar",
     "ask-ai-svc-*",
-    "file-viewer-*"
+    "file-viewer-*",
+    "spotlight"
   ],
   "permissions": [
     "core:default",

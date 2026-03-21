@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { File, Folder, AlertCircle } from "lucide-react";
+import { File, Folder, WarningCircle } from "@phosphor-icons/react";
 import type { FileMeta, ArchiveEntry } from "@/types";
 import { listArchiveContents } from "@/services/clipboardService";
 import { PreviewHeader } from "./PreviewHeader";
@@ -53,7 +53,7 @@ export function ArchivePreview({ file, onBack }: ArchivePreviewProps) {
           </div>
         ) : error ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
-            <AlertCircle className="h-6 w-6 text-red-400" />
+            <WarningCircle size={24} className="text-red-400" />
             <p className="text-sm">{error}</p>
           </div>
         ) : (
@@ -64,9 +64,9 @@ export function ArchivePreview({ file, onBack }: ArchivePreviewProps) {
                 className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-accent/50"
               >
                 {entry.is_dir ? (
-                  <Folder className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+                  <Folder size={14} className="shrink-0 text-amber-400" />
                 ) : (
-                  <File className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                  <File size={14} className="shrink-0 text-gray-400" />
                 )}
                 <span className="min-w-0 flex-1 truncate text-sm text-foreground">
                   {entry.name}

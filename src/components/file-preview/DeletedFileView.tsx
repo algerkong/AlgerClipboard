@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { AlertTriangle } from "lucide-react";
+import { Warning } from "@phosphor-icons/react";
 import type { FileMeta } from "@/types";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
@@ -22,7 +22,7 @@ export function DeletedFileView({ file, entryId, totalFiles }: DeletedFileViewPr
   return (
     <div className="flex h-full items-center justify-center">
       <div className="flex flex-col items-center gap-4 px-8 text-center">
-        <AlertTriangle className="h-12 w-12 text-amber-400" />
+        <Warning size={48} className="text-amber-400" />
         <p className="text-base font-medium text-foreground">
           {t("fileViewer.fileDeleted")}
         </p>

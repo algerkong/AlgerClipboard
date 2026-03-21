@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Search, X, Calendar } from "lucide-react";
+import { MagnifyingGlass, X, Calendar } from "@phosphor-icons/react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useClipboardStore } from "@/stores/clipboardStore";
@@ -185,7 +185,7 @@ export function SearchBar() {
         {isRegexMode ? (
           <span className="pointer-events-none absolute left-3 text-xs font-mono font-bold text-primary">.*</span>
         ) : (
-          <Search className="pointer-events-none absolute left-3 h-4 w-4 text-muted-foreground" />
+          <MagnifyingGlass size={16} className="pointer-events-none absolute left-3 text-muted-foreground" />
         )}
 
         <input
@@ -211,7 +211,7 @@ export function SearchBar() {
               isHovered ? "right-8" : "right-2"
             )}
           >
-            <X className="w-3 h-3" />
+            <X size={12} />
           </button>
         )}
 
@@ -225,17 +225,17 @@ export function SearchBar() {
             )}
             title={t("search.timeFilter")}
           >
-            <Calendar className="w-3.5 h-3.5" />
+            <Calendar size={14} />
             {timeRange !== "all" && (
-              <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary" />
+              <span className="h-2 w-2 absolute -top-0.5 -right-0.5 rounded-full bg-primary" />
             )}
           </button>
         )}
 
         {/* Show time filter indicator when not hovered but filter is active */}
         {!isHovered && timeRange !== "all" && (
-          <span className="absolute right-2 flex h-4 w-4 items-center justify-center">
-            <Calendar className="w-3 h-3 text-primary" />
+          <span className="h-4 w-4 absolute right-2 flex items-center justify-center">
+            <Calendar size={12} className="text-primary" />
           </span>
         )}
       </div>
@@ -283,7 +283,7 @@ export function SearchBar() {
                 }}
                 className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-400 transition-all"
               >
-                <X className="w-3 h-3" />
+                <X size={12} />
               </button>
             </div>
           ))}

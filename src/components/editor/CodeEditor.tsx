@@ -18,7 +18,7 @@ import { php } from "@codemirror/lang-php";
 import { markdown } from "@codemirror/lang-markdown";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
-import { Hash, WrapText, Minus, Plus } from "lucide-react";
+import { Hash, TextColumns, Minus, Plus } from "@phosphor-icons/react";
 
 const FONT_SIZES = [11, 12, 13, 14, 15, 16, 18, 20] as const;
 const DEFAULT_FONT_SIZE = 13;
@@ -225,14 +225,14 @@ export function CodeEditor({ value, language = "plaintext", readOnly = false, on
                 title={t("detail.lineNumbers")}
                 className={toolbarBtnClass(showLineNumbers)}
               >
-                <Hash className="w-3 h-3" />
+                <Hash size={12} />
               </button>
               <button
                 onClick={() => setWordWrap(!wordWrap)}
                 title={t("detail.wordWrap")}
                 className={toolbarBtnClass(wordWrap)}
               >
-                <WrapText className="w-3 h-3" />
+                <TextColumns size={12} />
               </button>
             </div>
           </div>
@@ -245,7 +245,7 @@ export function CodeEditor({ value, language = "plaintext", readOnly = false, on
                 title={t("detail.fontSizeDown")}
                 className={cn(toolbarBtnClass(false), "disabled:opacity-30 disabled:cursor-not-allowed")}
               >
-                <Minus className="w-3 h-3" />
+                <Minus size={12} />
               </button>
               <span className="min-w-[1.75rem] text-center text-2xs font-medium text-muted-foreground tabular-nums select-none leading-none">
                 {fontSize}
@@ -256,7 +256,7 @@ export function CodeEditor({ value, language = "plaintext", readOnly = false, on
                 title={t("detail.fontSizeUp")}
                 className={cn(toolbarBtnClass(false), "disabled:opacity-30 disabled:cursor-not-allowed")}
               >
-                <Plus className="w-3 h-3" />
+                <Plus size={12} />
               </button>
             </div>
           </div>

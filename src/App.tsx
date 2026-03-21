@@ -13,6 +13,7 @@ import { DetailPage } from "@/pages/DetailPage";
 import { TagManagerPage } from "@/pages/TagManager";
 import { AskAiPanel } from "@/pages/AskAiPanel";
 import { FileViewerPage } from "@/pages/FileViewerPage";
+import { SpotlightPanel } from "@/pages/SpotlightPanel";
 import { openSettingsWindow } from "@/services/settingsWindowService";
 import { toast } from "@/lib/toast";
 import { useClipboardStore } from "@/stores/clipboardStore";
@@ -47,6 +48,7 @@ const isDetail = searchParams.get("window") === "detail";
 const isTagManager = searchParams.get("window") === "tag-manager";
 const isAskAi = searchParams.get("window") === "ask-ai";
 const isFileViewer = searchParams.get("window") === "file-viewer";
+const isSpotlight = searchParams.get("window") === "spotlight";
 const initialSettingsTab = searchParams.get("tab") || undefined;
 
 function applyTheme(theme: "light" | "dark" | "system") {
@@ -97,6 +99,11 @@ function App() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [loadAvailability]);
+
+  // If this is the Spotlight window, render it without PlatformProvider/TitleBar
+  if (isSpotlight) {
+    return <SpotlightPanel />;
+  }
 
   // If this is an image viewer window, render the standalone viewer
   if (isImageViewer) {

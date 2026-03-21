@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, Minus, Pin, PinOff, Cloud, CloudOff, Loader2 } from "lucide-react";
+import { X, Minus, PushPin, PushPinSlash, Cloud, CloudSlash, SpinnerGap } from "@phosphor-icons/react";
 import appIcon from "@/assets/app-icon.png";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useTranslation } from "react-i18next";
@@ -26,13 +26,13 @@ function SyncIndicator() {
   const icon = (() => {
     switch (syncStatus) {
       case "syncing":
-        return <Loader2 className="w-3 h-3 text-blue-400 animate-spin" />;
+        return <SpinnerGap size={12} className="text-blue-400 animate-spin" />;
       case "synced":
-        return <Cloud className="w-3 h-3 text-green-400/70" />;
+        return <Cloud size={12} className="text-green-400/70" />;
       case "error":
-        return <CloudOff className="w-3 h-3 text-red-400/70" />;
+        return <CloudSlash size={12} className="text-red-400/70" />;
       default:
-        return <Cloud className="w-3 h-3 text-muted-foreground/40" />;
+        return <Cloud size={12} className="text-muted-foreground/40" />;
     }
   })();
 
@@ -51,7 +51,7 @@ function SyncIndicator() {
     <TooltipProvider delayDuration={300}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="flex items-center justify-center w-5 h-5">
+          <div className="h-5 w-5 flex items-center justify-center">
             {icon}
           </div>
         </TooltipTrigger>
@@ -83,20 +83,20 @@ function WinLinuxButtons({ onClose, showPinButton = true }: { onClose: () => voi
           onClick={handleTogglePin}
           className="titlebar-icon-btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          {isPinned ? <Pin className="w-3 h-3" /> : <PinOff className="w-3 h-3" />}
+          {isPinned ? <PushPin size={12} /> : <PushPinSlash size={12} />}
         </button>
       )}
       <button
         onClick={handleMinimize}
         className="titlebar-icon-btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        <Minus className="w-3 h-3" />
+        <Minus size={12} />
       </button>
       <button
         onClick={onClose}
         className="titlebar-icon-btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        <X className="w-3 h-3" />
+        <X size={12} />
       </button>
     </div>
   );
@@ -116,7 +116,7 @@ function PinButton() {
       onClick={handleTogglePin}
       className="titlebar-icon-btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      {isPinned ? <Pin className="w-3 h-3" /> : <PinOff className="w-3 h-3" />}
+      {isPinned ? <PushPin size={12} /> : <PushPinSlash size={12} />}
     </button>
   );
 }

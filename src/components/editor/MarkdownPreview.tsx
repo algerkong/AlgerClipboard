@@ -6,7 +6,7 @@ import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
 import { codeToHtml } from "shiki";
 import mermaid from "mermaid";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import "katex/dist/katex.min.css";
 
@@ -58,7 +58,7 @@ function CodeBlock({ className, children }: { className?: string; children: stri
           onClick={handleCopy}
           className="flex items-center gap-1 text-2xs text-muted-foreground/50 hover:text-foreground transition-colors"
         >
-          {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+          {copied ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
         </button>
       </div>
       {highlighted ? (

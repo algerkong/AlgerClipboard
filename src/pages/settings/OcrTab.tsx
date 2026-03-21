@@ -26,7 +26,7 @@ import {
   type RapidOcrRuntimeStatus,
 } from "@/services/ocrService";
 import { usePlatform } from "@/contexts/PlatformContext";
-import { Loader2, Trash2 } from "lucide-react";
+import { SpinnerGap, Trash } from "@phosphor-icons/react";
 
 type FieldKey = "apiKey" | "apiSecret" | "endpoint" | "model" | "command";
 
@@ -293,7 +293,7 @@ export function OcrTab() {
                       onClick={handleInstallRapidOcr}
                       disabled={rapidBusy || !rapidSupported}
                     >
-                      {rapidBusy && <Loader2 className="h-3 w-3 animate-spin" />}
+                      {rapidBusy && <SpinnerGap size={12} className="animate-spin" />}
                       {rapidBusy ? t("ocr.rapidInstalling") : rapidInstalled ? t("ocr.rapidRepair") : t("ocr.rapidInstall")}
                     </SettingsButton>
                     {rapidInstalled && (
@@ -369,7 +369,7 @@ export function OcrTab() {
             tone="danger"
             onClick={handleClearCache}
           >
-            <Trash2 className="h-3 w-3" />
+            <Trash size={12} />
             {cacheCleared ? t("ocr.cacheCleared") : t("ocr.clearCache")}
           </SettingsButton>
         </div>

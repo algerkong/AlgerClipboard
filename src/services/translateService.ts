@@ -1,6 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { TranslateResult, TranslateEngineConfig } from "@/types";
 
+export async function translateAll(
+  text: string,
+  from: string,
+  to: string
+): Promise<TranslateResult[]> {
+  return invoke("translate_all", { text, from, to });
+}
+
 export async function translateText(
   text: string,
   from: string,

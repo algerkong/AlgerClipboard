@@ -3,10 +3,10 @@ import {
   X,
   Plus,
   Pencil,
-  Trash2,
+  Trash,
   Copy,
   FileText,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -108,15 +108,15 @@ export function TemplateManager({ onBack }: Props) {
         <span data-tauri-drag-region className="text-xs font-medium text-foreground">{t("template.title")}</span>
         <div data-tauri-drag-region className="flex-1" />
         <Button size="xs" onClick={openCreate}>
-          <Plus className="w-3 h-3" />
+          <Plus size={12} />
           {t("template.new")}
         </Button>
         {platform !== "macos" && (
           <button
             onClick={onBack}
-            className="flex items-center justify-center w-6 h-6 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+            className="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
           >
-            <X className="w-3.5 h-3.5" />
+            <X size={14} />
           </button>
         )}
       </div>
@@ -129,7 +129,7 @@ export function TemplateManager({ onBack }: Props) {
           </div>
         ) : templates.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground/70">
-            <FileText className="w-8 h-8" />
+            <FileText size={32} />
             <p className="text-xs">{t("template.noTemplates")}</p>
             <p className="text-xs2">{t("template.createHint")}</p>
           </div>
@@ -156,24 +156,24 @@ export function TemplateManager({ onBack }: Props) {
                     <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                       <button
                         onClick={() => handleApply(tmpl.id)}
-                        className="flex items-center justify-center w-6 h-6 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                        className="flex w-6 h-6 items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
                         title={t("template.apply")}
                       >
-                        <Copy className="w-3 h-3" />
+                        <Copy size={12} />
                       </button>
                       <button
                         onClick={() => openEdit(tmpl)}
-                        className="flex items-center justify-center w-6 h-6 rounded text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+                        className="flex w-6 h-6 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
                         title={t("template.edit")}
                       >
-                        <Pencil className="w-3 h-3" />
+                        <Pencil size={12} />
                       </button>
                       <button
                         onClick={() => setDeleteConfirmId(tmpl.id)}
-                        className="flex items-center justify-center w-6 h-6 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        className="flex w-6 h-6 items-center justify-center rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
                         title={t("template.delete")}
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash size={12} />
                       </button>
                     </div>
                   </div>

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useLayoutEffect } from "react";
-import { ZoomIn, ZoomOut, RotateCcw, Languages, Loader2 } from "lucide-react";
+import { MagnifyingGlassPlus, MagnifyingGlassMinus, ArrowCounterClockwise, Translate, SpinnerGap } from "@phosphor-icons/react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -140,15 +140,15 @@ export function ImagePreview({ file, onBack }: ImagePreviewProps) {
     <div className="flex h-full flex-col">
       <PreviewHeader file={file} onBack={onBack}>
         {/* Zoom controls */}
-        <button onClick={handleZoomOut} className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground" title={t("imageViewer.zoomOut")}>
-          <ZoomOut className="h-3.5 w-3.5" />
+        <button onClick={handleZoomOut} className="h-7 w-7 flex items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground" title={t("imageViewer.zoomOut")}>
+          <MagnifyingGlassMinus size={14} />
         </button>
         <span className="text-xs text-muted-foreground min-w-[36px] text-center">{Math.round(zoom * 100)}%</span>
-        <button onClick={handleZoomIn} className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground" title={t("imageViewer.zoomIn")}>
-          <ZoomIn className="h-3.5 w-3.5" />
+        <button onClick={handleZoomIn} className="h-7 w-7 flex items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground" title={t("imageViewer.zoomIn")}>
+          <MagnifyingGlassPlus size={14} />
         </button>
-        <button onClick={handleResetZoom} className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground" title={t("imageViewer.resetZoom")}>
-          <RotateCcw className="h-3 w-3" />
+        <button onClick={handleResetZoom} className="h-7 w-7 flex items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground" title={t("imageViewer.resetZoom")}>
+          <ArrowCounterClockwise size={12} />
         </button>
 
         {availableEngines.length > 1 && (
@@ -170,7 +170,7 @@ export function ImagePreview({ file, onBack }: ImagePreviewProps) {
         {/* OCR status / translate button */}
         {ocrLoading && (
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Loader2 className="h-3 w-3 animate-spin" />
+            <SpinnerGap size={12} className="animate-spin" />
             {t("imageViewer.extracting")}
           </span>
         )}
@@ -186,7 +186,7 @@ export function ImagePreview({ file, onBack }: ImagePreviewProps) {
             )}
             title={t("imageViewer.translateText")}
           >
-            {translateLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3.5 w-3.5" />}
+            {translateLoading ? <SpinnerGap size={12} className="animate-spin" /> : <Translate size={14} />}
           </button>
         )}
       </PreviewHeader>

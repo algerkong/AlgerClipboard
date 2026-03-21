@@ -2,21 +2,20 @@ import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import {
   Copy,
   Check,
-  Save,
+  FloppyDisk,
   Pencil,
   X,
-  Languages,
+  Translate,
   Brain,
-  Loader2,
-  ArrowRightLeft,
-  RotateCcw,
-  ClipboardPaste,
+  SpinnerGap,
+  ArrowsLeftRight,
+  ArrowCounterClockwise,
+  ClipboardText,
   Eye,
-  PanelLeft,
-  Columns2,
-  PanelRight,
+  SidebarSimple,
+  Columns,
   Code,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { useTranslation } from "react-i18next";
 import { usePreviewCloseShortcut } from "@/hooks/usePreviewCloseShortcut";
 import { CloseConfirmDialog } from "@/components/CloseConfirmDialog";
@@ -204,7 +203,7 @@ export function DetailPage() {
   if (!entry) {
     return (
       <div className="flex items-center justify-center h-screen bg-background text-muted-foreground">
-        <Loader2 className="w-5 h-5 animate-spin" />
+        <SpinnerGap size={20} className="animate-spin" />
       </div>
     );
   }
@@ -233,7 +232,7 @@ export function DetailPage() {
                   )}
                 >
                   {t2 === "view" && <Eye style={tabIconStyle} />}
-                  {t2 === "translate" && <Languages style={tabIconStyle} />}
+                  {t2 === "translate" && <Translate style={tabIconStyle} />}
                   {t2 === "ai" && <Brain style={tabIconStyle} />}
                   {t(`detail.tab${t2.charAt(0).toUpperCase() + t2.slice(1)}`)}
                 </button>
@@ -260,9 +259,9 @@ export function DetailPage() {
                   )}
                 >
                   {copied ? (
-                    <Check className="w-2.5 h-2.5" />
+                    <Check size={10} />
                   ) : (
-                    <Copy className="w-2.5 h-2.5" />
+                    <Copy size={10} />
                   )}
                 </HintIconButton>
                 <HintIconButton
@@ -270,7 +269,7 @@ export function DetailPage() {
                   label={t("detail.paste")}
                   className="filter-pill min-h-0 p-1 transition-colors text-muted-foreground hover:text-foreground"
                 >
-                  <ClipboardPaste className="w-2.5 h-2.5" />
+                  <ClipboardText size={10} />
                 </HintIconButton>
               </div>
             )}
@@ -597,7 +596,7 @@ function ViewTab({
               title={t("contextMenu.textTransform")}
               className="filter-pill min-h-0 p-1 transition-colors text-muted-foreground hover:text-foreground hover:bg-accent/50"
             >
-              <Code className="w-3 h-3" />
+              <Code size={12} />
             </button>
 
             {/* RichText render mode toggle (clean/full) */}
@@ -630,17 +629,17 @@ function ViewTab({
                 {[
                   {
                     key: "editor" as ViewLayout,
-                    icon: PanelLeft,
+                    icon: SidebarSimple,
                     label: t("detail.editorOnly"),
                   },
                   {
                     key: "split" as ViewLayout,
-                    icon: Columns2,
+                    icon: Columns,
                     label: t("detail.splitView"),
                   },
                   {
                     key: "preview" as ViewLayout,
-                    icon: PanelRight,
+                    icon: SidebarSimple,
                     label: t("detail.previewOnly"),
                   },
                 ].map(({ key, icon: Icon, label }) => (
@@ -656,7 +655,7 @@ function ViewTab({
                         : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
                     )}
                   >
-                    <Icon className="w-3 h-3" />
+                    <Icon size={12} />
                   </button>
                 ))}
               </div>
@@ -668,7 +667,7 @@ function ViewTab({
                   onClick={onCancelEdit}
                   className="filter-pill flex items-center gap-1 px-2.5 text-2xs font-medium text-muted-foreground transition-colors hover:border-primary/20 hover:bg-accent/50 hover:text-foreground"
                 >
-                  <X className="w-2.5 h-2.5" />
+                  <X size={10} />
                   {t("detail.cancel")}
                 </button>
                 <button
@@ -677,9 +676,9 @@ function ViewTab({
                   className="filter-pill flex items-center gap-1 border-primary/60 bg-primary px-2.5 text-2xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
                 >
                   {saving ? (
-                    <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                    <SpinnerGap size={10} className="animate-spin" />
                   ) : (
-                    <Save className="w-2.5 h-2.5" />
+                    <FloppyDisk size={10} />
                   )}
                   {t("detail.save")}
                 </button>
@@ -689,7 +688,7 @@ function ViewTab({
                 onClick={onStartEdit}
                 className="filter-pill flex items-center gap-1 px-2.5 text-2xs font-medium text-muted-foreground transition-colors hover:border-primary/20 hover:bg-accent/50 hover:text-foreground"
               >
-                <Pencil className="w-2.5 h-2.5" />
+                <Pencil size={10} />
                 {t("detail.edit")}
               </button>
             )}
@@ -728,7 +727,7 @@ function ViewTab({
               className="filter-pill min-h-0 p-1 shrink-0 text-muted-foreground transition-colors hover:text-foreground hover:bg-accent/50"
               title={t("detail.cancel")}
             >
-              <X className="w-3 h-3" />
+              <X size={12} />
             </button>
           </div>
 
@@ -787,7 +786,7 @@ function ViewTab({
                   }}
                   className="filter-pill flex items-center gap-1 px-2.5 text-2xs font-medium text-muted-foreground transition-colors hover:border-primary/20 hover:bg-accent/50 hover:text-foreground"
                 >
-                  <Copy className="w-2.5 h-2.5" />
+                  <Copy size={10} />
                   {t("detail.copy")}
                 </button>
                 {isEditing && (
@@ -799,7 +798,7 @@ function ViewTab({
                     }}
                     className="filter-pill flex items-center gap-1 border-primary/60 bg-primary px-2.5 text-2xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                   >
-                    <Check className="w-2.5 h-2.5" />
+                    <Check size={10} />
                     {t("contextMenu.transformApply")}
                   </button>
                 )}
@@ -1008,7 +1007,7 @@ function TranslateTab({
                 : "text-muted-foreground hover:text-primary hover:bg-primary/10",
             )}
           >
-            <ArrowRightLeft className="w-3 h-3" />
+            <ArrowsLeftRight size={12} />
           </button>
 
           <StyledSelect
@@ -1030,7 +1029,7 @@ function TranslateTab({
                 : "bg-primary/15 text-primary hover:bg-primary/25",
             )}
           >
-            <RotateCcw className={cn("w-2.5 h-2.5", loading && "animate-spin")} />
+            <ArrowCounterClockwise className={cn("w-2.5 h-2.5", loading && "animate-spin")} />
           </button>
 
           {hasTranslateEngine && hasAi && (
@@ -1044,7 +1043,7 @@ function TranslateTab({
               )}
               title="AI"
             >
-              <Brain className="w-2.5 h-2.5" />
+              <Brain size={10} />
               AI
             </button>
           )}
@@ -1070,7 +1069,7 @@ function TranslateTab({
       <div className="flex-1 min-h-0 px-3 pb-3 pt-2 flex flex-col overflow-y-auto">
         {loading && (
           <div className="surface-panel flex items-center justify-center gap-1.5 rounded-[0.75rem] py-6 text-muted-foreground">
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <SpinnerGap size={14} className="animate-spin" />
             <span className="text-xs2">{t("translate.translating")}</span>
           </div>
         )}
@@ -1110,9 +1109,9 @@ function TranslateTab({
                 )}
               >
                 {copied ? (
-                  <Check className="w-2.5 h-2.5" />
+                  <Check size={10} />
                 ) : (
-                  <Copy className="w-2.5 h-2.5" />
+                  <Copy size={10} />
                 )}
                 {copied ? t("translate.copied") : t("translate.copyResult")}
               </button>
@@ -1120,7 +1119,7 @@ function TranslateTab({
                 onClick={handleUseTranslation}
                 className="filter-pill flex items-center gap-1 px-2.5 text-2xs font-medium bg-primary/15 text-primary transition-colors hover:bg-primary/25"
               >
-                <ClipboardPaste className="w-2.5 h-2.5" />
+                <ClipboardText size={10} />
                 {t("translate.useTranslation")}
               </button>
             </div>
@@ -1182,9 +1181,9 @@ function AiTab({
             )}
           >
             {summarizing ? (
-              <Loader2 className="w-2.5 h-2.5 animate-spin" />
+              <SpinnerGap size={10} className="animate-spin" />
             ) : (
-              <Brain className="w-2.5 h-2.5" />
+              <Brain size={10} />
             )}
             {summarizing
               ? t("detail.generating")

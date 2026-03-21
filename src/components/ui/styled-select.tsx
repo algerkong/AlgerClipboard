@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, Check } from "lucide-react";
+import { CaretDown, Check } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
 export interface SelectOption {
@@ -272,7 +272,7 @@ export function StyledSelect({
         <span className="truncate">
           {selectedOption?.label ?? placeholder ?? ""}
         </span>
-        <ChevronDown
+        <CaretDown
           className={cn(
             "styled-select-chevron",
             open && "rotate-180",

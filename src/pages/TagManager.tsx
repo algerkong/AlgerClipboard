@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, Pencil, Plus, Search, Tag, Trash2, X } from "lucide-react";
+import { Check, Pencil, Plus, MagnifyingGlass, Tag, Trash, X } from "@phosphor-icons/react";
 import { toast } from "@/lib/toast";
 import { useTranslation } from "react-i18next";
 import { useClipboardStore } from "@/stores/clipboardStore";
@@ -115,7 +115,7 @@ export function TagManagerPage() {
 
         <div className="mt-3 grid gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,240px)]">
           <div className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/10 px-2">
-            <Plus className="h-3.5 w-3.5 text-muted-foreground/70" />
+            <Plus size={14} className="text-muted-foreground/70" />
             <input
               value={newTagName}
               onChange={(e) => setNewTagName(e.target.value)}
@@ -137,7 +137,7 @@ export function TagManagerPage() {
           </div>
 
           <div className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/70" />
+            <MagnifyingGlass size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/70" />
             <input
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
@@ -151,7 +151,7 @@ export function TagManagerPage() {
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {filteredTags.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border/50 bg-muted/10 p-6 text-center">
-            <Tag className="h-8 w-8 text-muted-foreground/40" />
+            <Tag size={32} className="text-muted-foreground/40" />
             <div className="space-y-1">
               <p className="text-sm2 font-medium text-foreground">
                 {tagSummaries.length === 0 ? t("tags.empty") : t("tags.emptySearch")}
@@ -211,15 +211,15 @@ export function TagManagerPage() {
                             className="flex h-8 w-8 items-center justify-center rounded-md text-emerald-400 transition-colors hover:bg-emerald-500/10 disabled:opacity-50"
                             title={t("tags.save")}
                           >
-                            <Check className="h-4 w-4" />
+                            <Check size={16} />
                           </button>
                           <button
                             onClick={cancelEditing}
                             disabled={isBusy}
-                            className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground disabled:opacity-50"
+                            className="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground disabled:opacity-50"
                             title={t("tags.cancel")}
                           >
-                            <X className="h-4 w-4" />
+                            <X size={16} />
                           </button>
                         </>
                       ) : (
@@ -230,7 +230,7 @@ export function TagManagerPage() {
                             className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground disabled:opacity-50"
                             title={t("tags.rename")}
                           >
-                            <Pencil className="h-4 w-4" />
+                            <Pencil size={16} />
                           </button>
                           <button
                             onClick={() => setPendingDeleteTag(isDeleting ? null : tag)}
@@ -238,7 +238,7 @@ export function TagManagerPage() {
                             className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
                             title={t("tags.delete")}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash size={16} />
                           </button>
                         </>
                       )}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { FileText, Copy, Settings2 } from "lucide-react";
+import { FileText, Copy, Gear } from "@phosphor-icons/react";
 import { useTemplateStore } from "@/stores/templateStore";
 import { openTemplateManager } from "@/services/templateWindowService";
 import { useTranslation } from "react-i18next";
@@ -53,7 +53,7 @@ export function TemplateQuickPicker({ onClose }: Props) {
         </div>
       ) : templates.length === 0 ? (
         <div className="flex flex-col items-center gap-1 px-3 py-4 text-muted-foreground">
-          <FileText className="w-5 h-5" />
+          <FileText size={20} />
           <p className="text-sm2">{t("template.noTemplates")}</p>
         </div>
       ) : (
@@ -64,7 +64,7 @@ export function TemplateQuickPicker({ onClose }: Props) {
               onClick={() => handleApply(tmpl.id)}
               className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-accent/50 transition-colors"
             >
-              <Copy className="w-3 h-3 text-muted-foreground shrink-0" />
+              <Copy size={12} className="text-muted-foreground shrink-0" />
               <div className="min-w-0 flex-1">
                 <div className="text-sm2 font-medium text-foreground truncate">
                   {tmpl.title}
@@ -83,7 +83,7 @@ export function TemplateQuickPicker({ onClose }: Props) {
           onClick={() => { openTemplateManager(); onClose(); }}
           className="w-full flex items-center gap-2 px-2 py-1.5 text-left text-sm2 text-muted-foreground hover:text-foreground hover:bg-accent/50 rounded transition-colors"
         >
-          <Settings2 className="w-3 h-3 shrink-0" />
+          <Gear size={12} className="shrink-0" />
           {t("template.manage")}
         </button>
       </div>

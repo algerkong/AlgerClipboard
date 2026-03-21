@@ -1,5 +1,55 @@
 # Changelog
 
+## [1.8.0] - 2026-03-21
+
+### New Features
+
+- **Spotlight Global Search**: Global search panel activated by hotkeys (`Alt+Shift+F/A/T`), supporting clipboard search, app launcher, and multi-engine translation with TTS playback
+- **Plugin System**: Load plugins from local folders with frontend JS bundles and Rust native backends (.dll/.so/.dylib). Permission-based security, lifecycle hooks, context menu extensions, and Spotlight mode registration
+- **IDE Projects Plugin**: Search and open recent projects from VS Code, Cursor, Windsurf, Trae, Antigravity, and Zed. Supports WSL remote projects. Activated via `|` prefix in Spotlight
+- **Prefix Routing**: Type a prefix followed by space to switch Spotlight modes inline (e.g., `tt hello` for translation, `| query` for IDE projects)
+- **Plugin Settings UI**: Manage plugins in Settings > Plugins tab with enable/disable/remove, permission grants, and per-plugin settings
+
+### Improvements
+
+- **Icon System Migration**: Migrated all icons from Lucide React to Phosphor Icons (bold weight) with global `IconContext.Provider` for unified styling
+- **Spotlight UI Enlargement**: Wider panel (720px), larger fonts, icons, and result items for better readability
+- **Spotlight Input Icon**: Mode icon uses theme accent color at 30px for better visibility
+
+### Bug Fixes
+
+- **Prefix Route Translation**: Fixed translate mode results being silently discarded when activated via prefix routing (stale check compared wrong store fields)
+- **Prefix Route Mode Switch**: Fixed results from previous mode persisting during mode switch via prefix
+- **Bottom Whitespace**: Fixed extra whitespace at bottom of Spotlight panel when switching modes
+- **Spotlight executeSelected**: Fixed Enter key calling wrong mode's onSelect when using prefix routing
+
+---
+
+## [1.8.0] - 2026-03-21 (中文)
+
+### 新功能
+
+- **Spotlight 全局搜索**: 通过快捷键（`Alt+Shift+F/A/T`）激活的全局搜索面板，支持剪贴板搜索、应用启动器、多引擎翻译和 TTS 语音播放
+- **插件系统**: 从本地文件夹加载插件，支持前端 JS bundle 和 Rust 原生后端（.dll/.so/.dylib）。基于权限声明的安全模型，支持生命周期 Hook、右键菜单扩展和 Spotlight 模式注册
+- **IDE Projects 插件**: 搜索并打开 VS Code、Cursor、Windsurf、Trae、Antigravity、Zed 的最近项目，支持 WSL 远程项目。在 Spotlight 中通过 `|` 前缀激活
+- **前缀路由**: 输入前缀加空格即可切换 Spotlight 模式（如 `tt hello` 翻译、`| query` 搜索 IDE 项目）
+- **插件设置 UI**: 设置 > 插件 tab 管理插件的启用/禁用/移除、权限授权和插件专属设置
+
+### 改进
+
+- **图标系统迁移**: 全部图标从 Lucide React 迁移至 Phosphor Icons（bold 粗细），通过全局 `IconContext.Provider` 统一配置
+- **Spotlight UI 放大**: 面板宽度 720px，更大的字体、图标和结果项，提升可读性
+- **Spotlight 输入框图标**: 模式图标使用主题强调色，30px 大小
+
+### Bug 修复
+
+- **前缀路由翻译**: 修复通过前缀路由激活翻译模式时结果被静默丢弃的问题（stale check 比较了错误的 store 字段）
+- **前缀路由模式切换**: 修复前缀切换模式时旧模式结果残留
+- **底部空白**: 修复切换 Spotlight 模式时面板底部出现多余空白
+- **Spotlight 回车执行**: 修复使用前缀路由时回车调用了错误模式的 onSelect
+
+---
+
 ## [1.7.0] - 2026-03-19
 
 ### New Features

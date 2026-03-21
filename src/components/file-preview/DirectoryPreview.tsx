@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRight, ChevronDown, Folder, File } from "lucide-react";
+import { CaretRight, CaretDown, Folder, File } from "@phosphor-icons/react";
 import type { FileMeta, DirTreeNode } from "@/types";
 import { getDirectoryTree } from "@/services/clipboardService";
 import { PreviewHeader } from "./PreviewHeader";
@@ -24,16 +24,16 @@ function TreeItem({ node, depth = 0 }: { node: DirTreeNode; depth?: number }) {
         {node.is_dir ? (
           <>
             {expanded ? (
-              <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" />
+              <CaretDown size={12} className="shrink-0 text-muted-foreground" />
             ) : (
-              <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" />
+              <CaretRight size={12} className="shrink-0 text-muted-foreground" />
             )}
-            <Folder className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+            <Folder size={14} className="shrink-0 text-amber-400" />
           </>
         ) : (
           <>
             <span className="w-3" />
-            <File className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+            <File size={14} className="shrink-0 text-gray-400" />
           </>
         )}
         <span className="min-w-0 flex-1 truncate text-foreground">{node.name}</span>

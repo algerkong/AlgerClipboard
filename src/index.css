@@ -198,6 +198,312 @@ body {
   color: var(--foreground);
 }
 
+/* ─── Spotlight ─── */
+
+.spotlight-backdrop {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 8px 40px 40px 40px;
+  background: transparent;
+}
+
+.spotlight-panel {
+  width: 720px;
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--background);
+  border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+  box-shadow:
+    0 12px 48px -4px rgba(0, 0, 0, 0.22),
+    0 4px 16px -2px rgba(0, 0, 0, 0.12);
+}
+
+.dark .spotlight-panel {
+  box-shadow:
+    0 12px 48px -4px rgba(0, 0, 0, 0.55),
+    0 4px 16px -2px rgba(0, 0, 0, 0.35);
+}
+
+/* ── Input Row ── */
+
+.spotlight-input-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  height: 60px;
+  flex-shrink: 0;
+}
+
+.spotlight-mode-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+  user-select: none;
+  color: var(--primary);
+}
+
+.spotlight-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--foreground);
+}
+
+.spotlight-input::placeholder {
+  color: var(--muted-foreground);
+  opacity: 0.6;
+}
+
+.spotlight-spinner {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid color-mix(in oklab, var(--muted-foreground) 20%, transparent);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spotlight-spin 0.6s linear infinite;
+  flex-shrink: 0;
+}
+
+.spotlight-mode-tag {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 6px;
+  background: color-mix(in oklab, var(--primary) 10%, transparent);
+  color: var(--primary);
+  border: none;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+
+.spotlight-mode-tag:hover {
+  background: color-mix(in oklab, var(--primary) 18%, transparent);
+}
+
+/* ── Results ── */
+
+.spotlight-results,
+.spotlight-empty {
+  border-top: 1px solid var(--border);
+}
+
+.spotlight-results {
+  max-height: 440px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 0;
+}
+
+.spotlight-results::-webkit-scrollbar { width: 4px; }
+.spotlight-results::-webkit-scrollbar-track { background: transparent; }
+.spotlight-results::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--muted-foreground) 20%, transparent);
+  border-radius: 2px;
+}
+
+.spotlight-empty {
+  padding: 20px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+
+/* ── Result Item ── */
+
+.spotlight-result-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  margin: 2px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.08s ease;
+}
+
+.spotlight-result-item:hover:not(.is-selected) {
+  background: var(--accent);
+}
+
+.spotlight-result-item.is-selected {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.spotlight-result-item.is-selected .spotlight-result-subtitle,
+.spotlight-result-item.is-selected .spotlight-result-index {
+  color: color-mix(in oklab, var(--primary-foreground) 65%, transparent);
+}
+
+.spotlight-result-item.is-selected .spotlight-result-badge {
+  background: color-mix(in oklab, var(--primary-foreground) 15%, transparent);
+  color: var(--primary-foreground);
+}
+
+.spotlight-result-index {
+  width: 16px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  text-align: center;
+  flex-shrink: 0;
+  opacity: 0.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.spotlight-result-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.spotlight-result-icon--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.spotlight-result-icon--emoji {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--muted);
+  font-size: 18px;
+}
+
+.spotlight-result-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.spotlight-result-title {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spotlight-result-subtitle {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 1px;
+  line-height: 1.3;
+}
+
+.spotlight-result-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.spotlight-result-action-btn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.1s;
+  color: var(--muted-foreground);
+}
+
+.spotlight-result-action-btn:hover {
+  background: color-mix(in oklab, var(--foreground) 8%, transparent);
+}
+
+.spotlight-result-item.is-selected .spotlight-result-action-btn {
+  color: var(--primary-foreground);
+}
+
+.spotlight-result-item.is-selected .spotlight-result-action-btn:hover {
+  background: color-mix(in oklab, var(--primary-foreground) 15%, transparent);
+}
+
+.spotlight-result-badge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 4px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+
+/* ── Footer ── */
+
+.spotlight-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  padding: 0 16px;
+  height: 36px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  user-select: none;
+}
+
+.spotlight-footer-hint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  opacity: 0.6;
+}
+
+.spotlight-footer-hint kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  font-size: 9px;
+  font-weight: 600;
+  font-family: inherit;
+  border-radius: 3px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  line-height: 1;
+}
+
+@keyframes spotlight-spin {
+  to { transform: rotate(360deg); }
+}
+
 .app-shell {
   position: relative;
   background: var(--background);

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, useMemo, useRef, type ReactNode } from "react";
 import { getVersion } from "@tauri-apps/api/app";
-import { Moon, Monitor, Sun, X } from "lucide-react";
+import { Moon, Monitor, Sun, X } from "@phosphor-icons/react";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import {
   useSettingsStore,
@@ -207,9 +207,9 @@ export function GeneralTab() {
   }, [isRecordingCloseShortcut, previewCloseShortcut, t]);
 
   const themes: { value: Theme; labelKey: string; icon: ReactNode }[] = [
-    { value: "light", labelKey: "settings.light", icon: <Sun className="h-3.5 w-3.5" /> },
-    { value: "dark", labelKey: "settings.dark", icon: <Moon className="h-3.5 w-3.5" /> },
-    { value: "system", labelKey: "settings.auto", icon: <Monitor className="h-3.5 w-3.5" /> },
+    { value: "light", labelKey: "settings.light", icon: <Sun size={14} /> },
+    { value: "dark", labelKey: "settings.dark", icon: <Moon size={14} /> },
+    { value: "system", labelKey: "settings.auto", icon: <Monitor size={14} /> },
   ];
 
   const themeColors: {
@@ -416,7 +416,7 @@ export function GeneralTab() {
                 className="text-muted-foreground hover:text-destructive transition-colors"
                 onClick={() => setExcludedApps(excludedApps.filter(a => a !== app))}
               >
-                <X className="h-3.5 w-3.5" />
+                <X size={14} />
               </button>
             </div>
           ))}
