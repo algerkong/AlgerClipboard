@@ -7,13 +7,15 @@ export function SpotlightResultList() {
   const results = useSpotlightStore((s) => s.results);
   const selectedIndex = useSpotlightStore((s) => s.selectedIndex);
   const loading = useSpotlightStore((s) => s.loading);
-  const mode = useSpotlightStore((s) => s.mode);
   const query = useSpotlightStore((s) => s.query);
+  const checkPrefix = useSpotlightStore((s) => s.checkPrefix);
   const executeSelected = useSpotlightStore((s) => s.executeSelected);
 
-  if (results.length === 0 && !loading) {
-    if (!query.trim()) return null;
-    const emptyKey = `spotlight.empty.${mode}`;
+  const { activeMode } = checkPrefix(query);
+
+  if (results.length === 0) {
+    if (loading || !query.trim()) return null;
+    const emptyKey = `spotlight.empty.${activeMode}`;
     return (
       <div className="spotlight-empty">
         {t(emptyKey, t("spotlight.empty.noResults"))}

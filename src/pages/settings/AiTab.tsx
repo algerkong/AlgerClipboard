@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import {
-  RefreshCw,
+  ArrowsClockwise,
   Check,
-  Loader2,
+  SpinnerGap,
   Eye,
-  EyeOff,
-} from "lucide-react";
+  EyeSlash,
+} from "@phosphor-icons/react";
 import { useAiStore, DEFAULT_SUMMARY_PROMPT, DEFAULT_TRANSLATE_PROMPT } from "@/stores/aiStore";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -119,9 +119,9 @@ export function AiTab() {
                   className="absolute right-0 flex h-full items-center px-2 text-muted-foreground hover:text-foreground"
                 >
                   {showApiKey ? (
-                    <EyeOff className="h-3.5 w-3.5" />
+                    <EyeSlash size={14} />
                   ) : (
-                    <Eye className="h-3.5 w-3.5" />
+                    <Eye size={14} />
                   )}
                 </button>
               </div>
@@ -162,7 +162,7 @@ export function AiTab() {
                     disabled={isFetchingModels}
                     className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                   >
-                    <RefreshCw className={cn("h-3 w-3", isFetchingModels && "animate-spin")} />
+                    <ArrowsClockwise className={cn("h-3 w-3", isFetchingModels && "animate-spin")} />
                   </button>
                 )}
               </div>
@@ -193,9 +193,9 @@ export function AiTab() {
             disabled={isTesting || !config.provider || !config.api_key}
           >
             {isTesting ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
+              <SpinnerGap size={12} className="animate-spin" />
             ) : (
-              <Check className="h-3 w-3" />
+              <Check size={12} />
             )}
             {t("settings.ai.testConnection")}
           </SettingsButton>

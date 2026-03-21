@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { File, FileText, ImageIcon, Video, Music, Archive, FileCode, FileType as FileTypeIcon, Folder, PanelLeftClose } from "lucide-react";
+import { File, FileText, Image, VideoCamera, MusicNote, Archive, FileCode, FileText as FileTypeIcon, Folder, SidebarSimple } from "@phosphor-icons/react";
 import type { FileMeta } from "@/types";
 import { formatFileSize } from "./utils";
 
@@ -12,16 +12,16 @@ interface FileListSidebarProps {
 }
 
 function getFileIcon(file: FileMeta) {
-  if (file.is_dir) return <Folder className="h-4 w-4 text-amber-400" />;
+  if (file.is_dir) return <Folder size={16} className="text-amber-400" />;
   switch (file.file_type) {
-    case "Image": return <ImageIcon className="h-4 w-4 text-sky-400" />;
-    case "Video": return <Video className="h-4 w-4 text-purple-400" />;
-    case "Audio": return <Music className="h-4 w-4 text-pink-400" />;
-    case "Document": return <FileText className="h-4 w-4 text-blue-400" />;
-    case "Archive": return <Archive className="h-4 w-4 text-orange-400" />;
-    case "Code": return <FileCode className="h-4 w-4 text-green-400" />;
-    case "Executable": return <FileTypeIcon className="h-4 w-4 text-red-400" />;
-    default: return <File className="h-4 w-4 text-gray-400" />;
+    case "Image": return <Image size={16} className="text-sky-400" />;
+    case "Video": return <VideoCamera size={16} className="text-purple-400" />;
+    case "Audio": return <MusicNote size={16} className="text-pink-400" />;
+    case "Document": return <FileText size={16} className="text-blue-400" />;
+    case "Archive": return <Archive size={16} className="text-orange-400" />;
+    case "Code": return <FileCode size={16} className="text-green-400" />;
+    case "Executable": return <FileTypeIcon size={16} className="text-red-400" />;
+    default: return <File size={16} className="text-gray-400" />;
   }
 }
 
@@ -42,9 +42,9 @@ export function FileListSidebar({ files, existsMap, selectedIndex, onSelect, onC
         </div>
         <button
           onClick={onClose}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="h-7 w-7 flex items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
-          <PanelLeftClose className="h-4 w-4" />
+          <SidebarSimple size={16} />
         </button>
       </div>
       <div className="flex-1 overflow-y-auto p-1.5">

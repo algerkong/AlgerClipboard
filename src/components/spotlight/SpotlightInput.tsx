@@ -1,13 +1,8 @@
 import { useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { ClipboardList, LayoutGrid, Languages, Search } from "lucide-react";
+import { MagnifyingGlass } from "@phosphor-icons/react";
 import { useSpotlightStore } from "@/stores/spotlightStore";
-
-const ICON_MAP: Record<string, React.ReactNode> = {
-  "lucide:clipboard-list": <ClipboardList className="w-[18px] h-[18px]" />,
-  "lucide:layout-grid": <LayoutGrid className="w-[18px] h-[18px]" />,
-  "lucide:languages": <Languages className="w-[18px] h-[18px]" />,
-};
+import { LucideIcon } from "./LucideIcon";
 
 export function SpotlightInput() {
   const { t } = useTranslation();
@@ -15,15 +10,21 @@ export function SpotlightInput() {
   const mode = useSpotlightStore((s) => s.mode);
   const query = useSpotlightStore((s) => s.query);
   const setQuery = useSpotlightStore((s) => s.setQuery);
+  const checkPrefix = useSpotlightStore((s) => s.checkPrefix);
   const modes = useSpotlightStore((s) => s.modes);
   const switchMode = useSpotlightStore((s) => s.switchMode);
   const loading = useSpotlightStore((s) => s.loading);
 
-  const currentMode = modes.get(mode);
-  const iconKey = currentMode?.icon ?? "";
-  const modeIcon = ICON_MAP[iconKey] ?? <Search className="w-[18px] h-[18px]" />;
-  const placeholder = currentMode
-    ? t(currentMode.placeholder)
+  const { activeMode } = checkPrefix(query);
+  const displayMode = modes.get(activeMode) ?? modes.get(mode);
+  const iconKey = displayMode?.icon ?? "";
+  const modeIcon = iconKey.startsWith("ph:") || iconKey.startsWith("lucide:") ? (
+    <LucideIcon name={iconKey} size={30} className="text-[var(--primary)]" />
+  ) : (
+    <MagnifyingGlass size={30} className="text-[var(--primary)]" />
+  );
+  const placeholder = displayMode
+    ? t(displayMode.placeholder)
     : t("spotlight.placeholder.clipboard");
 
   useEffect(() => {
@@ -32,6 +33,10 @@ export function SpotlightInput() {
     });
   }, [mode]);
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuery(e.target.value);
+  };
+
   return (
     <div className="spotlight-input-row">
       <div className="spotlight-mode-icon">{modeIcon}</div>
@@ -39,7 +44,7 @@ export function SpotlightInput() {
         ref={inputRef}
         type="text"
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={handleChange}
         placeholder={placeholder}
         className="spotlight-input"
         autoFocus
@@ -52,7 +57,7 @@ export function SpotlightInput() {
         className="spotlight-mode-tag"
         tabIndex={-1}
       >
-        {currentMode ? t(currentMode.name) : mode}
+        {displayMode ? t(displayMode.name) : mode}
       </button>
     </div>
   );

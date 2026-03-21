@@ -1,0 +1,19 @@
+{
+  "id": "hello-world",
+  "name": "Hello World",
+  "version": "1.0.0",
+  "description": "A demo Spotlight plugin that echoes your search query",
+  "author": "AlgerClipboard",
+  "api_version": "1",
+  "frontend": {
+    "entry": "frontend/index.js"
+  },
+  "permissions": [],
+  "spotlight_modes": [
+    {
+      "id": "hello",
+      "prefix": "hi"
+    }
+  ],
+  "settings": {}
+}

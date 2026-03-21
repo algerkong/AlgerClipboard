@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlignLeft, FolderOpen, Image, LayoutGrid, Settings, Star, Tag } from "lucide-react";
+import { TextAlignLeft, FolderOpen, Image, SquaresFour, Gear, Star, Tag } from "@phosphor-icons/react";
 import { useTranslation } from "react-i18next";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { openTagManagerWindow } from "@/services/tagManagerWindowService";
@@ -7,8 +7,8 @@ import type { ContentType } from "@/types";
 import { cn } from "@/lib/utils";
 
 const filters: { labelKey: string; icon: React.ReactNode; filter: ContentType | null; isFavorites?: boolean }[] = [
-  { labelKey: "typeFilter.all", icon: <LayoutGrid className="h-[var(--app-tab-icon-size)] w-[var(--app-tab-icon-size)]" />, filter: null },
-  { labelKey: "typeFilter.text", icon: <AlignLeft className="h-[var(--app-tab-icon-size)] w-[var(--app-tab-icon-size)]" />, filter: "PlainText" },
+  { labelKey: "typeFilter.all", icon: <SquaresFour className="h-[var(--app-tab-icon-size)] w-[var(--app-tab-icon-size)]" />, filter: null },
+  { labelKey: "typeFilter.text", icon: <TextAlignLeft className="h-[var(--app-tab-icon-size)] w-[var(--app-tab-icon-size)]" />, filter: "PlainText" },
   { labelKey: "typeFilter.image", icon: <Image className="h-[var(--app-tab-icon-size)] w-[var(--app-tab-icon-size)]" />, filter: "Image" },
   { labelKey: "typeFilter.file", icon: <FolderOpen className="h-[var(--app-tab-icon-size)] w-[var(--app-tab-icon-size)]" />, filter: "FilePaths" },
   { labelKey: "typeFilter.starred", icon: <Star className="h-[var(--app-tab-icon-size)] w-[var(--app-tab-icon-size)]" />, filter: null, isFavorites: true },
@@ -239,7 +239,7 @@ export function TypeFilter() {
                 style={tabStyle}
                 className="filter-pill ml-1 flex shrink-0 items-center whitespace-nowrap px-0 font-medium leading-none text-muted-foreground transition-all hover:bg-accent/50 hover:text-foreground"
               >
-                <Settings style={tabIconStyle} />
+                <Gear style={tabIconStyle} />
                 <span>{t("tags.manage")}</span>
               </button>
             </div>

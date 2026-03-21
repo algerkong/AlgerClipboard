@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, FolderOpen, ExternalLink } from "lucide-react";
+import { ArrowLeft, FolderOpen, ArrowSquareOut } from "@phosphor-icons/react";
 import type { FileMeta } from "@/types";
 import { openInFileExplorer, openFileDefault } from "@/services/clipboardService";
 import { formatFileSize } from "./utils";
@@ -19,9 +19,9 @@ export function PreviewHeader({ file, onBack, children }: PreviewHeaderProps) {
       {onBack && (
         <button
           onClick={onBack}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="h-7 w-7 flex shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft size={16} />
         </button>
       )}
       <div className="min-w-0 flex-1">
@@ -36,7 +36,7 @@ export function PreviewHeader({ file, onBack, children }: PreviewHeaderProps) {
           className="flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           title={t("fileViewer.openInExplorer")}
         >
-          <FolderOpen className="h-3.5 w-3.5" />
+          <FolderOpen size={14} />
         </button>
         <button
           onClick={() => {
@@ -45,7 +45,7 @@ export function PreviewHeader({ file, onBack, children }: PreviewHeaderProps) {
           className="flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           title={t("fileViewer.openWithDefault")}
         >
-          <ExternalLink className="h-3.5 w-3.5" />
+          <ArrowSquareOut size={14} />
         </button>
         {children}
       </div>

@@ -1,17 +1,17 @@
 import { useEffect, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ExternalLink,
+  ArrowSquareOut,
   Plus,
   Pencil,
-  Trash2,
-  RotateCcw,
-  GripVertical,
-  ChevronUp,
-  ChevronDown,
+  Trash,
+  ArrowCounterClockwise,
+  DotsSixVertical,
+  CaretUp,
+  CaretDown,
   Check,
   X,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { useAskAiStore } from "@/stores/askAiStore";
 import { AI_WEB_SERVICES } from "@/constants/aiServices";
 import { openAiWebView } from "@/services/askAiService";
@@ -126,7 +126,7 @@ export function AskAiTab() {
                       onClick={() => openAiWebView(service)}
                       title={t("settings.askAi.open")}
                     >
-                      <ExternalLink className="h-3.5 w-3.5" />
+                      <ArrowSquareOut size={14} />
                     </button>
                   )}
                   <Toggle
@@ -150,14 +150,14 @@ export function AskAiTab() {
               tone="ghost"
               onClick={() => { setIsAdding(!isAdding); setEditingId(null); }}
             >
-              <Plus className="h-3 w-3" />
+              <Plus size={12} />
               {t("settings.askAi.addPreset")}
             </SettingsButton>
             <SettingsButton
               tone="ghost"
               onClick={() => { void resetPresets(); }}
             >
-              <RotateCcw className="h-3 w-3" />
+              <ArrowCounterClockwise size={12} />
             </SettingsButton>
           </div>
         }
@@ -199,8 +199,8 @@ export function AskAiTab() {
               key={preset.id}
               className="group flex items-center gap-3 border-b border-[color-mix(in_oklab,var(--border)_76%,transparent)] px-5 py-3 last:border-b-0"
             >
-              <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40" />
-              {Icon && <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />}
+              <DotsSixVertical size={14} className="shrink-0 text-muted-foreground/40" />
+              {Icon && <Icon size={16} className="shrink-0 text-muted-foreground" />}
               <div className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">
                   {preset.labelKey ? t(preset.labelKey) : preset.label}
@@ -217,7 +217,7 @@ export function AskAiTab() {
                   disabled={index === 0}
                   className="rounded p-1 text-muted-foreground hover:text-foreground disabled:opacity-20"
                 >
-                  <ChevronUp className="h-3.5 w-3.5" />
+                  <CaretUp size={14} />
                 </button>
                 <button
                   type="button"
@@ -225,21 +225,21 @@ export function AskAiTab() {
                   disabled={index === presets.length - 1}
                   className="rounded p-1 text-muted-foreground hover:text-foreground disabled:opacity-20"
                 >
-                  <ChevronDown className="h-3.5 w-3.5" />
+                  <CaretDown size={14} />
                 </button>
                 <button
                   type="button"
                   onClick={() => startEdit(preset)}
                   className="rounded p-1 text-muted-foreground hover:text-foreground"
                 >
-                  <Pencil className="h-3.5 w-3.5" />
+                  <Pencil size={14} />
                 </button>
                 <button
                   type="button"
                   onClick={() => void removePreset(preset.id)}
                   className="rounded p-1 text-muted-foreground hover:text-destructive"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash size={14} />
                 </button>
               </div>
             </div>
@@ -305,7 +305,7 @@ function PresetForm({
                     : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
                 )}
               >
-                <Icon className="h-4 w-4" />
+                <Icon size={16} />
               </button>
             );
           })}
@@ -332,7 +332,7 @@ function PresetForm({
       {/* Actions */}
       <div className="flex justify-end gap-2">
         <SettingsButton tone="ghost" onClick={onCancel}>
-          <X className="h-3 w-3" />
+          <X size={12} />
           {t("settings.askAi.cancel")}
         </SettingsButton>
         <SettingsButton
@@ -340,7 +340,7 @@ function PresetForm({
           onClick={onSave}
           disabled={!form.label?.trim()}
         >
-          <Check className="h-3 w-3" />
+          <Check size={12} />
           {t("settings.askAi.save")}
         </SettingsButton>
       </div>

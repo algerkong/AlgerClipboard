@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import {
-  ClipboardList,
+  ClipboardText,
   FileText,
   ListChecks,
-  Loader2,
-  Settings,
-} from "lucide-react";
+  SpinnerGap,
+  Gear,
+} from "@phosphor-icons/react";
 import { SearchBar } from "@/components/SearchBar";
 import { TypeFilter } from "@/components/TypeFilter";
 import { EntryCard } from "@/components/EntryCard";
@@ -228,7 +228,7 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
           title={t("settings.title")}
           aria-label={t("settings.title")}
         >
-          <Settings className="h-[15px] w-[15px]" />
+          <Gear className="h-[15px] w-[15px]" />
         </button>
       </div>
 
@@ -239,7 +239,7 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
       <div className="relative flex-1 min-h-0">
         {loading && (
           <div className="pointer-events-none absolute right-3 top-2 z-10 flex items-center gap-2 rounded-full border border-border/60 bg-card/90 px-2.5 py-1 text-2xs font-medium text-muted-foreground shadow-sm">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <SpinnerGap size={14} className="animate-spin" />
             <span>{t("clipboardPanel.loading")}</span>
           </div>
         )}
@@ -247,7 +247,7 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
         {displayEntries.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-muted-foreground/70">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/50">
-              <ClipboardList className="h-7 w-7 text-muted-foreground/55" />
+              <ClipboardText size={28} className="text-muted-foreground/55" />
             </div>
             <div className="text-center">
               <p className="text-sm2 font-medium text-foreground">

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
-import { ChevronLeft, ChevronRight, PanelLeft } from "lucide-react";
+import { CaretLeft, CaretRight, SidebarSimple } from "@phosphor-icons/react";
 import { usePreviewCloseShortcut } from "@/hooks/usePreviewCloseShortcut";
 import { CloseConfirmDialog } from "@/components/CloseConfirmDialog";
 import type { ClipboardEntry, FileMeta } from "@/types";
@@ -180,15 +180,15 @@ export function FileViewerPage() {
                 className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 title={t("fileViewer.showFileList")}
               >
-                <PanelLeft className="h-4 w-4" />
+                <SidebarSimple size={16} />
               </button>
             )}
             <button
               onClick={goPrev}
               disabled={selectedIndex === 0}
-              className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
+              className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <CaretLeft size={16} />
             </button>
             <span className="text-xs text-muted-foreground">
               {selectedIndex + 1} / {fileMetas.length}
@@ -196,9 +196,9 @@ export function FileViewerPage() {
             <button
               onClick={goNext}
               disabled={selectedIndex === fileMetas.length - 1}
-              className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
+              className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
             >
-              <ChevronRight className="h-4 w-4" />
+              <CaretRight size={16} />
             </button>
           </div>
         )}

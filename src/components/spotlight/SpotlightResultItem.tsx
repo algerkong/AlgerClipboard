@@ -1,6 +1,7 @@
 import type { SpotlightResult } from "@/spotlight/types";
 import { useEffect, useRef } from "react";
-import { Languages, AlertTriangle } from "lucide-react";
+import { SpeakerHigh, SpeakerLow } from "@phosphor-icons/react";
+import { LucideIcon } from "./LucideIcon";
 
 interface Props {
   result: SpotlightResult;
@@ -19,32 +20,20 @@ export function SpotlightResultItem({ result, selected, index, onClick }: Props)
   }, [selected]);
 
   const renderIcon = () => {
-    if (!result.icon) {
-      return (
-        <div className="spotlight-result-icon spotlight-result-icon--placeholder">
-          <span>{result.title.charAt(0).toUpperCase()}</span>
-        </div>
-      );
-    }
+    if (!result.icon) return null;
 
     if (typeof result.icon === "string") {
+      // Image URL or data URI
       if (result.icon.startsWith("data:") || result.icon.startsWith("http")) {
         return (
           <img src={result.icon} alt="" className="spotlight-result-icon" />
         );
       }
-      // Lucide icon references
-      if (result.icon === "lucide:languages") {
+      // Phosphor or Lucide icon reference
+      if (result.icon.startsWith("ph:") || result.icon.startsWith("lucide:")) {
         return (
           <div className="spotlight-result-icon spotlight-result-icon--emoji">
-            <Languages className="w-4 h-4" />
-          </div>
-        );
-      }
-      if (result.icon === "lucide:alert") {
-        return (
-          <div className="spotlight-result-icon spotlight-result-icon--emoji">
-            <AlertTriangle className="w-4 h-4" />
+            <LucideIcon name={result.icon} size={20} />
           </div>
         );
       }
@@ -68,6 +57,11 @@ export function SpotlightResultItem({ result, selected, index, onClick }: Props)
     return null;
   };
 
+  const actionIconMap: Record<string, React.ReactNode> = {
+    "ph:speaker-high": <SpeakerHigh size={14} weight="duotone" />,
+    "ph:speaker-low": <SpeakerLow size={14} weight="duotone" />,
+  };
+
   return (
     <div
       ref={ref}
@@ -82,6 +76,24 @@ export function SpotlightResultItem({ result, selected, index, onClick }: Props)
           <div className="spotlight-result-subtitle">{result.subtitle}</div>
         )}
       </div>
+      {result.actions && result.actions.length > 0 && (
+        <div className="spotlight-result-actions">
+          {result.actions.map((action) => (
+            <button
+              key={action.id}
+              className="spotlight-result-action-btn"
+              title={action.id.includes("src") ? "Play source" : "Play translation"}
+              tabIndex={-1}
+              onClick={(e) => {
+                e.stopPropagation();
+                action.handler();
+              }}
+            >
+              {actionIconMap[action.label] ?? action.label}
+            </button>
+          ))}
+        </div>
+      )}
       {result.badge && (
         <span className="spotlight-result-badge">{result.badge}</span>
       )}

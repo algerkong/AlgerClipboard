@@ -203,6 +203,25 @@
         }
       }
     },
+    "tabPlugins": "插件",
+    "plugins": {
+      "installed": "已安装插件",
+      "noPlugins": "暂无已安装插件",
+      "enable": "启用",
+      "disable": "禁用",
+      "remove": "移除",
+      "permissions": "权限",
+      "version": "版本",
+      "author": "作者",
+      "installFromFolder": "从文件夹安装...",
+      "confirmRemove": "确定要移除此插件吗？",
+      "permissionConfirm": "此插件请求以下权限：",
+      "grant": "授权",
+      "deny": "拒绝",
+      "openPluginDir": "打开插件目录",
+      "refresh": "刷新",
+      "restartHint": "插件已启用，请重启 Spotlight（按 Esc 后重新打开）以生效。"
+    },
     "tabOcr": "OCR",
     "tabAi": "AI",
     "tabAskAi": "问 AI",
@@ -268,6 +287,7 @@
     "ocrDesc": "管理 OCR 引擎、默认识别方式和本地运行时。",
     "dataDesc": "查看剪贴板统计、导入导出历史并维护缓存。",
     "aiDesc": "设置 AI 服务商、模型、摘要和提示词行为。",
-    "askAiDesc": "整理问 AI 菜单里的服务入口和预设操作。"
+    "askAiDesc": "整理问 AI 菜单里的服务入口和预设操作。",
+    "pluginsDesc": "管理已安装的插件"
   }
 }

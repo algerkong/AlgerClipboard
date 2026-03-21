@@ -62,10 +62,10 @@ function formatTimeAgo(dateStr: string): string {
 export const clipboardMode: SpotlightMode = {
   id: "clipboard",
   name: "spotlight.mode.clipboard",
-  icon: "lucide:clipboard-list",
+  icon: "ph:clipboard-text",
   placeholder: "spotlight.placeholder.clipboard",
   shortcutSettingKey: "spotlight_clipboard_shortcut",
-  debounceMs: 200,
+  debounceMs: 100,
 
   onQuery: async (query: string): Promise<SpotlightResult[]> => {
     if (!query.trim()) {

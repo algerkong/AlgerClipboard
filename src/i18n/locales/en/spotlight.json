@@ -39,7 +39,10 @@
       "app_name": "App name",
       "app_path": "App path",
       "browse": "Browse",
-      "refresh_apps": "Refresh app list"
+      "refresh_apps": "Refresh app list",
+      "auto_translate_clipboard": "Auto-translate clipboard on open",
+      "prefixes": "Prefix triggers",
+      "prefixes_desc": "Type prefix + space to switch mode"
     }
   }
 }

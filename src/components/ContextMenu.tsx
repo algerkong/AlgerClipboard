@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ChevronRight } from "lucide-react";
+import { CaretRight } from "@phosphor-icons/react";
 
 export interface ContextMenuItem {
   label: string;
@@ -146,7 +146,7 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
             >
               {item.icon && <span className="context-menu-icon">{item.icon}</span>}
               <span className="context-menu-label">{item.label}</span>
-              {item.children && <ChevronRight className="w-3.5 h-3.5 opacity-50 ml-1 flex-shrink-0" />}
+              {item.children && <CaretRight size={14} className="opacity-50 ml-1 flex-shrink-0" />}
             </button>
             {item.children && subMenuIndex === i && (
               <SubMenu

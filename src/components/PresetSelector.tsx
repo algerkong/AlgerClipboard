@@ -1,21 +1,21 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import {
-  Languages,
+  Translate,
   FileText,
-  HelpCircle,
-  PenLine,
+  Question,
+  PenNib,
   ArrowRight,
-  MessageSquare,
-  Loader2,
-  Sparkles,
-  Wand2,
+  ChatCircle,
+  SpinnerGap,
+  Sparkle,
+  MagicWand,
   BookOpen,
   Code,
   ListChecks,
   Lightbulb,
-  Search,
-  Zap,
-} from "lucide-react";
+  MagnifyingGlass,
+  Lightning,
+} from "@phosphor-icons/react";
 import { useTranslation } from "react-i18next";
 
 import { useAskAiStore } from "@/stores/askAiStore";
@@ -26,21 +26,21 @@ import { askAi } from "@/services/askAiService";
 import { cn } from "@/lib/utils";
 import { FaviconImg } from "@/pages/settings/AskAiTab";
 
-const ICON_MAP: Record<string, React.FC<{ className?: string }>> = {
-  Languages,
+const ICON_MAP: Record<string, React.FC<{ className?: string; size?: number }>> = {
+  Languages: Translate,
   FileText,
-  HelpCircle,
-  PenLine,
+  HelpCircle: Question,
+  PenLine: PenNib,
   ArrowRight,
-  MessageSquare,
-  Sparkles,
-  Wand2,
+  MessageSquare: ChatCircle,
+  Sparkles: Sparkle,
+  Wand2: MagicWand,
   BookOpen,
   Code,
   ListChecks,
   Lightbulb,
-  Search,
-  Zap,
+  Search: MagnifyingGlass,
+  Zap: Lightning,
 };
 
 export { ICON_MAP };
@@ -189,7 +189,7 @@ export function PresetSelector() {
       >
         {isSending ? (
           <div className="flex items-center justify-center gap-2 p-4 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <SpinnerGap size={16} className="animate-spin" />
             {t("askAi.sending")}
           </div>
         ) : enabledServices.length === 0 ? (
@@ -214,7 +214,7 @@ export function PresetSelector() {
                         : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
                     )}
                   >
-                    {Icon && <Icon className="h-4 w-4 shrink-0" />}
+                    {Icon && <Icon size={16} className="shrink-0" />}
                     <span>{preset.labelKey ? t(preset.labelKey) : preset.label}</span>
                   </button>
                 );

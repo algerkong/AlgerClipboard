@@ -1,0 +1,27 @@
+{
+  "id": "ide-projects",
+  "name": "IDE Projects",
+  "version": "1.0.0",
+  "description": "Search and open recent projects from VS Code, Cursor, Windsurf, Trae, Antigravity, and Zed",
+  "author": "AlgerClipboard",
+  "icon": "ph:folder-notch-open",
+  "api_version": "1",
+  "frontend": {
+    "entry": "frontend/index.js"
+  },
+  "backend": {
+    "library": "backend/ide_projects_plugin"
+  },
+  "permissions": [
+    "filesystem:read",
+    "shell:execute"
+  ],
+  "spotlight_modes": [
+    {
+      "id": "ide-projects",
+      "prefix": "|"
+    }
+  ],
+  "hooks": [],
+  "settings": {}
+}

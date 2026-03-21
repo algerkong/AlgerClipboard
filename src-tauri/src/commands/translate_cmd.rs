@@ -145,6 +145,81 @@ pub async fn translate_text(
 }
 
 #[tauri::command]
+pub async fn translate_all(
+    db: State<'_, AppDatabase>,
+    text: String,
+    from: String,
+    to: String,
+) -> Result<Vec<TranslateResult>, String> {
+    let configs = load_engine_configs_from_db(&db);
+    let mut results = Vec::new();
+
+    // Build individual engines and translate in parallel
+    let mut handles = Vec::new();
+    for cfg in &configs {
+        if !is_engine_config_usable(cfg) {
+            continue;
+        }
+        let engine: Box<dyn TranslateEngine> = match cfg.engine.as_str() {
+            "baidu" => Box::new(BaiduTranslator::new(cfg.api_key.clone(), cfg.api_secret.clone())),
+            "youdao" => Box::new(YoudaoTranslator::new(cfg.api_key.clone(), cfg.api_secret.clone())),
+            "google" => Box::new(GoogleTranslator::new(cfg.api_key.clone())),
+            _ => continue,
+        };
+        let text_clone = text.clone();
+        let from_clone = from.clone();
+        let to_clone = to.clone();
+        handles.push(tokio::spawn(async move {
+            match engine.translate(&text_clone, &from_clone, &to_clone).await {
+                Ok(translated) => Some(TranslateResult {
+                    text: text_clone,
+                    translated,
+                    from_lang: from_clone,
+                    to_lang: to_clone,
+                    engine: engine.name().to_string(),
+                }),
+                Err(e) => {
+                    log::warn!("translate_all: {} failed: {}", engine.name(), e);
+                    None
+                }
+            }
+        }));
+    }
+
+    // Also try AI if configured
+    let ai_config = load_ai_config_pub(&db.0);
+    if is_ai_config_ready(&ai_config) {
+        let text_clone = text.clone();
+        let from_clone = from.clone();
+        let to_clone = to.clone();
+        handles.push(tokio::spawn(async move {
+            match run_ai_translate(&ai_config, &text_clone, &from_clone, &to_clone).await {
+                Ok(translated) => Some(TranslateResult {
+                    text: text_clone,
+                    translated,
+                    from_lang: from_clone,
+                    to_lang: to_clone,
+                    engine: "AI".to_string(),
+                }),
+                Err(_) => None,
+            }
+        }));
+    }
+
+    for handle in handles {
+        if let Ok(Some(result)) = handle.await {
+            results.push(result);
+        }
+    }
+
+    if results.is_empty() {
+        return Err("All translation engines failed".to_string());
+    }
+
+    Ok(results)
+}
+
+#[tauri::command]
 pub fn get_translate_engines(db: State<'_, AppDatabase>) -> Result<Vec<EngineConfig>, String> {
     Ok(load_engine_configs_from_db(&db))
 }

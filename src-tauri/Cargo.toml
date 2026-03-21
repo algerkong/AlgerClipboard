@@ -55,6 +55,7 @@ rand = "0.8"
 regex = "1"
 pinyin = "0.10"
 zip = "2"
+libloading = "0.8"
 
 lnk = "0.6"
 

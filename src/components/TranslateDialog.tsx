@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import {
   X,
-  Loader2,
-  ArrowRightLeft,
+  SpinnerGap,
+  ArrowsLeftRight,
   Copy,
   Check,
-  ClipboardPaste,
-  RotateCcw,
-} from "lucide-react";
+  ClipboardText,
+  ArrowCounterClockwise,
+} from "@phosphor-icons/react";
 import { useTranslateStore } from "@/stores/translateStore";
 import { useCapabilityStore } from "@/stores/capabilityStore";
 import { cn } from "@/lib/utils";
@@ -119,7 +119,7 @@ export function TranslateDialog({ text, onClose }: Props) {
               onClick={onClose}
               className="p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
             >
-              <X className="w-3.5 h-3.5" />
+              <X size={14} />
             </button>
           </div>
 
@@ -148,7 +148,7 @@ export function TranslateDialog({ text, onClose }: Props) {
               )}
               title={t("translate.swap")}
             >
-              <ArrowRightLeft className="w-3 h-3" />
+              <ArrowsLeftRight size={12} />
             </button>
 
             <select
@@ -173,7 +173,7 @@ export function TranslateDialog({ text, onClose }: Props) {
                   : "bg-primary/15 text-primary hover:bg-primary/25"
               )}
             >
-              <RotateCcw
+              <ArrowCounterClockwise
                 className={cn("w-2.5 h-2.5", loading && "animate-spin")}
               />
             </button>
@@ -217,7 +217,7 @@ export function TranslateDialog({ text, onClose }: Props) {
               <div className="px-3 pt-2 pb-3 flex-1 min-h-0 flex flex-col">
                 {loading && (
                   <div className="flex items-center justify-center gap-1.5 py-8 text-muted-foreground">
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <SpinnerGap size={16} className="animate-spin" />
                     <span className="text-sm2">{t("translate.translating")}</span>
                   </div>
                 )}
@@ -259,9 +259,9 @@ export function TranslateDialog({ text, onClose }: Props) {
                         )}
                       >
                         {copied ? (
-                          <Check className="w-2.5 h-2.5" />
+                          <Check size={10} />
                         ) : (
-                          <Copy className="w-2.5 h-2.5" />
+                          <Copy size={10} />
                         )}
                         {copied ? t("translate.copied") : t("translate.copyResult")}
                       </button>
@@ -269,7 +269,7 @@ export function TranslateDialog({ text, onClose }: Props) {
                         onClick={handleUseTranslation}
                         className="flex items-center gap-1 h-6 px-2.5 rounded text-xs2 font-medium bg-primary/15 text-primary hover:bg-primary/25 transition-colors"
                       >
-                        <ClipboardPaste className="w-2.5 h-2.5" />
+                        <ClipboardText size={10} />
                         {t("translate.useTranslation")}
                       </button>
                     </div>

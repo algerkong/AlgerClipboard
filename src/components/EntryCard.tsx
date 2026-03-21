@@ -1,5 +1,5 @@
 import { memo, useCallback, useState, useEffect, useMemo, useRef } from "react";
-import { Star, Trash2, FileText, ImageIcon, FolderOpen, Languages, Pin, Eye, Copy, ClipboardPaste, Maximize2, Cloud, Upload, CloudAlert, Code, Tag, X, ExternalLink, Brain, Sparkles, File, Video, Music, Archive, FileCode, FileType as FileTypeIcon, Folder, QrCode, Ban, ShieldAlert, Check } from "lucide-react";
+import { Star, Trash, FileText, Image as ImageIcon, FolderOpen, Translate, PushPin, Eye, Copy, ClipboardText, ArrowsOut, Cloud, Upload, CloudWarning, Code, Tag, X, ArrowSquareOut, Brain, Sparkle, File, VideoCamera, MusicNote, Archive, FileCode, FileText as FileTypeIcon, Folder, QrCode, Prohibit, ShieldWarning, Check } from "@phosphor-icons/react";
 
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { useCapabilityStore } from "@/stores/capabilityStore";
@@ -135,14 +135,14 @@ function formatFileSize(bytes: number): string {
 
 function getFileTypeIcon(fileType: string) {
   switch (fileType) {
-    case "Image": return <ImageIcon className="h-4 w-4 text-sky-400" />;
-    case "Video": return <Video className="h-4 w-4 text-purple-400" />;
-    case "Audio": return <Music className="h-4 w-4 text-pink-400" />;
-    case "Document": return <FileText className="h-4 w-4 text-blue-400" />;
-    case "Archive": return <Archive className="h-4 w-4 text-orange-400" />;
-    case "Code": return <FileCode className="h-4 w-4 text-green-400" />;
-    case "Executable": return <FileTypeIcon className="h-4 w-4 text-red-400" />;
-    default: return <File className="h-4 w-4 text-gray-400" />;
+    case "Image": return <ImageIcon size={16} className="text-sky-400" />;
+    case "Video": return <VideoCamera size={16} className="text-purple-400" />;
+    case "Audio": return <MusicNote size={16} className="text-pink-400" />;
+    case "Document": return <FileText size={16} className="text-blue-400" />;
+    case "Archive": return <Archive size={16} className="text-orange-400" />;
+    case "Code": return <FileCode size={16} className="text-green-400" />;
+    case "Executable": return <FileTypeIcon size={16} className="text-red-400" />;
+    default: return <File size={16} className="text-gray-400" />;
   }
 }
 
@@ -164,15 +164,15 @@ function getPreview(entry: ClipboardEntry, t: (key: string) => string, fileMetas
 
 function getIcon(type: string, fileMetas?: FileMeta[]) {
   switch (type) {
-    case "Image": return <ImageIcon className="h-4 w-4 text-sky-400" />;
+    case "Image": return <ImageIcon size={16} className="text-sky-400" />;
     case "FilePaths":
       if (fileMetas && fileMetas.length === 1) {
-        if (fileMetas[0].is_dir) return <Folder className="h-4 w-4 text-amber-400" />;
+        if (fileMetas[0].is_dir) return <Folder size={16} className="text-amber-400" />;
         return getFileTypeIcon(fileMetas[0].file_type);
       }
-      return <FolderOpen className="h-4 w-4 text-amber-400" />;
-    case "RichText": return <Code className="h-4 w-4 text-violet-400" />;
-    default: return <FileText className="h-4 w-4 text-teal-400" />;
+      return <FolderOpen size={16} className="text-amber-400" />;
+    case "RichText": return <Code size={16} className="text-violet-400" />;
+    default: return <FileText size={16} className="text-teal-400" />;
   }
 }
 
@@ -382,20 +382,20 @@ export const EntryCard = memo(function EntryCard({
     if (isFilePaths) {
       items.push({
         label: t("contextMenu.previewFile"),
-        icon: <Eye className="w-3.5 h-3.5" />,
+        icon: <Eye size={14} />,
         onClick: () => openFileViewer(entry.id),
       });
       if (fileMetas.length === 1) {
         items.push({
           label: t("contextMenu.openInExplorer"),
-          icon: <FolderOpen className="w-3.5 h-3.5" />,
+          icon: <FolderOpen size={14} />,
           onClick: () => {
             openInFileExplorer(fileMetas[0].path).catch(() => toast.error(t("toast.openUrlFailed")));
           },
         });
         items.push({
           label: t("contextMenu.openDefault"),
-          icon: <ExternalLink className="w-3.5 h-3.5" />,
+          icon: <ArrowSquareOut size={14} />,
           onClick: () => {
             openFileDefault(fileMetas[0].path).catch(() => toast.error(t("toast.openUrlFailed")));
           },
@@ -403,7 +403,7 @@ export const EntryCard = memo(function EntryCard({
       }
       items.push({
         label: t("contextMenu.copyFilePath"),
-        icon: <Copy className="w-3.5 h-3.5" />,
+        icon: <Copy size={14} />,
         onClick: async () => {
           const paths = fileMetas.map(m => m.path).join("\n");
           await navigator.clipboard.writeText(paths || entry.text_content || "");
@@ -415,7 +415,7 @@ export const EntryCard = memo(function EntryCard({
     if (isImage) {
       items.push({
         label: t("contextMenu.viewImage"),
-        icon: <Eye className="w-3.5 h-3.5" />,
+        icon: <Eye size={14} />,
         onClick: handleOpenImageViewer,
       });
     }
@@ -423,12 +423,12 @@ export const EntryCard = memo(function EntryCard({
     if (hasText && entry.text_content) {
       items.push({
         label: t("contextMenu.viewFull"),
-        icon: <Eye className="w-3.5 h-3.5" />,
+        icon: <Eye size={14} />,
         onClick: () => openDetailWindow(entry.id, "view"),
       });
       items.push({
         label: t("contextMenu.copy"),
-        icon: <Copy className="w-3.5 h-3.5" />,
+        icon: <Copy size={14} />,
         onClick: async () => {
           await navigator.clipboard.writeText(entry.text_content!);
           toast.success(t("toast.copied"));
@@ -436,7 +436,7 @@ export const EntryCard = memo(function EntryCard({
       });
       items.push({
         label: t("contextMenu.generateQrCode"),
-        icon: <QrCode className="w-3.5 h-3.5" />,
+        icon: <QrCode size={14} />,
         onClick: async () => {
           try {
             const base64 = await QRCode.toDataURL(entry.text_content!, { width: 400, margin: 2 });
@@ -450,7 +450,7 @@ export const EntryCard = memo(function EntryCard({
       if (urls.length === 1) {
         items.push({
           label: t("contextMenu.openInBrowser"),
-          icon: <ExternalLink className="w-3.5 h-3.5" />,
+          icon: <ArrowSquareOut size={14} />,
           onClick: () => {
             openUrl(urls[0]).catch(() => toast.error(t("toast.openUrlFailed")));
           },
@@ -458,7 +458,7 @@ export const EntryCard = memo(function EntryCard({
       } else if (urls.length > 1) {
         items.push({
           label: `${t("contextMenu.openInBrowser")} (${urls.length})`,
-          icon: <ExternalLink className="w-3.5 h-3.5" />,
+          icon: <ArrowSquareOut size={14} />,
           onClick: () => setShowUrlPicker(true),
         });
       }
@@ -467,27 +467,27 @@ export const EntryCard = memo(function EntryCard({
 
     items.push({
       label: t("contextMenu.paste"),
-      icon: <ClipboardPaste className="w-3.5 h-3.5" />,
+      icon: <ClipboardText size={14} />,
       onClick: handlePaste,
     });
 
     items.push({
       label: entry.is_pinned ? t("contextMenu.unpin") : t("contextMenu.pin"),
-      icon: <Pin className="w-3.5 h-3.5" />,
+      icon: <PushPin size={14} />,
       onClick: () => void togglePin(entry.id),
       divider: true,
     });
 
     items.push({
       label: entry.is_favorite ? t("contextMenu.unfavorite") : t("contextMenu.favorite"),
-      icon: <Star className="w-3.5 h-3.5" />,
+      icon: <Star size={14} />,
       onClick: () => void toggleFavorite(entry.id),
     });
 
     if (canTranslate && hasText && entry.text_content) {
       items.push({
         label: t("contextMenu.translate"),
-        icon: <Languages className="w-3.5 h-3.5" />,
+        icon: <Translate size={14} />,
         onClick: () => openDetailWindow(entry.id, "translate"),
       });
     }
@@ -495,14 +495,14 @@ export const EntryCard = memo(function EntryCard({
     if (hasAi && hasText && entry.content_type !== "FilePaths") {
       items.push({
         label: entry.ai_summary ? t("contextMenu.resummarize") : t("contextMenu.aiSummarize"),
-        icon: <Brain className="w-3.5 h-3.5" />,
+        icon: <Brain size={14} />,
         onClick: () => openDetailWindow(entry.id, "ai"),
       });
     }
 
     items.push({
       label: t("contextMenu.addTag"),
-      icon: <Tag className="w-3.5 h-3.5" />,
+      icon: <Tag size={14} />,
       onClick: () => setShowTagInput(true),
       divider: true,
     });
@@ -510,7 +510,7 @@ export const EntryCard = memo(function EntryCard({
     if (entry.source_app) {
       items.push({
         label: t("contextMenu.excludeApp", { app: entry.source_app }),
-        icon: <Ban className="w-3.5 h-3.5" />,
+        icon: <Prohibit size={14} />,
         onClick: async () => {
           const { excludedApps, setExcludedApps } = useSettingsStore.getState();
           if (!excludedApps.includes(entry.source_app!)) {
@@ -523,7 +523,7 @@ export const EntryCard = memo(function EntryCard({
 
     items.push({
       label: t("contextMenu.delete"),
-      icon: <Trash2 className="w-3.5 h-3.5" />,
+      icon: <Trash size={14} />,
       onClick: () => deleteEntries([entry.id]),
       danger: true,
       divider: true,
@@ -540,7 +540,7 @@ export const EntryCard = memo(function EntryCard({
           className="flex flex-col items-center justify-center gap-1 py-3 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
           onClick={(e) => { e.stopPropagation(); setSensitiveRevealed(true); }}
         >
-          <ShieldAlert className="h-5 w-5 text-amber-500" />
+          <ShieldWarning size={20} className="text-amber-500" />
           <span className="text-xs">{t("contextMenu.sensitiveContent")}</span>
           <span className="text-[10px]">{t("contextMenu.sensitiveReveal")}</span>
         </div>
@@ -588,7 +588,7 @@ export const EntryCard = memo(function EntryCard({
     if (isFilePaths && fileMetas.length > 0) {
       return (
         <div className="flex items-center gap-2.5 rounded-lg border px-2 py-1.5" style={{ background: "color-mix(in oklab, var(--muted) 30%, transparent)", borderColor: "color-mix(in oklab, var(--border) 50%, transparent)" }}>
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: "color-mix(in oklab, var(--primary) 8%, transparent)" }}>
+          <div className="h-8 w-8 flex shrink-0 items-center justify-center rounded-lg" style={{ background: "color-mix(in oklab, var(--primary) 8%, transparent)" }}>
             {getIcon(entry.content_type, fileMetas)}
           </div>
           <div className="min-w-0 flex-1">
@@ -657,7 +657,7 @@ export const EntryCard = memo(function EntryCard({
               ? "bg-primary border-primary text-primary-foreground"
               : "border-muted-foreground/40"
           )}>
-            {isMultiSelected && <Check className="h-3 w-3" />}
+            {isMultiSelected && <Check size={12} />}
           </div>
         </div>
       )}
@@ -680,7 +680,7 @@ export const EntryCard = memo(function EntryCard({
                   title={t("askAi.askAi")}
                   aria-label={t("askAi.askAi")}
                 >
-                  <Sparkles className="h-3 w-3" />
+                  <Sparkle size={12} />
                 </button>
               )}
               <button
@@ -692,7 +692,7 @@ export const EntryCard = memo(function EntryCard({
                 title={t("contextMenu.paste")}
                 aria-label={t("contextMenu.paste")}
               >
-                <ClipboardPaste className="h-3 w-3" />
+                <ClipboardText size={12} />
               </button>
               {isFilePaths && (
                 <button
@@ -704,7 +704,7 @@ export const EntryCard = memo(function EntryCard({
                   title={t("contextMenu.previewFile")}
                   aria-label={t("contextMenu.previewFile")}
                 >
-                  <Eye className="h-3 w-3" />
+                  <Eye size={12} />
                 </button>
               )}
               {(hasText || isImage) && (
@@ -721,7 +721,7 @@ export const EntryCard = memo(function EntryCard({
                   title={isImage ? t("contextMenu.viewImage") : t("contextMenu.viewFull")}
                   aria-label={isImage ? t("contextMenu.viewImage") : t("contextMenu.viewFull")}
                 >
-                  {isImage ? <Eye className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
+                  {isImage ? <Eye size={12} /> : <ArrowsOut size={12} />}
                 </button>
               )}
               <button
@@ -733,7 +733,7 @@ export const EntryCard = memo(function EntryCard({
                 title={entry.is_pinned ? t("entryCard.unpin") : t("entryCard.pin")}
                 aria-label={entry.is_pinned ? t("entryCard.unpin") : t("entryCard.pin")}
               >
-                <Pin className={cn("h-3 w-3", entry.is_pinned && "fill-current")} />
+                <PushPin className={cn("h-3 w-3", entry.is_pinned && "fill-current")} />
               </button>
               <button
                 onClick={handleToggleFavorite}
@@ -791,19 +791,19 @@ export const EntryCard = memo(function EntryCard({
             )}
             {entry.is_pinned && (
               <span className="text-primary">
-                <Pin className="h-2.5 w-2.5 fill-current" />
+                <PushPin size={10} className="fill-current" />
               </span>
             )}
             {entry.is_favorite && (
               <span className="text-yellow-400">
-                <Star className="h-2.5 w-2.5 fill-current" />
+                <Star size={10} className="fill-current" />
               </span>
             )}
             {entry.sync_status !== "Local" && (
               <span className="inline-flex items-center">
-                {entry.sync_status === "Synced" && <Cloud className="w-2.5 h-2.5 text-green-400/70" />}
-                {entry.sync_status === "PendingSync" && <Upload className="w-2.5 h-2.5 text-blue-400/70" />}
-                {entry.sync_status === "Conflict" && <CloudAlert className="w-2.5 h-2.5 text-amber-400/70" />}
+                {entry.sync_status === "Synced" && <Cloud size={10} className="text-green-400/70" />}
+                {entry.sync_status === "PendingSync" && <Upload size={10} className="text-blue-400/70" />}
+                {entry.sync_status === "Conflict" && <CloudWarning size={10} className="text-amber-400/70" />}
               </span>
             )}
             {showTranslateHint && (
@@ -811,7 +811,7 @@ export const EntryCard = memo(function EntryCard({
                 onClick={(e) => { e.stopPropagation(); openDetailWindow(entry.id, "translate"); }}
                 className="meta-pill inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground hover:underline transition-all"
               >
-                <Languages className="h-2.5 w-2.5" />
+                <Translate size={10} />
                 <span>{t("viewer.translateHint")}</span>
               </button>
             )}
@@ -827,7 +827,7 @@ export const EntryCard = memo(function EntryCard({
                 }}
                 className="meta-pill inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground hover:underline transition-all"
               >
-                <ExternalLink className="h-2.5 w-2.5" />
+                <ArrowSquareOut size={10} />
                 <span>{urls.length > 1 ? `${urls.length} URLs` : truncateUrl(urls[0], 24)}</span>
               </button>
             )}
@@ -841,7 +841,7 @@ export const EntryCard = memo(function EntryCard({
                   onClick={(e) => { e.stopPropagation(); removeTag(entry.id, tag); }}
                   className="hover:text-red-400 transition-colors"
                 >
-                  <X className="w-2 h-2" />
+                  <X size={8} />
                 </button>
               </span>
             ))}
@@ -879,9 +879,9 @@ export const EntryCard = memo(function EntryCard({
                 </button>
                 <button
                   onClick={closeTagInput}
-                  className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
+                  className="h-8 w-8 flex items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
                 >
-                  <X className="h-3 w-3" />
+                  <X size={12} />
                 </button>
               </div>
 
@@ -934,7 +934,7 @@ export const EntryCard = memo(function EntryCard({
             <div className="flex items-center justify-between px-3 py-2 border-b border-border/50">
               <span className="text-sm font-medium">{t("contextMenu.openInBrowser")} ({urls.length})</span>
               <button onClick={() => setShowUrlPicker(false)} className="text-muted-foreground hover:text-foreground">
-                <X className="w-3.5 h-3.5" />
+                <X size={14} />
               </button>
             </div>
             <div className="overflow-y-auto max-h-48 p-1">
@@ -947,7 +947,7 @@ export const EntryCard = memo(function EntryCard({
                     setShowUrlPicker(false);
                   }}
                 >
-                  <ExternalLink className="w-3.5 h-3.5 shrink-0 text-blue-400" />
+                  <ArrowSquareOut size={14} className="shrink-0 text-blue-400" />
                   <span className="truncate text-foreground">{truncateUrl(url, 50)}</span>
                 </button>
               ))}

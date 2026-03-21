@@ -2,15 +2,15 @@ import { useEffect, useState } from "react";
 import {
   Cloud,
   Plus,
-  RefreshCw,
+  ArrowsClockwise,
   Check,
   X,
   Lock,
-  Loader2,
-  CloudOff,
+  SpinnerGap,
+  CloudSlash,
   Pencil,
-  Trash2,
-} from "lucide-react";
+  Trash,
+} from "@phosphor-icons/react";
 import { useSyncStore } from "@/stores/syncStore";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -223,7 +223,7 @@ export function SyncTab() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Cloud className="h-3.5 w-3.5 text-muted-foreground" />
+                  <Cloud size={14} className="text-muted-foreground" />
                   <span className="text-sm font-medium capitalize text-foreground">
                     {acc.provider === "google_drive"
                       ? "Google Drive"
@@ -257,7 +257,7 @@ export function SyncTab() {
                 {acc.encryption_enabled && (
                   <>
                     <span>·</span>
-                    <Lock className="h-3 w-3" />
+                    <Lock size={12} />
                   </>
                 )}
               </div>
@@ -268,14 +268,14 @@ export function SyncTab() {
                   disabled={syncStatus === "syncing"}
                 >
                   {syncStatus === "syncing" ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <SpinnerGap size={12} className="animate-spin" />
                   ) : (
-                    <RefreshCw className="h-3 w-3" />
+                    <ArrowsClockwise size={12} />
                   )}
                   {t("sync.syncNow")}
                 </SettingsButton>
                 <SettingsButton onClick={() => handleEdit(acc)}>
-                  <Pencil className="h-3 w-3" />
+                  <Pencil size={12} />
                   {t("sync.edit")}
                 </SettingsButton>
                 <SettingsButton
@@ -285,7 +285,7 @@ export function SyncTab() {
                     toast.success(t("sync.delete"));
                   }}
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <Trash size={12} />
                   {t("sync.delete")}
                 </SettingsButton>
               </div>
@@ -296,13 +296,13 @@ export function SyncTab() {
           <div className="flex items-center justify-between px-5 py-2 text-xs text-muted-foreground">
             <div className="flex items-center gap-1.5">
               {syncStatus === "syncing" && (
-                <Loader2 className="h-3 w-3 animate-spin text-blue-400" />
+                <SpinnerGap size={12} className="animate-spin text-blue-400" />
               )}
               {syncStatus === "synced" && (
-                <Cloud className="h-3 w-3 text-green-400" />
+                <Cloud size={12} className="text-green-400" />
               )}
               {syncStatus === "error" && (
-                <CloudOff className="h-3 w-3 text-red-400" />
+                <CloudSlash size={12} className="text-red-400" />
               )}
               <span>
                 {syncStatus === "syncing"
@@ -321,7 +321,7 @@ export function SyncTab() {
 
           <div className="px-5 py-3">
             <SettingsButton onClick={() => setShowAddForm(true)}>
-              <Plus className="h-3 w-3" />
+              <Plus size={12} />
               {t("sync.addAccount")}
             </SettingsButton>
           </div>
@@ -381,11 +381,11 @@ export function SyncTab() {
       {/* Empty state */}
       {accounts.length === 0 && !showAddForm && (
         <div className="flex flex-col items-center justify-center gap-3 py-8 text-muted-foreground/70">
-          <Cloud className="h-8 w-8 text-muted-foreground/40" />
+          <Cloud size={32} className="text-muted-foreground/40" />
           <p className="text-sm">{t("sync.noAccounts")}</p>
           <p className="text-xs">{t("sync.noAccountsDesc")}</p>
           <SettingsButton tone="primary" onClick={() => setShowAddForm(true)}>
-            <Plus className="h-3 w-3" />
+            <Plus size={12} />
             {t("sync.addAccount")}
           </SettingsButton>
         </div>
@@ -427,7 +427,7 @@ export function SyncTab() {
                   <SettingsInput type="password" placeholder={t("sync.clientSecret")} value={oauthClientSecret} onChange={(e) => setOauthClientSecret(e.target.value)} className="settings-input-standalone" />
                 )}
                 <SettingsButton onClick={handleOAuth} disabled={authorizing || !oauthClientId}>
-                  {authorizing && <Loader2 className="h-3 w-3 animate-spin" />}
+                  {authorizing && <SpinnerGap size={12} className="animate-spin" />}
                   {oauthTokens ? t("sync.authorized") : t("sync.authorize")}
                 </SettingsButton>
               </div>
@@ -489,7 +489,7 @@ export function SyncTab() {
                 resetForm();
               }}
             >
-              <X className="h-3 w-3" />
+              <X size={12} />
               {t("template.cancel")}
             </SettingsButton>
             <SettingsButton
@@ -497,9 +497,9 @@ export function SyncTab() {
               disabled={saving}
             >
               {saving ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
+                <SpinnerGap size={12} className="animate-spin" />
               ) : (
-                <Check className="h-3 w-3" />
+                <Check size={12} />
               )}
               {t("sync.save")}
             </SettingsButton>
@@ -510,9 +510,9 @@ export function SyncTab() {
                 className="ml-auto"
               >
                 {testing ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <SpinnerGap size={12} className="animate-spin" />
                 ) : (
-                  <RefreshCw className="h-3 w-3" />
+                  <ArrowsClockwise size={12} />
                 )}
                 {t("sync.testConnection")}
               </SettingsButton>

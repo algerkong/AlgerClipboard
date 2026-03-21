@@ -1,5 +1,5 @@
 import { type ComponentType, useEffect, useMemo, useState } from "react";
-import { Globe, FolderOpen, SquareTerminal, Monitor, Code2 } from "lucide-react";
+import { Globe, FolderOpen, Terminal, Monitor, Code } from "@phosphor-icons/react";
 import { openUrl } from "@/services/settingsService";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -28,12 +28,12 @@ const APP_BADGE_MAP: Record<string, AppBadgeMeta> = {
   Firefox: { label: "F", className: "bg-orange-500/18 text-orange-300 border border-orange-500/25" },
   Safari: { label: "S", className: "bg-sky-500/18 text-sky-300 border border-sky-500/25" },
   Arc: { label: "A", className: "bg-fuchsia-500/18 text-fuchsia-300 border border-fuchsia-500/25" },
-  "VS Code": { label: "VS", className: "bg-sky-500/18 text-sky-300 border border-sky-500/25", icon: Code2 },
+  "VS Code": { label: "VS", className: "bg-sky-500/18 text-sky-300 border border-sky-500/25", icon: Code },
   Finder: { label: "F", className: "bg-blue-500/18 text-blue-300 border border-blue-500/25", icon: FolderOpen },
   "File Explorer": { label: "FE", className: "bg-yellow-500/18 text-yellow-300 border border-yellow-500/25", icon: FolderOpen },
-  Terminal: { label: "T", className: "bg-zinc-500/18 text-zinc-300 border border-zinc-500/25", icon: SquareTerminal },
-  iTerm: { label: "IT", className: "bg-zinc-500/18 text-zinc-300 border border-zinc-500/25", icon: SquareTerminal },
-  WezTerm: { label: "W", className: "bg-zinc-500/18 text-zinc-300 border border-zinc-500/25", icon: SquareTerminal },
+  Terminal: { label: "T", className: "bg-zinc-500/18 text-zinc-300 border border-zinc-500/25", icon: Terminal },
+  iTerm: { label: "IT", className: "bg-zinc-500/18 text-zinc-300 border border-zinc-500/25", icon: Terminal },
+  WezTerm: { label: "W", className: "bg-zinc-500/18 text-zinc-300 border border-zinc-500/25", icon: Terminal },
 };
 
 function getAppBadgeMeta(sourceApp: string): AppBadgeMeta {
@@ -120,7 +120,7 @@ export function SourceBadge({
               badgeMeta.className,
             )}
           >
-            {badgeMeta.icon ? <BadgeIcon className="h-2.5 w-2.5" /> : badgeMeta.label}
+            {badgeMeta.icon ? <BadgeIcon size={10} /> : badgeMeta.label}
           </span>
         )}
       </span>

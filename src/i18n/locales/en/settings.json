@@ -203,6 +203,25 @@
         }
       }
     },
+    "tabPlugins": "Plugins",
+    "plugins": {
+      "installed": "Installed Plugins",
+      "noPlugins": "No plugins installed",
+      "enable": "Enable",
+      "disable": "Disable",
+      "remove": "Remove",
+      "permissions": "Permissions",
+      "version": "Version",
+      "author": "Author",
+      "installFromFolder": "Install from folder...",
+      "confirmRemove": "Are you sure you want to remove this plugin?",
+      "permissionConfirm": "This plugin requests the following permissions:",
+      "grant": "Grant",
+      "deny": "Deny",
+      "openPluginDir": "Open plugins folder",
+      "refresh": "Refresh",
+      "restartHint": "Plugin enabled. Restart Spotlight (press Esc then reopen) to take effect."
+    },
     "tabOcr": "OCR",
     "tabAi": "AI",
     "tabAskAi": "Ask AI",
@@ -268,6 +287,7 @@
     "ocrDesc": "Manage OCR engines, default recognition flow, and local runtimes.",
     "dataDesc": "Review clipboard stats, import or export history, and maintain cache storage.",
     "aiDesc": "Choose AI providers, models, summaries, and prompt behavior.",
-    "askAiDesc": "Organize Ask AI services and the preset actions shown in the menu."
+    "askAiDesc": "Organize Ask AI services and the preset actions shown in the menu.",
+    "pluginsDesc": "Manage installed plugins"
   }
 }

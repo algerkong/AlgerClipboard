@@ -39,7 +39,10 @@
       "app_name": "应用名称",
       "app_path": "应用路径",
       "browse": "浏览",
-      "refresh_apps": "刷新应用列表"
+      "refresh_apps": "刷新应用列表",
+      "auto_translate_clipboard": "打开翻译时自动翻译剪贴板内容",
+      "prefixes": "前缀触发器",
+      "prefixes_desc": "输入前缀+空格快速切换模式"
     }
   }
 }

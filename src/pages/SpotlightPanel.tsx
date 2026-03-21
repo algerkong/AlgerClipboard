@@ -9,6 +9,7 @@ import { SpotlightFooter } from "@/components/spotlight/SpotlightFooter";
 import { clipboardMode } from "@/spotlight/clipboardMode";
 import { appMode } from "@/spotlight/appMode";
 import { translateMode } from "@/spotlight/translateMode";
+import { loadAllPlugins } from "@/plugin_system/loader";
 import { hideSpotlightWindow } from "@/services/spotlightWindowService";
 import { getSetting } from "@/services/settingsService";
 
@@ -58,12 +59,16 @@ export function SpotlightPanel() {
     document.body.style.overflow = "hidden";
   }, []);
 
-  // Register built-in modes
+  const loadPrefixes = useSpotlightStore((s) => s.loadPrefixes);
+
+  // Register built-in modes + load prefixes
   useEffect(() => {
     registerMode(clipboardMode);
     registerMode(appMode);
     registerMode(translateMode);
-  }, [registerMode]);
+    loadPrefixes();
+    loadAllPlugins();
+  }, [registerMode, loadPrefixes]);
 
   useEffect(() => {
     loadSettings();
@@ -81,36 +86,66 @@ export function SpotlightPanel() {
 
   // Listen for spotlight-activate events from Rust
   useEffect(() => {
-    const unlisten = listen<{ mode: string }>("spotlight-activate", (event) => {
+    const unlisten = listen<{ mode: string }>("spotlight-activate", async (event) => {
       activate(event.payload.mode);
+
+      // Auto-fill clipboard text when opening translate mode
+      if (event.payload.mode === "translate") {
+        try {
+          const autoTranslate = (await getSetting("spotlight_auto_translate_clipboard")) !== "false";
+          if (autoTranslate) {
+            const clipText = await navigator.clipboard.readText();
+            if (clipText && clipText.trim().length > 0 && clipText.trim().length < 2000) {
+              useSpotlightStore.setState({ query: clipText.trim() });
+            }
+          }
+        } catch {
+          // Clipboard read may fail without permission
+        }
+      }
     });
     return () => {
       unlisten.then((fn) => fn());
     };
   }, [activate]);
 
-  // Query debounce
+  const checkPrefix = useSpotlightStore((s) => s.checkPrefix);
+
+  // Query debounce — use prefix routing to determine which mode to query
+  const lastActiveModeRef = useRef(mode);
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    const currentMode = modes.get(mode);
-    if (!currentMode) return;
+    const { activeMode, searchQuery } = checkPrefix(query);
+    const targetMode = modes.get(activeMode);
+    if (!targetMode) return;
+
+    // When mode changes via prefix (e.g. typing "tt "), clear results immediately
+    if (activeMode !== lastActiveModeRef.current) {
+      lastActiveModeRef.current = activeMode;
+      setResults([]);
+    }
 
     setLoading(true);
     debounceRef.current = setTimeout(async () => {
       try {
-        const newResults = await currentMode.onQuery(query);
-        setResults(newResults);
+        const newResults = await targetMode.onQuery(searchQuery);
+        const currentResults = useSpotlightStore.getState().results;
+        if (newResults.length > 0 || currentResults.length === 0) {
+          setResults(newResults);
+        } else {
+          setLoading(false);
+        }
       } catch (err) {
         console.error("Spotlight query error:", err);
         setResults([]);
       }
-    }, currentMode.debounceMs ?? 200);
+    }, targetMode.debounceMs ?? 200);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [query, mode, modes, setResults, setLoading]);
+  }, [query, mode, modes, setResults, setLoading, checkPrefix]);
 
   const dismissSpotlight = useCallback(async () => {
     const clearOnHide = (await getSetting("spotlight_clear_on_hide")) === "true";

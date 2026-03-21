@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { X, Copy, Code, Eye } from "lucide-react";
+import { X, Copy, Code, Eye } from "@phosphor-icons/react";
 import DOMPurify from "dompurify";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -69,7 +69,7 @@ export function TextViewer({ text, htmlContent, onClose }: Props) {
                 className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs2 font-medium text-purple-400 bg-purple-400/10 hover:bg-purple-400/20 transition-colors"
                 title={viewMode === "rendered" ? t("viewer.viewSource") : t("viewer.viewRendered")}
               >
-                {viewMode === "rendered" ? <Code className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                {viewMode === "rendered" ? <Code size={12} /> : <Eye size={12} />}
                 {viewMode === "rendered" ? t("viewer.viewSource") : t("viewer.viewRendered")}
               </button>
             )}
@@ -78,13 +78,13 @@ export function TextViewer({ text, htmlContent, onClose }: Props) {
               className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
               title={t("viewer.copy")}
             >
-              <Copy className="w-3.5 h-3.5" />
+              <Copy size={14} />
             </button>
             <button
               onClick={onClose}
               className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
             >
-              <X className="w-3.5 h-3.5" />
+              <X size={14} />
             </button>
           </div>
         </div>

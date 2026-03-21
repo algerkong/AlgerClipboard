@@ -19,7 +19,7 @@ import {
 } from "./shared";
 import { SettingsSection, SettingsRow } from "./shared";
 import { StyledSelect } from "@/components/ui/styled-select";
-import { X } from "lucide-react";
+import { X } from "@phosphor-icons/react";
 
 type RecordingTarget =
   | "clipboard"
@@ -38,6 +38,8 @@ export function SpotlightTab() {
   const [enterBehavior, setEnterBehavior] = useState("paste");
   const [maxResults, setMaxResults] = useState("8");
   const [recording, setRecording] = useState<RecordingTarget>(null);
+  const [autoTranslateClipboard, setAutoTranslateClipboard] = useState(true);
+  const [prefixes, setPrefixes] = useState<Record<string, string>>({ cc: "clipboard", tt: "translate", aa: "app" });
   const [customApps, setCustomApps] = useState<AppEntry[]>([]);
   const [newAppName, setNewAppName] = useState("");
   const [newAppPath, setNewAppPath] = useState("");
@@ -45,7 +47,7 @@ export function SpotlightTab() {
   // Load settings
   useEffect(() => {
     const load = async () => {
-      const [en, cs, as2, ts, coh, eb, mr] = await Promise.all([
+      const [en, cs, as2, ts, coh, eb, mr, atc, pf] = await Promise.all([
         getSetting("spotlight_enabled"),
         getSetting("spotlight_clipboard_shortcut"),
         getSetting("spotlight_app_shortcut"),
@@ -53,6 +55,8 @@ export function SpotlightTab() {
         getSetting("spotlight_clear_on_hide"),
         getSetting("spotlight_enter_behavior"),
         getSetting("spotlight_max_results"),
+        getSetting("spotlight_auto_translate_clipboard"),
+        getSetting("spotlight_prefixes"),
       ]);
       if (en !== null) setEnabled(en !== "false");
       if (cs) setClipboardShortcut(cs);
@@ -61,6 +65,10 @@ export function SpotlightTab() {
       if (coh !== null) setClearOnHide(coh === "true");
       if (eb) setEnterBehavior(eb);
       if (mr) setMaxResults(mr);
+      if (atc !== null) setAutoTranslateClipboard(atc !== "false");
+      if (pf) {
+        try { setPrefixes(JSON.parse(pf)); } catch { /* use defaults */ }
+      }
 
       const apps = await getCustomApps();
       setCustomApps(apps);
@@ -120,6 +128,12 @@ export function SpotlightTab() {
     invoke("update_spotlight_shortcuts", {}).catch(() => {});
   };
 
+  const handleAutoTranslateClipboardChange = async () => {
+    const next = !autoTranslateClipboard;
+    setAutoTranslateClipboard(next);
+    await updateSetting("spotlight_auto_translate_clipboard", String(next));
+  };
+
   const handleClearOnHideChange = async () => {
     const next = !clearOnHide;
     setClearOnHide(next);
@@ -136,6 +150,19 @@ export function SpotlightTab() {
     if (isNaN(num) || num < 1 || num > 20) return;
     setMaxResults(value);
     await updateSetting("spotlight_max_results", value);
+  };
+
+  const handlePrefixChange = async (prefix: string, modeId: string) => {
+    const next = { ...prefixes };
+    // Remove any existing prefix pointing to this mode
+    for (const [k, v] of Object.entries(next)) {
+      if (v === modeId) delete next[k];
+    }
+    if (prefix.trim()) {
+      next[prefix.trim().toLowerCase()] = modeId;
+    }
+    setPrefixes(next);
+    await updateSetting("spotlight_prefixes", JSON.stringify(next));
   };
 
   const handleAddCustomApp = async () => {
@@ -202,6 +229,13 @@ export function SpotlightTab() {
         />
 
         <SettingsRow
+          title={t("spotlight.settings.auto_translate_clipboard")}
+          control={
+            <Toggle value={autoTranslateClipboard} onChange={handleAutoTranslateClipboardChange} />
+          }
+        />
+
+        <SettingsRow
           title={t("spotlight.settings.enter_behavior")}
           control={
             <StyledSelect
@@ -247,6 +281,28 @@ export function SpotlightTab() {
           translateShortcut,
           "translate",
         )}
+      </SettingsSection>
+
+      {/* ─── Prefixes ─── */}
+      <SettingsSection title={t("spotlight.settings.prefixes")}>
+        {["clipboard", "app", "translate"].map((modeId) => {
+          const currentPrefix = Object.entries(prefixes).find(([, v]) => v === modeId)?.[0] ?? "";
+          return (
+            <SettingsRow
+              key={modeId}
+              title={t(`spotlight.mode.${modeId}`)}
+              control={
+                <input
+                  type="text"
+                  value={currentPrefix}
+                  onChange={(e) => handlePrefixChange(e.target.value, modeId)}
+                  placeholder="cc"
+                  className="w-20 rounded-md border border-border bg-background px-2 py-1 text-sm text-center font-mono"
+                />
+              }
+            />
+          );
+        })}
       </SettingsSection>
 
       {/* ─── Custom Apps ─── */}
@@ -297,7 +353,7 @@ export function SpotlightTab() {
                   onClick={() => handleRemoveCustomApp(app.id)}
                   className="ml-2 rounded p-1 text-muted-foreground hover:text-destructive hover:bg-muted transition-colors"
                 >
-                  <X className="h-4 w-4" />
+                  <X size={16} />
                 </button>
               </div>
             ))}

@@ -1,5 +1,13 @@
 import { create } from "zustand";
 import type { SpotlightMode, SpotlightResult } from "@/spotlight/types";
+import { getSetting } from "@/services/settingsService";
+
+// Default prefix → mode mapping
+const DEFAULT_PREFIXES: Record<string, string> = {
+  cc: "clipboard",
+  tt: "translate",
+  aa: "app",
+};
 
 interface SpotlightState {
   visible: boolean;
@@ -9,6 +17,7 @@ interface SpotlightState {
   selectedIndex: number;
   loading: boolean;
   modes: Map<string, SpotlightMode>;
+  prefixes: Record<string, string>; // prefix → modeId
 
   activate: (mode: string) => void;
   hide: () => void;
@@ -20,16 +29,19 @@ interface SpotlightState {
   executeSelected: () => Promise<void>;
   switchMode: (direction: 1 | -1) => void;
   registerMode: (mode: SpotlightMode) => void;
+  loadPrefixes: () => Promise<void>;
+  checkPrefix: (input: string) => { activeMode: string; searchQuery: string };
 }
 
 export const useSpotlightStore = create<SpotlightState>((set, get) => ({
   visible: false,
-  mode: "clipboard",
+  mode: "app",
   query: "",
   results: [],
   selectedIndex: 0,
   loading: false,
   modes: new Map(),
+  prefixes: { ...DEFAULT_PREFIXES },
 
   registerMode: (mode) => {
     set((state) => {
@@ -39,10 +51,42 @@ export const useSpotlightStore = create<SpotlightState>((set, get) => ({
     });
   },
 
+  loadPrefixes: async () => {
+    try {
+      const json = await getSetting("spotlight_prefixes");
+      if (json) {
+        const parsed = JSON.parse(json);
+        if (typeof parsed === "object" && parsed !== null) {
+          set({ prefixes: parsed });
+          return;
+        }
+      }
+    } catch { /* use defaults */ }
+    set({ prefixes: { ...DEFAULT_PREFIXES } });
+  },
+
+  /**
+   * Parse input for prefix routing. Returns the active mode and the actual search query.
+   * Does NOT mutate state — the caller uses this to determine which mode's onQuery to call.
+   * e.g. "tt hello" → { activeMode: "translate", searchQuery: "hello" }
+   * e.g. "hello"    → { activeMode: current mode, searchQuery: "hello" }
+   */
+  checkPrefix: (input: string) => {
+    const { prefixes, mode } = get();
+    const spaceIdx = input.indexOf(" ");
+    if (spaceIdx >= 1) {
+      const prefix = input.slice(0, spaceIdx).toLowerCase();
+      const targetMode = prefixes[prefix];
+      if (targetMode) {
+        return { activeMode: targetMode, searchQuery: input.slice(spaceIdx + 1) };
+      }
+    }
+    return { activeMode: mode, searchQuery: input };
+  },
+
   activate: (mode) => {
     const state = get();
     if (state.visible && state.mode === mode) {
-      // Same mode pressed again → clear and restart
       set({ query: "", results: [], selectedIndex: 0 });
     } else {
       set({ visible: true, mode, query: "", results: [], selectedIndex: 0 });
@@ -70,8 +114,9 @@ export const useSpotlightStore = create<SpotlightState>((set, get) => ({
     })),
 
   executeSelected: async () => {
-    const { mode, modes, results, selectedIndex } = get();
-    const m = modes.get(mode);
+    const { query, modes, results, selectedIndex } = get();
+    const { activeMode } = get().checkPrefix(query);
+    const m = modes.get(activeMode);
     const result = results[selectedIndex];
     if (m && result) {
       await m.onSelect(result);

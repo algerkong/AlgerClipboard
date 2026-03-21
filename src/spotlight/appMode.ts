@@ -20,10 +20,10 @@ function appToResult(app: AppEntry): SpotlightResult {
 export const appMode: SpotlightMode = {
   id: "app",
   name: "spotlight.mode.app",
-  icon: "lucide:layout-grid",
+  icon: "ph:squares-four",
   placeholder: "spotlight.placeholder.app",
   shortcutSettingKey: "spotlight_app_shortcut",
-  debounceMs: 200,
+  debounceMs: 50,
 
   onQuery: async (query: string): Promise<SpotlightResult[]> => {
     if (!query.trim()) {

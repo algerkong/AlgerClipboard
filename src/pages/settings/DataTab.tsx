@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import {
   Download,
   Upload,
-  Trash2,
+  Trash,
   FolderOpen,
-  Loader2,
-} from "lucide-react";
+  SpinnerGap,
+} from "@phosphor-icons/react";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import {
   exportData,
@@ -230,7 +230,7 @@ export function DataTab() {
               }
             }}
           >
-            <Download className="h-3 w-3" />
+            <Download size={12} />
             JSON
           </SettingsButton>
           <SettingsButton
@@ -249,7 +249,7 @@ export function DataTab() {
               }
             }}
           >
-            <Download className="h-3 w-3" />
+            <Download size={12} />
             CSV
           </SettingsButton>
           <SettingsButton
@@ -268,7 +268,7 @@ export function DataTab() {
               }
             }}
           >
-            <Download className="h-3 w-3" />
+            <Download size={12} />
             TXT
           </SettingsButton>
           <SettingsButton
@@ -287,7 +287,7 @@ export function DataTab() {
               }
             }}
           >
-            <Download className="h-3 w-3" />
+            <Download size={12} />
             HTML
           </SettingsButton>
           <SettingsButton
@@ -310,7 +310,7 @@ export function DataTab() {
               input.click();
             }}
           >
-            <Upload className="h-3 w-3" />
+            <Upload size={12} />
             {t("settings.import")}
           </SettingsButton>
           <SettingsButton
@@ -325,7 +325,7 @@ export function DataTab() {
               }
             }}
           >
-            <Trash2 className="h-3 w-3" />
+            <Trash size={12} />
             {t("settings.clearHistory")}
           </SettingsButton>
         </div>
@@ -336,7 +336,7 @@ export function DataTab() {
         {cacheInfo && (
           <>
             <div className="flex flex-wrap items-center gap-2 px-5 py-3 text-sm">
-              <FolderOpen className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <FolderOpen size={14} className="shrink-0 text-muted-foreground" />
               <span
                 className="flex-1 truncate text-xs text-muted-foreground"
                 title={cacheInfo.cache_dir}
@@ -355,7 +355,7 @@ export function DataTab() {
                 disabled={migrating}
               >
                 {migrating ? (
-                  <Loader2 className="inline h-3 w-3 animate-spin" />
+                  <SpinnerGap size={12} className="inline animate-spin" />
                 ) : (
                   t("settings.changeCacheDir")
                 )}
@@ -412,7 +412,7 @@ export function DataTab() {
                   }
                 }}
               >
-                <Trash2 className="h-3 w-3" />
+                <Trash size={12} />
                 {t("settings.cleanupCache")}
               </SettingsButton>
             </div>

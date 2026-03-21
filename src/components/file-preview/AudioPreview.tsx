@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Music } from "lucide-react";
+import { MusicNote } from "@phosphor-icons/react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import type { FileMeta } from "@/types";
 import { PreviewHeader } from "./PreviewHeader";
@@ -26,7 +26,7 @@ export function AudioPreview({ file, onBack }: AudioPreviewProps) {
       <PreviewHeader file={file} onBack={onBack} />
       <div className="flex flex-1 flex-col items-center justify-center gap-6 bg-background/50 p-8">
         <div className="flex h-24 w-24 items-center justify-center rounded-2xl border border-border/40 bg-card/50">
-          <Music className="h-12 w-12 text-pink-400" />
+          <MusicNote size={48} className="text-pink-400" />
         </div>
         <div className="text-center">
           <p className="text-sm font-medium text-foreground">{file.name}</p>

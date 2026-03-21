@@ -8,6 +8,7 @@ mod storage;
 mod sync;
 mod translate;
 mod search;
+mod plugin_system;
 
 use clipboard::entry::ContentType;
 use clipboard::monitor::ClipboardMonitor;
@@ -102,7 +103,7 @@ fn create_spotlight_window<R: tauri::Runtime>(
     // Extra 80px on each axis for CSS shadow to render without clipping
     let builder = tauri::WebviewWindowBuilder::new(app, "spotlight", url)
         .title("Spotlight")
-        .inner_size(760.0, 600.0)
+        .inner_size(840.0, 680.0)
         .resizable(false)
         .always_on_top(true)
         .visible(false)
@@ -272,6 +273,20 @@ pub fn run() {
             // Spotlight app launcher scanner
             let scanner = Arc::new(app_launcher::scanner::AppScanner::new());
             app.manage::<commands::app_launcher_cmd::AppScannerState>(scanner);
+
+            let plugin_dir = app_data_dir.join("plugins");
+            let mut plugin_manager = plugin_system::manager::PluginManager::new(plugin_dir, db.clone());
+            plugin_manager.set_app_handle(app.handle().clone());
+            plugin_manager.scan();
+            for info in plugin_manager.list_plugins() {
+                if info.enabled {
+                    if let Err(e) = plugin_manager.load(&info.id) {
+                        log::warn!("Failed to auto-load plugin '{}': {}", info.id, e);
+                    }
+                }
+            }
+            let plugin_manager_state: commands::plugin_cmd::PluginManagerState = Arc::new(std::sync::Mutex::new(plugin_manager));
+            app.manage(plugin_manager_state);
 
             let device_id = match db.get_setting("device_id") {
                 Ok(Some(id)) => id,
@@ -666,6 +681,7 @@ pub fn run() {
             commands::template_cmd::delete_template,
             commands::template_cmd::apply_template,
             commands::translate_cmd::translate_text,
+            commands::translate_cmd::translate_all,
             commands::translate_cmd::get_translate_engines,
             commands::translate_cmd::configure_translate_engine,
             commands::sync_cmd::get_sync_accounts,
@@ -740,6 +756,17 @@ pub fn run() {
             commands::search_cmd::get_search_history,
             commands::search_cmd::delete_search_history,
             commands::search_cmd::clear_search_history,
+            commands::plugin_cmd::list_plugins,
+            commands::plugin_cmd::scan_plugins,
+            commands::plugin_cmd::enable_plugin,
+            commands::plugin_cmd::disable_plugin,
+            commands::plugin_cmd::remove_plugin,
+            commands::plugin_cmd::invoke_plugin_command,
+            commands::plugin_cmd::get_plugin_settings,
+            commands::plugin_cmd::set_plugin_setting,
+            commands::plugin_cmd::grant_plugin_permissions,
+            commands::plugin_cmd::get_plugin_permissions,
+            commands::plugin_cmd::get_plugin_dir,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
