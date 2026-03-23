@@ -29,6 +29,22 @@
     "trae-cn": ["Trae CN"],
     antigravity: ["Antigravity"],
     zed: ["Zed"],
+    // JetBrains IDEs
+    idea: ["IntelliJ IDEA", "IntelliJ"],
+    "idea-ce": ["IntelliJ IDEA Community", "IntelliJ"],
+    pycharm: ["PyCharm Professional", "PyCharm"],
+    "pycharm-ce": ["PyCharm Community", "PyCharm"],
+    goland: ["GoLand"],
+    webstorm: ["WebStorm"],
+    clion: ["CLion"],
+    phpstorm: ["PhpStorm"],
+    rustrover: ["RustRover"],
+    rider: ["Rider"],
+    datagrip: ["DataGrip"],
+    rubymine: ["RubyMine"],
+    dataspell: ["DataSpell"],
+    aqua: ["Aqua"],
+    "android-studio": ["Android Studio"],
   };
 
   function loadIdeIcons() {

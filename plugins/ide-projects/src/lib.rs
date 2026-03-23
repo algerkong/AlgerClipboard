@@ -29,23 +29,54 @@ fn host_log(level: c_int, msg: &str) {
 
 // ---- IDE definitions ----
 
+#[derive(Clone, PartialEq)]
+enum IdeKind { VsCodeFork, Zed, JetBrains }
+
 #[derive(Clone)]
 struct IdeInfo {
     id: &'static str,
     name: &'static str,
     dir_name: &'static str,
     cli: &'static str,
-    is_vscode_fork: bool,
+    kind: IdeKind,
 }
 
+// VS Code forks + Zed
 const IDES: &[IdeInfo] = &[
-    IdeInfo { id: "code", name: "VS Code", dir_name: "Code", cli: "code", is_vscode_fork: true },
-    IdeInfo { id: "cursor", name: "Cursor", dir_name: "Cursor", cli: "cursor", is_vscode_fork: true },
-    IdeInfo { id: "windsurf", name: "Windsurf", dir_name: "Windsurf", cli: "windsurf", is_vscode_fork: true },
-    IdeInfo { id: "trae", name: "Trae", dir_name: "Trae", cli: "trae", is_vscode_fork: true },
-    IdeInfo { id: "trae-cn", name: "Trae CN", dir_name: "Trae CN", cli: "trae", is_vscode_fork: true },
-    IdeInfo { id: "antigravity", name: "Antigravity", dir_name: "Antigravity", cli: "antigravity", is_vscode_fork: true },
-    IdeInfo { id: "zed", name: "Zed", dir_name: "Zed", cli: "zed", is_vscode_fork: false },
+    IdeInfo { id: "code", name: "VS Code", dir_name: "Code", cli: "code", kind: IdeKind::VsCodeFork },
+    IdeInfo { id: "cursor", name: "Cursor", dir_name: "Cursor", cli: "cursor", kind: IdeKind::VsCodeFork },
+    IdeInfo { id: "windsurf", name: "Windsurf", dir_name: "Windsurf", cli: "windsurf", kind: IdeKind::VsCodeFork },
+    IdeInfo { id: "trae", name: "Trae", dir_name: "Trae", cli: "trae", kind: IdeKind::VsCodeFork },
+    IdeInfo { id: "trae-cn", name: "Trae CN", dir_name: "Trae CN", cli: "trae", kind: IdeKind::VsCodeFork },
+    IdeInfo { id: "antigravity", name: "Antigravity", dir_name: "Antigravity", cli: "antigravity", kind: IdeKind::VsCodeFork },
+    IdeInfo { id: "zed", name: "Zed", dir_name: "Zed", cli: "zed", kind: IdeKind::Zed },
+];
+
+// JetBrains IDEs: dir_name is the prefix before the version number in %APPDATA%/JetBrains/
+// e.g. "IntelliJIdea" matches "IntelliJIdea2025.1", "IntelliJIdea2024.3", etc.
+struct JetBrainsIde {
+    id: &'static str,
+    name: &'static str,
+    dir_prefix: &'static str,
+    cli: &'static str,
+}
+
+const JETBRAINS_IDES: &[JetBrainsIde] = &[
+    JetBrainsIde { id: "idea", name: "IntelliJ IDEA", dir_prefix: "IntelliJIdea", cli: "idea" },
+    JetBrainsIde { id: "idea-ce", name: "IntelliJ IDEA CE", dir_prefix: "IdeaIC", cli: "idea" },
+    JetBrainsIde { id: "pycharm", name: "PyCharm", dir_prefix: "PyCharm", cli: "pycharm" },
+    JetBrainsIde { id: "pycharm-ce", name: "PyCharm CE", dir_prefix: "PyCharmCE", cli: "pycharm" },
+    JetBrainsIde { id: "goland", name: "GoLand", dir_prefix: "GoLand", cli: "goland" },
+    JetBrainsIde { id: "webstorm", name: "WebStorm", dir_prefix: "WebStorm", cli: "webstorm" },
+    JetBrainsIde { id: "clion", name: "CLion", dir_prefix: "CLion", cli: "clion" },
+    JetBrainsIde { id: "phpstorm", name: "PhpStorm", dir_prefix: "PhpStorm", cli: "phpstorm" },
+    JetBrainsIde { id: "rustrover", name: "RustRover", dir_prefix: "RustRover", cli: "rustrover" },
+    JetBrainsIde { id: "rider", name: "Rider", dir_prefix: "Rider", cli: "rider" },
+    JetBrainsIde { id: "datagrip", name: "DataGrip", dir_prefix: "DataGrip", cli: "datagrip" },
+    JetBrainsIde { id: "rubymine", name: "RubyMine", dir_prefix: "RubyMine", cli: "rubymine" },
+    JetBrainsIde { id: "dataspell", name: "DataSpell", dir_prefix: "DataSpell", cli: "dataspell" },
+    JetBrainsIde { id: "aqua", name: "Aqua", dir_prefix: "Aqua", cli: "aqua" },
+    JetBrainsIde { id: "android-studio", name: "Android Studio", dir_prefix: "Google/AndroidStudio", cli: "studio" },
 ];
 
 // ---- Platform paths ----
@@ -335,14 +366,150 @@ fn path_last_component(path: &str) -> String {
     p.rsplit('/').find(|s| !s.is_empty()).unwrap_or(path).to_string()
 }
 
+// ---- JetBrains project scanning ----
+
+fn jetbrains_config_root() -> Option<PathBuf> {
+    #[cfg(target_os = "windows")]
+    { std::env::var("APPDATA").ok().map(|d| PathBuf::from(d).join("JetBrains")) }
+    #[cfg(target_os = "macos")]
+    { home_dir().map(|h| h.join("Library/Application Support/JetBrains")) }
+    #[cfg(target_os = "linux")]
+    {
+        std::env::var("XDG_CONFIG_HOME").ok().map(PathBuf::from)
+            .or_else(|| home_dir().map(|h| h.join(".config")))
+            .map(|d| d.join("JetBrains"))
+    }
+}
+
+fn scan_jetbrains_ide(ide: &JetBrainsIde) -> Vec<ProjectEntry> {
+    let root = match jetbrains_config_root() {
+        Some(r) => r,
+        None => return vec![],
+    };
+    if !root.exists() { return vec![]; }
+
+    // Find the latest version directory matching the prefix
+    // e.g. "IntelliJIdea2025.1", "IntelliJIdea2024.3"
+    // For Android Studio: prefix is "Google/AndroidStudio" so we handle nested path
+    let (search_dir, prefix) = if ide.dir_prefix.contains('/') {
+        let parts: Vec<&str> = ide.dir_prefix.rsplitn(2, '/').collect();
+        (root.join(parts[1]), parts[0].to_string())
+    } else {
+        (root.clone(), ide.dir_prefix.to_string())
+    };
+
+    let mut version_dirs: Vec<PathBuf> = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(&search_dir) {
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if name.starts_with(&prefix) && entry.path().is_dir() {
+                version_dirs.push(entry.path());
+            }
+        }
+    }
+
+    // Sort by name descending to prefer latest version
+    version_dirs.sort_by(|a, b| b.file_name().cmp(&a.file_name()));
+
+    let mut results = Vec::new();
+    let mut seen_paths = std::collections::HashSet::new();
+
+    for dir in version_dirs {
+        // Rider uses recentSolutions.xml, others use recentProjects.xml
+        let xml_name = if ide.id == "rider" { "recentSolutions.xml" } else { "recentProjects.xml" };
+        let xml_path = dir.join("options").join(xml_name);
+        if !xml_path.exists() { continue; }
+
+        let content = match std::fs::read_to_string(&xml_path) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+
+        parse_jetbrains_recent_xml(&content, ide, &mut results, &mut seen_paths);
+    }
+
+    results
+}
+
+fn parse_jetbrains_recent_xml(
+    content: &str,
+    ide: &JetBrainsIde,
+    results: &mut Vec<ProjectEntry>,
+    seen: &mut std::collections::HashSet<String>,
+) {
+    // Parse entry keys from: <entry key="$USER_HOME$/path"> or <entry key="//wsl.localhost/...">
+    // The key uses $USER_HOME$ as placeholder for home directory
+    let home = home_dir().unwrap_or_default();
+    let home_str = home.to_string_lossy().replace('\\', "/");
+
+    for line in content.lines() {
+        let line = line.trim();
+        if !line.starts_with("<entry key=\"") { continue; }
+
+        let key_start = match line.find("key=\"") {
+            Some(pos) => pos + 5,
+            None => continue,
+        };
+        let key_end = match line[key_start..].find('"') {
+            Some(pos) => key_start + pos,
+            None => continue,
+        };
+        let raw_path = &line[key_start..key_end];
+
+        // Replace $USER_HOME$ with actual home
+        let resolved = raw_path.replace("$USER_HOME$", &home_str);
+
+        // Handle WSL paths: //wsl.localhost/Ubuntu/home/user/project
+        let (path, remote) = if resolved.starts_with("//wsl.localhost/") || resolved.starts_with("//wsl$/") {
+            let rest = resolved.trim_start_matches("//wsl.localhost/").trim_start_matches("//wsl$/");
+            if let Some(slash_pos) = rest.find('/') {
+                let distro = &rest[..slash_pos];
+                let remote_path = format!("/{}", &rest[slash_pos + 1..]);
+                (remote_path, Some(format!("wsl+{}", distro)))
+            } else {
+                continue;
+            }
+        } else {
+            // Convert forward slashes to platform path
+            #[cfg(target_os = "windows")]
+            let path = resolved.replace('/', "\\");
+            #[cfg(not(target_os = "windows"))]
+            let path = if resolved.starts_with('/') { resolved.clone() } else { format!("/{}", resolved) };
+            (path, None)
+        };
+
+        if path.is_empty() || !seen.insert(format!("{}|{}", path, remote.as_deref().unwrap_or(""))) {
+            continue;
+        }
+
+        let name = path_last_component(&path);
+        let exists = if remote.is_some() { true } else { std::path::Path::new(&path).exists() };
+
+        results.push(ProjectEntry {
+            name,
+            path,
+            ide: ide.id.into(),
+            ide_name: ide.name.into(),
+            cli: ide.cli.into(),
+            exists,
+            remote,
+        });
+    }
+}
+
 fn scan_all_ides() -> Vec<ProjectEntry> {
     let mut all = Vec::new();
     for ide in IDES {
-        if ide.is_vscode_fork {
+        if ide.kind == IdeKind::VsCodeFork {
             all.extend(scan_vscode_fork(ide));
         }
     }
     all.extend(scan_zed());
+
+    // Scan JetBrains IDEs
+    for ide in JETBRAINS_IDES {
+        all.extend(scan_jetbrains_ide(ide));
+    }
 
     // Deduplicate by (path + remote) combination
     let mut seen = std::collections::HashSet::new();
