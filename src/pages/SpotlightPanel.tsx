@@ -41,15 +41,12 @@ export function SpotlightPanel() {
   const activate = useSpotlightStore((s) => s.activate);
   const hide = useSpotlightStore((s) => s.hide);
   const setResults = useSpotlightStore((s) => s.setResults);
-  const setLoading = useSpotlightStore((s) => s.setLoading);
   const selectNext = useSpotlightStore((s) => s.selectNext);
   const selectPrev = useSpotlightStore((s) => s.selectPrev);
   const executeSelected = useSpotlightStore((s) => s.executeSelected);
   const switchMode = useSpotlightStore((s) => s.switchMode);
   const registerMode = useSpotlightStore((s) => s.registerMode);
   const modes = useSpotlightStore((s) => s.modes);
-
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Make html/body fully transparent for this window
   useEffect(() => {
@@ -114,43 +111,22 @@ export function SpotlightPanel() {
     };
   }, [activate]);
 
-  const checkPrefix = useSpotlightStore((s) => s.checkPrefix);
+  const resolveQuery = useSpotlightStore((s) => s.resolveQuery);
+  const executeQuery = useSpotlightStore((s) => s.executeQuery);
 
-  // Query debounce — use prefix routing to determine which mode to query
+  // Query dispatch — delegates to store's executeQuery
   const lastActiveModeRef = useRef(mode);
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const { activeMode } = resolveQuery(query);
 
-    const { activeMode, searchQuery } = checkPrefix(query);
-    const targetMode = modes.get(activeMode);
-    if (!targetMode) return;
-
-    // When mode changes via prefix (e.g. typing "tt "), clear results immediately
+    // When mode changes via prefix, clear results immediately
     if (activeMode !== lastActiveModeRef.current) {
       lastActiveModeRef.current = activeMode;
       setResults([]);
     }
 
-    setLoading(true);
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const newResults = await targetMode.onQuery(searchQuery);
-        const currentResults = useSpotlightStore.getState().results;
-        if (newResults.length > 0 || currentResults.length === 0) {
-          setResults(newResults);
-        } else {
-          setLoading(false);
-        }
-      } catch (err) {
-        console.error("Spotlight query error:", err);
-        setResults([]);
-      }
-    }, targetMode.debounceMs ?? 200);
-
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [query, mode, modes, setResults, setLoading, checkPrefix]);
+    executeQuery(query);
+  }, [query, mode, modes, setResults, resolveQuery, executeQuery]);
 
   const dismissSpotlight = useCallback(async () => {
     const clearOnHide = (await getSetting("spotlight_clear_on_hide")) === "true";
@@ -248,7 +224,7 @@ export function SpotlightPanel() {
       <div className="spotlight-panel">
         <SpotlightInput />
         <SpotlightResultList />
-        {results.length > 0 && <SpotlightFooter modeHints={modes.get(checkPrefix(query).activeMode)?.footerHints} />}
+        {results.length > 0 && <SpotlightFooter modeHints={modes.get(resolveQuery(query).activeMode)?.footerHints} />}
       </div>
     </div>
   );

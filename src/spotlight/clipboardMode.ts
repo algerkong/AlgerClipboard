@@ -66,6 +66,8 @@ export const clipboardMode: SpotlightMode = {
   placeholder: "spotlight.placeholder.clipboard",
   shortcutSettingKey: "spotlight_clipboard_shortcut",
   debounceMs: 100,
+  globalSearch: true,
+  priority: 80,
 
   onQuery: async (query: string): Promise<SpotlightResult[]> => {
     if (!query.trim()) {
@@ -73,7 +75,10 @@ export const clipboardMode: SpotlightMode = {
     }
 
     const entries = await searchEntries(query, { limit: 8 });
-    return entries.map(entryToResult);
+    return entries.map((entry, i) => ({
+      ...entryToResult(entry),
+      score: 1 - i * 0.1,
+    }));
   },
 
   onSelect: async (result: SpotlightResult): Promise<void> => {

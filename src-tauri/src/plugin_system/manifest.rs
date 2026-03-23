@@ -77,6 +77,10 @@ pub struct SpotlightModeDecl {
     pub prefix: String,
     #[serde(default)]
     pub shortcut_setting_key: String,
+    #[serde(default)]
+    pub global_search: Option<bool>,
+    #[serde(default)]
+    pub priority: Option<u8>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

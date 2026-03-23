@@ -101,8 +101,28 @@ export function syncPluginModesToStore() {
     }
   }
 
-  // Register current plugin modes
+  // Build a lookup from manifest spotlight_modes config
+  const manifestConfig = new Map<string, { global_search?: boolean; priority?: number }>();
+  for (const plugin of loadedPluginInfos) {
+    for (const sm of plugin.spotlight_modes) {
+      manifestConfig.set(sm.id, {
+        global_search: sm.global_search,
+        priority: sm.priority,
+      });
+    }
+  }
+
+  // Register current plugin modes, merging manifest config
   for (const mode of currentModes) {
+    const config = manifestConfig.get(mode.id);
+    if (config) {
+      if (config.global_search != null && mode.globalSearch == null) {
+        mode.globalSearch = config.global_search;
+      }
+      if (config.priority != null && mode.priority == null) {
+        mode.priority = config.priority;
+      }
+    }
     store.registerMode(mode);
   }
   pluginModeIds = newModeIds;

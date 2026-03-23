@@ -10,22 +10,23 @@ export function SpotlightInput() {
   const mode = useSpotlightStore((s) => s.mode);
   const query = useSpotlightStore((s) => s.query);
   const setQuery = useSpotlightStore((s) => s.setQuery);
-  const checkPrefix = useSpotlightStore((s) => s.checkPrefix);
+  const resolveQuery = useSpotlightStore((s) => s.resolveQuery);
   const modes = useSpotlightStore((s) => s.modes);
   const switchMode = useSpotlightStore((s) => s.switchMode);
   const loading = useSpotlightStore((s) => s.loading);
 
-  const { activeMode } = checkPrefix(query);
-  const displayMode = modes.get(activeMode) ?? modes.get(mode);
+  const resolved = resolveQuery(query);
+  const displayMode = resolved.isGlobal ? null : modes.get(resolved.activeMode);
+  const fallbackMode = modes.get(mode);
   const iconKey = displayMode?.icon ?? "";
-  const modeIcon = iconKey.startsWith("ph:") || iconKey.startsWith("lucide:") ? (
+  const modeIcon = displayMode && (iconKey.startsWith("ph:") || iconKey.startsWith("lucide:")) ? (
     <LucideIcon name={iconKey} size={30} className="text-[var(--primary)]" />
   ) : (
     <MagnifyingGlass size={30} className="text-[var(--primary)]" />
   );
   const placeholder = displayMode
     ? t(displayMode.placeholder)
-    : t("spotlight.placeholder.clipboard");
+    : t("spotlight.placeholder.global", t("spotlight.placeholder.clipboard"));
 
   useEffect(() => {
     requestAnimationFrame(() => {
@@ -57,7 +58,7 @@ export function SpotlightInput() {
         className="spotlight-mode-tag"
         tabIndex={-1}
       >
-        {displayMode ? t(displayMode.name) : mode}
+        {displayMode ? t(displayMode.name) : (fallbackMode ? t(fallbackMode.name) : mode)}
       </button>
     </div>
   );

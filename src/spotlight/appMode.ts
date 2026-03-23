@@ -24,13 +24,18 @@ export const appMode: SpotlightMode = {
   placeholder: "spotlight.placeholder.app",
   shortcutSettingKey: "spotlight_app_shortcut",
   debounceMs: 50,
+  globalSearch: true,
+  priority: 90,
 
   onQuery: async (query: string): Promise<SpotlightResult[]> => {
     if (!query.trim()) {
       return [];
     }
     const apps = await searchApplications(query);
-    return apps.slice(0, 8).map(appToResult);
+    return apps.slice(0, 8).map((app, i) => ({
+      ...appToResult(app),
+      score: 1 - i * 0.1,
+    }));
   },
 
   onSelect: async (result: SpotlightResult): Promise<void> => {

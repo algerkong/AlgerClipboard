@@ -8,10 +8,10 @@ export function SpotlightResultList() {
   const selectedIndex = useSpotlightStore((s) => s.selectedIndex);
   const loading = useSpotlightStore((s) => s.loading);
   const query = useSpotlightStore((s) => s.query);
-  const checkPrefix = useSpotlightStore((s) => s.checkPrefix);
+  const resolveQuery = useSpotlightStore((s) => s.resolveQuery);
   const executeSelected = useSpotlightStore((s) => s.executeSelected);
 
-  const { activeMode } = checkPrefix(query);
+  const { activeMode } = resolveQuery(query);
 
   if (results.length === 0) {
     if (loading || !query.trim()) return null;

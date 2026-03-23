@@ -38,6 +38,8 @@ export interface SpotlightModeDecl {
   id: string;
   prefix: string;
   shortcut_setting_key: string;
+  global_search?: boolean;
+  priority?: number;
 }
 
 export interface PluginInfo {

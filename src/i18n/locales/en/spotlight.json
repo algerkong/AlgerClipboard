@@ -9,7 +9,8 @@
     "placeholder": {
       "clipboard": "Search clipboard...",
       "app": "Search applications...",
-      "translate": "Type to translate..."
+      "translate": "Type to translate...",
+      "global": "Search apps, clipboard, files..."
     },
     "empty": {
       "clipboard": "No matching clipboard entries",

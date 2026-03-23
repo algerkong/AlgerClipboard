@@ -19,6 +19,9 @@ export interface SpotlightMode {
   onSelect: (result: SpotlightResult, modifiers?: SpotlightModifiers) => Promise<void>;
   debounceMs?: number;
   footerHints?: SpotlightFooterHint[];
+  globalSearch?: boolean;
+  match?: (input: string) => boolean;
+  priority?: number;
 }
 
 export interface SpotlightResult {
@@ -28,6 +31,8 @@ export interface SpotlightResult {
   icon?: string | { type: "thumbnail"; data: string };
   badge?: string;
   actions?: SpotlightAction[];
+  score?: number;
+  _modeId?: string;
 }
 
 export interface SpotlightAction {

@@ -90,6 +90,8 @@ export const translateMode: SpotlightMode = {
   placeholder: "spotlight.placeholder.translate",
   shortcutSettingKey: "spotlight_translate_shortcut",
   debounceMs: 800,
+  globalSearch: false,
+  priority: 50,
 
   onQuery: async (query: string): Promise<SpotlightResult[]> => {
     if (!query.trim()) {
@@ -132,7 +134,7 @@ export const translateMode: SpotlightMode = {
         .then((result) => {
           if (activeQuery !== thisQuery) return;
           const store = useSpotlightStore.getState();
-          const { activeMode, searchQuery } = store.checkPrefix(store.query);
+          const { activeMode, searchQuery } = store.resolveQuery(store.query);
           if (activeMode !== "translate" || searchQuery !== thisQuery) return;
           const item = buildResultItem(query, result, idx);
           const current = store.results;
