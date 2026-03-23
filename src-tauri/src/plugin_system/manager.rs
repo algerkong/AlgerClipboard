@@ -80,8 +80,15 @@ impl PluginManager {
             .clone();
 
         let plugin_dir = self.plugin_dir.join(&manifest.id);
-        let lib_path = manifest.library_path(&plugin_dir)
-            .ok_or_else(|| format!("Plugin '{}' has no backend library", plugin_id))?;
+        let lib_path = match manifest.library_path(&plugin_dir) {
+            Some(p) => p,
+            None => {
+                // Frontend-only plugin: no backend DLL to load, just mark as enabled
+                let _ = self.db.set_setting(&format!("plugin_enabled:{}", plugin_id), "true");
+                log::info!("Plugin '{}' enabled (frontend-only)", plugin_id);
+                return Ok(());
+            }
+        };
 
         if !lib_path.exists() {
             return Err(format!("Library not found: {}", lib_path.display()));
