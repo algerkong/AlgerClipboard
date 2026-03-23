@@ -145,7 +145,7 @@ export function PluginsTab() {
                         )}
                       </button>
                       {/* Plugin icon */}
-                      {plugin.icon && plugin.icon.startsWith("ph:") ? (
+                      {plugin.icon && (plugin.icon.startsWith("ph:") || plugin.icon.startsWith("lucide:")) ? (
                         <LucideIcon name={plugin.icon} size={18} />
                       ) : (
                         <PuzzlePiece size={18} className="text-muted-foreground" />
