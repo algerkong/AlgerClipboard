@@ -3,6 +3,7 @@ use crate::plugin_system::manifest::PluginInfo;
 use crate::plugin_system::manager::PluginManager;
 use crate::plugin_system::permissions;
 use std::sync::{Arc, Mutex};
+use tauri::Emitter;
 
 pub type PluginManagerState = Arc<Mutex<PluginManager>>;
 
@@ -25,15 +26,19 @@ pub fn scan_plugins(
 
 #[tauri::command]
 pub fn enable_plugin(
+    app: tauri::AppHandle,
     pm: tauri::State<'_, PluginManagerState>,
     plugin_id: String,
 ) -> Result<(), String> {
     let mut manager = pm.lock().map_err(|e| format!("Lock error: {}", e))?;
-    manager.load(&plugin_id)
+    manager.load(&plugin_id)?;
+    let _ = app.emit("plugins-changed", ());
+    Ok(())
 }
 
 #[tauri::command]
 pub fn disable_plugin(
+    app: tauri::AppHandle,
     pm: tauri::State<'_, PluginManagerState>,
     db: tauri::State<'_, AppDatabase>,
     plugin_id: String,
@@ -41,16 +46,20 @@ pub fn disable_plugin(
     let mut manager = pm.lock().map_err(|e| format!("Lock error: {}", e))?;
     manager.unload(&plugin_id)?;
     let _ = db.0.set_setting(&format!("plugin_enabled:{}", plugin_id), "false");
+    let _ = app.emit("plugins-changed", ());
     Ok(())
 }
 
 #[tauri::command]
 pub fn remove_plugin(
+    app: tauri::AppHandle,
     pm: tauri::State<'_, PluginManagerState>,
     plugin_id: String,
 ) -> Result<(), String> {
     let mut manager = pm.lock().map_err(|e| format!("Lock error: {}", e))?;
-    manager.remove_plugin(&plugin_id)
+    manager.remove_plugin(&plugin_id)?;
+    let _ = app.emit("plugins-changed", ());
+    Ok(())
 }
 
 #[tauri::command]

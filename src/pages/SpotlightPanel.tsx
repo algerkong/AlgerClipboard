@@ -9,7 +9,7 @@ import { SpotlightFooter } from "@/components/spotlight/SpotlightFooter";
 import { clipboardMode } from "@/spotlight/clipboardMode";
 import { appMode } from "@/spotlight/appMode";
 import { translateMode } from "@/spotlight/translateMode";
-import { loadAllPlugins } from "@/plugin_system/loader";
+import { loadAllPlugins, reloadAllPlugins } from "@/plugin_system/loader";
 import { hideSpotlightWindow } from "@/services/spotlightWindowService";
 import { getSetting } from "@/services/settingsService";
 
@@ -68,6 +68,11 @@ export function SpotlightPanel() {
     registerMode(translateMode);
     loadPrefixes();
     loadAllPlugins();
+
+    const unlisten = listen("plugins-changed", () => {
+      reloadAllPlugins();
+    });
+    return () => { unlisten.then((fn) => fn()); };
   }, [registerMode, loadPrefixes]);
 
   useEffect(() => {
@@ -169,7 +174,11 @@ export function SpotlightPanel() {
           break;
         case "Enter":
           e.preventDefault();
-          await executeSelected();
+          await executeSelected({
+            ctrlKey: e.ctrlKey || e.metaKey,
+            shiftKey: e.shiftKey,
+            altKey: e.altKey,
+          });
           await dismissSpotlight();
           break;
         case "Tab":
@@ -239,7 +248,7 @@ export function SpotlightPanel() {
       <div className="spotlight-panel">
         <SpotlightInput />
         <SpotlightResultList />
-        {results.length > 0 && <SpotlightFooter />}
+        {results.length > 0 && <SpotlightFooter modeHints={modes.get(checkPrefix(query).activeMode)?.footerHints} />}
       </div>
     </div>
   );

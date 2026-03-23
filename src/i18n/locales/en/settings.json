@@ -220,7 +220,12 @@
       "deny": "Deny",
       "openPluginDir": "Open plugins folder",
       "refresh": "Refresh",
-      "restartHint": "Plugin enabled. Restart Spotlight (press Esc then reopen) to take effect."
+      "restartHint": "Plugin enabled. Restart Spotlight (press Esc then reopen) to take effect.",
+      "settings": "Settings",
+      "addItem": "Add",
+      "removeItem": "Remove",
+      "recordShortcut": "Press shortcut...",
+      "clearShortcut": "Clear"
     },
     "tabOcr": "OCR",
     "tabAi": "AI",

@@ -4,13 +4,39 @@ use std::path::{Path, PathBuf};
 
 pub const CURRENT_API_VERSION: &str = "1";
 
+/// A string that can be either a plain string or a localized map like {"en": "...", "zh-CN": "..."}
+/// Serializes/deserializes as serde_json::Value to preserve both forms.
+pub type I18nString = serde_json::Value;
+
+/// Resolve an I18nString to a plain string given a locale.
+/// Tries exact match, then language prefix (e.g. "zh" for "zh-CN"), then "en", then first value.
+pub fn resolve_i18n(val: &I18nString, locale: &str) -> String {
+    match val {
+        serde_json::Value::String(s) => s.clone(),
+        serde_json::Value::Object(map) => {
+            if let Some(s) = map.get(locale).and_then(|v| v.as_str()) {
+                return s.to_string();
+            }
+            let lang = locale.split('-').next().unwrap_or(locale);
+            if let Some(s) = map.get(lang).and_then(|v| v.as_str()) {
+                return s.to_string();
+            }
+            if let Some(s) = map.get("en").and_then(|v| v.as_str()) {
+                return s.to_string();
+            }
+            map.values().next().and_then(|v| v.as_str()).unwrap_or("").to_string()
+        }
+        _ => String::new(),
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PluginManifest {
     pub id: String,
-    pub name: String,
+    pub name: I18nString,
     pub version: String,
     #[serde(default)]
-    pub description: String,
+    pub description: I18nString,
     #[serde(default)]
     pub author: String,
     #[serde(default)]
@@ -54,21 +80,40 @@ pub struct SpotlightModeDecl {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PluginSettingOption {
+    pub label: I18nString,
+    pub value: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PluginSettingDef {
+    #[serde(rename = "type")]
     pub setting_type: String,
     #[serde(default)]
-    pub label: String,
+    pub label: I18nString,
     #[serde(default)]
     pub secret: bool,
     pub default: Option<serde_json::Value>,
+    #[serde(default)]
+    pub description: Option<I18nString>,
+    #[serde(default)]
+    pub options: Option<Vec<PluginSettingOption>>,
+    #[serde(default)]
+    pub min: Option<f64>,
+    #[serde(default)]
+    pub max: Option<f64>,
+    #[serde(default)]
+    pub step: Option<f64>,
+    #[serde(default)]
+    pub item_type: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PluginInfo {
     pub id: String,
-    pub name: String,
+    pub name: I18nString,
     pub version: String,
-    pub description: String,
+    pub description: I18nString,
     pub author: String,
     pub homepage: String,
     pub icon: String,
@@ -96,7 +141,7 @@ impl PluginManifest {
         if manifest.id.is_empty() {
             return Err("Plugin id is empty".to_string());
         }
-        if manifest.name.is_empty() {
+        if manifest.name.is_null() || (manifest.name.is_string() && manifest.name.as_str().unwrap_or("").is_empty()) {
             return Err("Plugin name is empty".to_string());
         }
         if manifest.api_version != CURRENT_API_VERSION {

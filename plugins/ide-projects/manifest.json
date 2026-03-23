@@ -1,8 +1,8 @@
 {
   "id": "ide-projects",
-  "name": "IDE Projects",
+  "name": { "en": "IDE Projects", "zh-CN": "IDE 项目" },
   "version": "1.0.0",
-  "description": "Search and open recent projects from VS Code, Cursor, Windsurf, Trae, Antigravity, and Zed",
+  "description": { "en": "Search and open recent projects from VS Code, Cursor, Windsurf, Trae, Antigravity, and Zed", "zh-CN": "搜索并打开 VS Code、Cursor、Windsurf、Trae、Antigravity 和 Zed 的最近项目" },
   "author": "AlgerClipboard",
   "icon": "ph:folder-notch-open",
   "api_version": "1",
@@ -23,5 +23,32 @@
     }
   ],
   "hooks": [],
-  "settings": {}
+  "settings": {
+    "prefix": {
+      "type": "string",
+      "label": { "en": "Spotlight Prefix", "zh-CN": "Spotlight 前缀" },
+      "default": "|",
+      "description": { "en": "Prefix to trigger IDE Projects mode in Spotlight", "zh-CN": "在 Spotlight 中触发 IDE 项目模式的前缀" }
+    },
+    "default_ide": {
+      "type": "select",
+      "label": { "en": "Default IDE", "zh-CN": "默认 IDE" },
+      "default": "code",
+      "description": { "en": "Preferred IDE for opening projects", "zh-CN": "打开项目时优先使用的 IDE" },
+      "options": [
+        { "label": "VS Code", "value": "code" },
+        { "label": "Cursor", "value": "cursor" },
+        { "label": "Windsurf", "value": "windsurf" },
+        { "label": "Trae", "value": "trae" },
+        { "label": "Trae CN", "value": "trae-cn" },
+        { "label": "Antigravity", "value": "antigravity" },
+        { "label": "Zed", "value": "zed" }
+      ]
+    },
+    "show_remote": {
+      "type": "boolean",
+      "label": { "en": "Show WSL/Remote Projects", "zh-CN": "显示 WSL/远程项目" },
+      "default": true
+    }
+  }
 }

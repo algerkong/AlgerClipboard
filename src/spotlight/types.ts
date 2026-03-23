@@ -1,3 +1,14 @@
+export interface SpotlightFooterHint {
+  kbd: string;
+  label: string;
+}
+
+export interface SpotlightModifiers {
+  ctrlKey?: boolean;
+  shiftKey?: boolean;
+  altKey?: boolean;
+}
+
 export interface SpotlightMode {
   id: string;
   name: string;
@@ -5,8 +16,9 @@ export interface SpotlightMode {
   placeholder: string;
   shortcutSettingKey?: string;
   onQuery: (query: string) => Promise<SpotlightResult[]>;
-  onSelect: (result: SpotlightResult) => Promise<void>;
+  onSelect: (result: SpotlightResult, modifiers?: SpotlightModifiers) => Promise<void>;
   debounceMs?: number;
+  footerHints?: SpotlightFooterHint[];
 }
 
 export interface SpotlightResult {

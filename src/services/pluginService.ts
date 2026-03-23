@@ -1,11 +1,37 @@
 import { invoke } from "@tauri-apps/api/core";
+import { emit } from "@tauri-apps/api/event";
 import { getSetting, updateSetting } from "@/services/settingsService";
+
+/** A string or a locale map like {"en": "...", "zh-CN": "..."} */
+export type I18nString = string | Record<string, string>;
+
+export function resolveI18n(val: I18nString | undefined | null, locale: string): string {
+  if (val == null) return "";
+  if (typeof val === "string") return val;
+  if (val[locale]) return val[locale];
+  const lang = locale.split("-")[0];
+  if (val[lang]) return val[lang];
+  if (val["en"]) return val["en"];
+  const keys = Object.keys(val);
+  return keys.length > 0 ? val[keys[0]] : "";
+}
+
+export interface PluginSettingOption {
+  label: I18nString;
+  value: string;
+}
 
 export interface PluginSettingDef {
   type: string;
-  label: string;
+  label: I18nString;
   secret?: boolean;
   default?: unknown;
+  description?: I18nString;
+  options?: PluginSettingOption[];
+  min?: number;
+  max?: number;
+  step?: number;
+  item_type?: string;
 }
 
 export interface SpotlightModeDecl {
@@ -16,9 +42,9 @@ export interface SpotlightModeDecl {
 
 export interface PluginInfo {
   id: string;
-  name: string;
+  name: I18nString;
   version: string;
-  description: string;
+  description: I18nString;
   author: string;
   icon: string;
   enabled: boolean;
@@ -88,7 +114,13 @@ export async function setPluginSetting(
   key: string,
   value: unknown
 ): Promise<void> {
+  const oldRaw = await getSetting(`plugin:${pluginId}:${key}`);
+  let oldValue: unknown = null;
+  if (oldRaw !== null) {
+    try { oldValue = JSON.parse(oldRaw); } catch { oldValue = oldRaw; }
+  }
   await updateSetting(`plugin:${pluginId}:${key}`, JSON.stringify(value));
+  await emit(`plugin:${pluginId}:setting-changed`, { key, value, oldValue });
 }
 
 export async function grantPluginPermissions(

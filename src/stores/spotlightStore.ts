@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { SpotlightMode, SpotlightResult } from "@/spotlight/types";
+import type { SpotlightMode, SpotlightResult, SpotlightModifiers } from "@/spotlight/types";
 import { getSetting } from "@/services/settingsService";
 
 // Default prefix → mode mapping
@@ -26,9 +26,10 @@ interface SpotlightState {
   setLoading: (loading: boolean) => void;
   selectNext: () => void;
   selectPrev: () => void;
-  executeSelected: () => Promise<void>;
+  executeSelected: (modifiers?: SpotlightModifiers) => Promise<void>;
   switchMode: (direction: 1 | -1) => void;
   registerMode: (mode: SpotlightMode) => void;
+  unregisterMode: (modeId: string) => void;
   loadPrefixes: () => Promise<void>;
   checkPrefix: (input: string) => { activeMode: string; searchQuery: string };
 }
@@ -47,6 +48,14 @@ export const useSpotlightStore = create<SpotlightState>((set, get) => ({
     set((state) => {
       const modes = new Map(state.modes);
       modes.set(mode.id, mode);
+      return { modes };
+    });
+  },
+
+  unregisterMode: (modeId) => {
+    set((state) => {
+      const modes = new Map(state.modes);
+      modes.delete(modeId);
       return { modes };
     });
   },
@@ -113,13 +122,13 @@ export const useSpotlightStore = create<SpotlightState>((set, get) => ({
       selectedIndex: Math.max(s.selectedIndex - 1, 0),
     })),
 
-  executeSelected: async () => {
+  executeSelected: async (modifiers) => {
     const { query, modes, results, selectedIndex } = get();
     const { activeMode } = get().checkPrefix(query);
     const m = modes.get(activeMode);
     const result = results[selectedIndex];
     if (m && result) {
-      await m.onSelect(result);
+      await m.onSelect(result, modifiers);
     }
   },
 

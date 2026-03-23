@@ -62,6 +62,14 @@ export function SpotlightResultItem({ result, selected, index, onClick }: Props)
     "ph:speaker-low": <SpeakerLow size={14} weight="duotone" />,
   };
 
+  const renderActionIcon = (label: string) => {
+    if (actionIconMap[label]) return actionIconMap[label];
+    if (label.startsWith("ph:")) {
+      return <LucideIcon name={label} size={14} />;
+    }
+    return label;
+  };
+
   return (
     <div
       ref={ref}
@@ -82,14 +90,14 @@ export function SpotlightResultItem({ result, selected, index, onClick }: Props)
             <button
               key={action.id}
               className="spotlight-result-action-btn"
-              title={action.id.includes("src") ? "Play source" : "Play translation"}
+              title={action.shortcut || action.id}
               tabIndex={-1}
               onClick={(e) => {
                 e.stopPropagation();
                 action.handler();
               }}
             >
-              {actionIconMap[action.label] ?? action.label}
+              {renderActionIcon(action.label)}
             </button>
           ))}
         </div>

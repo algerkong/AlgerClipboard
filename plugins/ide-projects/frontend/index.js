@@ -6,6 +6,18 @@
   var CACHE_TTL = 30000;
   var ideIconCache = {}; // ide id -> data:image/png;base64,... or null
   var iconsLoaded = false;
+  var showRemote = true;
+
+  // Load initial settings
+  api.getSetting("show_remote").then(function (val) {
+    if (val !== null) showRemote = val !== "false" && val !== false;
+  });
+
+  // Listen for setting changes
+  api.onSettingChanged("show_remote", function (newVal) {
+    showRemote = newVal !== "false" && newVal !== false;
+    cachedProjects = null; // invalidate cache
+  });
 
   // Search keywords to find each IDE in the system app list.
   // Try multiple keywords per IDE to maximize matching chance.
@@ -76,9 +88,14 @@
   }
 
   function filterProjects(projects, query) {
-    if (!query || !query.trim()) return projects;
+    var filtered = projects;
+    // Filter remote projects if disabled
+    if (!showRemote) {
+      filtered = filtered.filter(function (p) { return !p.remote; });
+    }
+    if (!query || !query.trim()) return filtered;
     var terms = query.toLowerCase().split(/\s+/);
-    return projects.filter(function (p) {
+    return filtered.filter(function (p) {
       var text = (p.name + " " + p.path + " " + p.ide_name + " " + (p.remote || "")).toLowerCase();
       return terms.every(function (t) { return text.indexOf(t) !== -1; });
     });

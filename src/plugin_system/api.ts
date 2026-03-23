@@ -74,6 +74,27 @@ export function createPluginAPI(
       return setPluginSetting(pluginId, key, value);
     },
 
+    onSettingChanged(key, handler) {
+      const eventName = `plugin:${pluginId}:setting-changed`;
+      const promise = listen(eventName, (e) => {
+        const payload = e.payload as {
+          key: string;
+          value: unknown;
+          oldValue: unknown;
+        };
+        if (key === "*") {
+          handler(payload.key, payload.value, payload.oldValue);
+        } else if (payload.key === key) {
+          handler(payload.value, payload.oldValue);
+        }
+      });
+      const unsub = () => {
+        promise.then((fn) => fn());
+      };
+      cleanups.push(unsub);
+      return unsub;
+    },
+
     getAssetPath(relativePath) {
       const fullPath = `${pluginDirPath}/${relativePath}`;
       return convertFileSrc(fullPath);

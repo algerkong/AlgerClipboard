@@ -60,6 +60,10 @@ export interface AlgerPluginAPI {
   emit(event: string, payload?: unknown): void;
   getSetting(key: string): Promise<unknown>;
   setSetting(key: string, value: unknown): Promise<void>;
+  onSettingChanged(
+    key: string,
+    handler: (...args: unknown[]) => void
+  ): () => void;
   getAssetPath(relativePath: string): string;
   getEnv(): { theme: string; locale: string; platform: string };
 }

@@ -1,5 +1,57 @@
 # Changelog
 
+## [1.9.0] - 2026-03-23
+
+### New Features
+
+- **Plugin Configuration System**: Plugins can now declare rich settings in manifest.json with 6 control types — string, number, boolean, select, shortcut, and array. Settings are auto-rendered in the plugin card's expandable area in Settings > Plugins
+- **Plugin Setting Change Notifications**: New `api.onSettingChanged(key, handler)` API allows plugins to react to configuration changes in real-time. Supports per-key listening and wildcard `"*"` for all changes
+- **Custom Plugin Settings UI**: Plugins can inject custom vanilla DOM settings panels via `api.registerSettingsSection()` with built-in helpers (createToggle, createInput, createSelect)
+- **Plugin Hot-Reload**: Enabling/disabling/removing plugins now takes effect immediately without restarting the app. Rust backend emits `plugins-changed` event, Spotlight window dynamically loads/unloads plugin scripts
+- **Plugin I18n**: All text fields in manifest.json (name, description, settings labels) support I18nString format — either plain string or locale map `{"en": "...", "zh-CN": "..."}`. Frontend resolves by locale with fallback chain
+- **Spotlight Keyboard Modifiers**: `onSelect(result, modifiers)` now receives `{ctrlKey, shiftKey, altKey}` from keyboard events, enabling plugins to implement multi-action shortcuts (e.g., Ctrl+Enter, Shift+Enter)
+- **Spotlight Footer Hints**: Plugins can declare `footerHints` on SpotlightMode to display mode-specific shortcut hints in the Spotlight footer
+- **Spotlight Action Buttons**: Search results support `actions` array with icon buttons rendered inline, supporting any Phosphor icon via `ph:icon-name` label format
+
+### Improvements
+
+- **Plugin Settings Panel**: Enhanced PluginSettingsPanel with StyledSelect dropdown, ShortcutRecorder, ArrayEditor components and description text for all control types
+- **SpotlightResultItem**: Action button rendering now supports dynamic Phosphor icons via LucideIcon component, with tooltip from action.shortcut field
+- **SpotlightStore**: Added `unregisterMode()` for proper mode cleanup when plugins are disabled
+
+### Bug Fixes
+
+- **Plugin Mode Cleanup**: Fixed Spotlight modes and prefixes persisting after plugin disable/unload — syncPluginModesToStore now properly tracks and removes stale entries
+- **Plugin Manifest Serde**: Added `#[serde(rename = "type")]` to PluginSettingDef.setting_type to fix JSON field name mismatch between Rust and frontend
+
+---
+
+## [1.9.0] - 2026-03-23 (中文)
+
+### 新功能
+
+- **插件配置系统**: 插件可在 manifest.json 中声明丰富的设置项，支持 6 种控件类型 — 文本、数字、开关、下拉选择、快捷键录入和可增删列表。设置项在「设置 > 插件」中展开插件卡片后自动渲染
+- **插件配置变更通知**: 新增 `api.onSettingChanged(key, handler)` API，插件可实时响应配置变化。支持单 key 监听和 `"*"` 通配符监听所有变更
+- **自定义插件设置 UI**: 插件可通过 `api.registerSettingsSection()` 注入自定义 vanilla DOM 设置面板，内置 createToggle/createInput/createSelect 辅助方法
+- **插件热重载**: 启用/禁用/移除插件后立即生效，无需重启应用。Rust 端 emit `plugins-changed` 事件，Spotlight 窗口动态加载/卸载插件脚本
+- **插件国际化**: manifest.json 中所有文本字段（name、description、settings label）支持 I18nString 格式 — 纯字符串或 locale 映射 `{"en": "...", "zh-CN": "..."}`。前端按 locale 解析并自动 fallback
+- **Spotlight 键盘修饰键**: `onSelect(result, modifiers)` 现在接收 `{ctrlKey, shiftKey, altKey}` 键盘修饰信息，插件可实现多操作快捷键（如 Ctrl+Enter 定位、Shift+Enter 复制路径）
+- **Spotlight 底部快捷键提示**: 插件可通过 SpotlightMode 的 `footerHints` 声明模式专属的快捷键提示，显示在 Spotlight 底部
+- **Spotlight 操作按钮**: 搜索结果支持 `actions` 数组，渲染行内图标按钮，支持通过 `ph:icon-name` 格式使用任意 Phosphor 图标
+
+### 改进
+
+- **插件设置面板**: 增强 PluginSettingsPanel，新增 StyledSelect 下拉、快捷键录入器、数组编辑器组件，所有控件支持描述文字
+- **SpotlightResultItem**: 操作按钮渲染支持动态 Phosphor 图标，hover 显示 tooltip
+- **SpotlightStore**: 新增 `unregisterMode()` 方法，插件禁用时正确清理模式
+
+### Bug 修复
+
+- **插件模式清理**: 修复插件禁用/卸载后 Spotlight 模式和前缀未清除的问题 — syncPluginModesToStore 现在正确追踪和移除过期条目
+- **插件 Manifest 序列化**: 修复 PluginSettingDef.setting_type 的 serde rename 缺失导致 JSON 字段名不匹配
+
+---
+
 ## [1.8.0] - 2026-03-21
 
 ### New Features

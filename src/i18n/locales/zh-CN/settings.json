@@ -220,7 +220,12 @@
       "deny": "拒绝",
       "openPluginDir": "打开插件目录",
       "refresh": "刷新",
-      "restartHint": "插件已启用，请重启 Spotlight（按 Esc 后重新打开）以生效。"
+      "restartHint": "插件已启用，请重启 Spotlight（按 Esc 后重新打开）以生效。",
+      "settings": "设置",
+      "addItem": "添加",
+      "removeItem": "移除",
+      "recordShortcut": "按下快捷键...",
+      "clearShortcut": "清除"
     },
     "tabOcr": "OCR",
     "tabAi": "AI",
