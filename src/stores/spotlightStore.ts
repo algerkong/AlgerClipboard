@@ -168,7 +168,14 @@ export const useSpotlightStore = create<SpotlightState>((set, get) => ({
       const globalModes: SpotlightMode[] = [];
       for (const m of modes.values()) {
         if (!m.globalSearch) continue;
-        if (m.match && !m.match(resolved.searchQuery)) continue;
+        if (m.match) {
+          try {
+            if (!m.match(resolved.searchQuery)) continue;
+          } catch (err) {
+            console.warn(`Spotlight match error in mode '${m.id}':`, err);
+            continue;
+          }
+        }
         globalModes.push(m);
       }
 
@@ -199,7 +206,19 @@ export const useSpotlightStore = create<SpotlightState>((set, get) => ({
         }, GLOBAL_SEARCH_TIMEOUT);
 
         for (const m of globalModes) {
-          m.onQuery(resolved.searchQuery)
+          let queryPromise: Promise<SpotlightResult[]>;
+          try {
+            queryPromise = m.onQuery(resolved.searchQuery);
+          } catch (err) {
+            console.warn(`Spotlight onQuery sync error in mode '${m.id}':`, err);
+            completed++;
+            if (completed >= total && !abort.signal.aborted) {
+              clearTimeout(timeoutId);
+              set({ loading: false });
+            }
+            continue;
+          }
+          queryPromise
             .then((results) => {
               if (abort.signal.aborted) return;
 
@@ -209,16 +228,18 @@ export const useSpotlightStore = create<SpotlightState>((set, get) => ({
                 if (r.score == null) r.score = 0.5;
               }
 
-              // Merge into current results, sorted by score * priority
+              // Merge into current results, deduplicate, sort by score * priority
               const current = get().results;
               const allModes = get().modes;
-              const merged = [...current, ...results];
+              // Remove existing results from this mode to avoid duplicates
+              const filtered = current.filter((r) => r._modeId !== m.id);
+              const merged = [...filtered, ...results];
               merged.sort((a, b) => {
                 const sa = (a.score ?? 0.5) * (allModes.get(a._modeId ?? "")?.priority ?? 50);
                 const sb = (b.score ?? 0.5) * (allModes.get(b._modeId ?? "")?.priority ?? 50);
                 return sb - sa;
               });
-              set({ results: merged });
+              set({ results: merged, selectedIndex: 0 });
             })
             .catch(() => { /* ignore individual mode errors */ })
             .finally(() => {
