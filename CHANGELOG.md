@@ -1,5 +1,57 @@
 # Changelog
 
+## [1.10.0] - 2026-03-24
+
+### New Features
+
+- **Spotlight Global Search**: Default mode is now unified global search — type without prefix to search across all enabled modes simultaneously. Results from clipboard, apps, bookmarks, and more appear in a single merged list, ranked by `score × priority`
+- **Content-Aware Matching**: Plugins can declare `match(input)` functions for global search — Calculator activates on expressions, Color Toolbox on color values, Timestamp on date patterns, URL Opener on links. No prefix needed
+- **Spotlight History**: Every selection in Spotlight is recorded. Use `!!` prefix to search and revisit previously selected results
+- **Spotlight Toggle**: Pressing the same Spotlight shortcut again now closes the window (toggle behavior)
+- **Preserve Query on Reopen**: Spotlight retains your previous query and results when reopened. Text is pre-selected for easy replacement. Configurable via "Clear input on hide" setting
+- **10 New Plugins**: Calculator (`=`), Color Toolbox (`cc`), Password Generator (`pw`), Timestamp (`ts`), URL Opener, Web Search (`??`), History (`!!`), Browser Bookmarks (`bm`), Network Info (`ip`), GitHub Search (`gh`)
+
+### Plugin System Improvements
+
+- **Frontend-Only Plugins**: Plugins without a Rust backend can now be properly enabled/disabled — no DLL required
+- **Plugin Icon Support**: Plugin list now renders both `ph:` (Phosphor) and `lucide:` icon prefixes
+- **Manifest Extensions**: `spotlight_modes` in manifest.json now supports `global_search` and `priority` fields for controlling global search participation
+
+### Bug Fixes
+
+- Fixed IME candidate window jumping to top-left corner during Spotlight input
+- Fixed duplicate results appearing in global search (e.g., 123456456789 index pattern)
+- Fixed blur-dismiss not respecting "Clear input on hide" setting
+- Fixed `selectedIndex` going stale after global search result merge
+
+---
+
+## [1.10.0] - 2026-03-24 (中文)
+
+### 新功能
+
+- **Spotlight 全局搜索**: 默认模式改为统一全局搜索 — 无需前缀即可同时搜索所有已启用模式。剪贴板、应用、书签等结果混合显示，按 `评分 × 优先级` 排序
+- **内容智能匹配**: 插件可声明 `match(input)` 函数参与全局搜索 — 计算器识别表达式、颜色工具识别色值、时间工具识别日期、URL 快开识别链接，无需前缀
+- **Spotlight 历史记录**: 每次在 Spotlight 中选择的结果都会被记录，使用 `!!` 前缀搜索和回溯之前的结果
+- **Spotlight 快捷键切换**: 再次按下相同的 Spotlight 快捷键会关闭窗口（切换行为）
+- **重新打开保留输入**: Spotlight 重新打开时保留上次的查询和结果，文本预选中方便替换。可通过「隐藏时清空输入」设置控制
+- **10 个新插件**: 计算器（`=`）、颜色工具（`cc`）、密码生成器（`pw`）、时间工具（`ts`）、URL 快开、网页搜索（`??`）、历史记录（`!!`）、浏览器书签（`bm`）、网络信息（`ip`）、GitHub 搜索（`gh`）
+
+### 插件系统改进
+
+- **纯前端插件**: 无 Rust 后端的插件现在可以正常启用/禁用
+- **插件图标**: 插件列表支持 `ph:` (Phosphor) 和 `lucide:` 图标前缀
+- **Manifest 扩展**: manifest.json 的 `spotlight_modes` 新增 `global_search` 和 `priority` 字段，控制全局搜索参与
+
+### Bug 修复
+
+- 修复 Spotlight 输入时输入法候选框跳到屏幕左上角
+- 修复全局搜索结果重复（出现 123456456789 序号错乱）
+- 修复失焦隐藏未遵守「隐藏时清空输入」设置
+- 修复全局搜索结果合并后 selectedIndex 过时
+
+---
+
 ## [1.9.0] - 2026-03-23
 
 ### New Features

@@ -53,14 +53,14 @@ CodeMirror 6 code editor with 12+ language syntax highlighting, TipTap 2 WYSIWYG
 
 ### Spotlight
 
-Global search panel (`Alt+Shift+F/A/T`) with prefix routing. Built-in clipboard search, app launcher, and multi-engine translation with TTS. Extensible via plugin system.
+Global search panel with unified search across all modes — clipboard, apps, bookmarks, calculator, and more in one place. Supports prefix routing, keyboard toggle, and 10+ plugin-powered modes.
 
 </td>
 <td width="50%">
 
 ### Plugin System
 
-Load plugins from local folders with frontend JS + Rust native backend (.dll/.so/.dylib). Permission-based security, lifecycle hooks, context menu extensions, and Spotlight mode registration. Includes IDE Projects plugin for searching recent projects across VS Code, Cursor, Windsurf, Trae, Zed, and more.
+10+ built-in plugins: Calculator, Color Toolbox, Password Generator, Timestamp, URL Opener, Web Search, History, Browser Bookmarks, Network Info, GitHub Search. Extensible via JS frontend + optional Rust native backend.
 
 </td>
 </tr>
@@ -78,24 +78,35 @@ Load plugins from local folders with frontend JS + Rust native backend (.dll/.so
 | **Translation** | Baidu / Youdao / Google engines &bull; AI translation mode &bull; Language auto-detect &bull; One-click copy |
 | **Templates** | Reusable templates with variable substitution |
 | **Organization** | Pin & favorites &bull; Tag system with CRUD &bull; Content categories &bull; Language detection (19 languages) |
-| **Spotlight** | Global search panel &bull; Prefix routing (`cc`/`tt`/`aa`/`\|`) &bull; Clipboard search &bull; App launcher &bull; Multi-engine translation with TTS |
-| **Plugins** | Local folder loading &bull; JS frontend + Rust native backend &bull; Permission system &bull; Lifecycle hooks &bull; Context menu / tray extensions &bull; IDE Projects plugin |
+| **Spotlight** | Unified global search &bull; Prefix routing &bull; Content-aware matching &bull; 10+ modes &bull; History (`!!`) &bull; Toggle shortcut &bull; Preserve query on reopen |
+| **Plugins** | 10+ built-in plugins &bull; Calculator (`=`) &bull; Color Toolbox (`cc`) &bull; Password Generator (`pw`) &bull; Timestamp (`ts`) &bull; URL Opener &bull; Web Search (`??`) &bull; Browser Bookmarks (`bm`) &bull; Network Info (`ip`) &bull; GitHub Search (`gh`) |
 | **UX** | Global hotkey (`Ctrl+Shift+V`) &bull; Arrow key navigation &bull; Smart window positioning &bull; Window size memory &bull; OCR |
 | **Personalization** | Dark / Light / System theme &bull; Custom fonts &bull; UI scaling &bull; i18n (中文 / English) &bull; Auto-start |
 | **Privacy** | All data stored locally &bull; Optional encrypted sync &bull; No telemetry |
 
 ## Spotlight
 
-A global search panel activated by hotkeys, supporting multiple modes with prefix routing:
+A unified global search panel — type anything to search across all enabled modes simultaneously. Use prefixes for targeted search.
 
-| Mode | Hotkey | Prefix | Description |
+| Mode | Prefix | Global | Description |
 |------|--------|--------|-------------|
-| Clipboard | `Alt+Shift+F` | `cc` | Search clipboard history, paste or copy on Enter |
-| App Launcher | `Alt+Shift+A` | `aa` | Search installed applications, launch on Enter |
-| Translate | `Alt+Shift+T` | `tt` | Multi-engine parallel translation with TTS playback |
-| IDE Projects | - | `\|` | Search recent projects from VS Code, Cursor, Windsurf, Trae, Zed (plugin) |
+| Clipboard | `cc` | Yes | Search clipboard history, paste or copy |
+| App Launcher | `aa` | Yes | Search installed apps, launch on Enter |
+| Translate | `tt` | No | Multi-engine parallel translation with TTS |
+| Calculator | `=` | Yes | Math expressions, unit/base conversion |
+| Color Toolbox | `cc` | Yes | Parse HEX/RGB/HSL, Tailwind colors |
+| Timestamp | `ts` | Yes | Convert timestamps, dates, time zones |
+| URL Opener | — | Yes | Detect and open URLs in browser |
+| Password Generator | `pw` | No | Generate secure passwords |
+| Web Search | `??` | No | Search with Google, Bing, Baidu, etc. |
+| History | `!!` | No | Revisit previously selected results |
+| Browser Bookmarks | `bm` | Yes | Search Chrome/Edge/Brave bookmarks |
+| Network Info | `ip` | Yes | IP lookup, DNS resolve, ping |
+| GitHub Search | `gh` | No | Search repos, users, issues |
+| IDE Projects | `\|` | Yes | Recent projects from VS Code, Cursor, etc. |
+| Everything Search | `f` | Yes | File search via Everything (voidtools) |
 
-Type a prefix followed by a space to switch modes inline (e.g., `tt hello` translates "hello"). Use `Tab` to cycle modes, `Esc` to close.
+Toggle with same shortcut, `Tab` to cycle modes, `Esc` to close. Query preserved on reopen.
 
 ## Plugin System
 
