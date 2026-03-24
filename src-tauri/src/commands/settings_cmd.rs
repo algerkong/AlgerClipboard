@@ -468,14 +468,17 @@ fn register_spotlight_shortcut(
     app.global_shortcut()
         .on_shortcut(shortcut, move |app, _shortcut, event| {
             if event.state == ShortcutState::Pressed {
-                // Show and focus the spotlight window from Rust
                 if let Some(window) = app.get_webview_window("spotlight") {
-                    crate::show_and_focus_spotlight(app, &window);
+                    // Toggle: if visible, hide; otherwise show
+                    if window.is_visible().unwrap_or(false) {
+                        let _ = window.hide();
+                    } else {
+                        crate::show_and_focus_spotlight(app, &window);
+                        let _ = app.emit("spotlight-activate", serde_json::json!({
+                            "mode": mode_str
+                        }));
+                    }
                 }
-                // Emit mode event so frontend can switch modes
-                let _ = app.emit("spotlight-activate", serde_json::json!({
-                    "mode": mode_str
-                }));
             }
         })
         .map_err(|e| format!("Failed to register spotlight shortcut '{}': {:?}", shortcut_str, e))?;
