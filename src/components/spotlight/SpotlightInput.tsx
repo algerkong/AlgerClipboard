@@ -30,26 +30,26 @@ export function SpotlightInput() {
     ? t(displayMode.placeholder)
     : t("spotlight.placeholder.global", t("spotlight.placeholder.clipboard"));
 
-  // Focus and optionally select all when Spotlight becomes visible or mode changes
+  // Focus when Spotlight becomes visible or mode changes
   useEffect(() => {
     if (!visible) return;
-    // Use multiple rAF + setTimeout to ensure focus after window show/focus
     const focusInput = () => {
-      if (inputRef.current) {
-        inputRef.current.focus();
-        if (selectAll && query) {
-          inputRef.current.select();
-          useSpotlightStore.setState({ _selectAll: false });
-        }
-      }
+      inputRef.current?.focus();
     };
     requestAnimationFrame(() => {
       focusInput();
-      // Retry after a short delay in case the window hasn't fully focused yet
       setTimeout(focusInput, 50);
       setTimeout(focusInput, 150);
     });
-  }, [visible, mode, selectAll, query]);
+  }, [visible, mode]);
+
+  // Select all text when _selectAll flag is set (on reopen with preserved query)
+  useEffect(() => {
+    if (selectAll && visible && inputRef.current) {
+      inputRef.current.select();
+      useSpotlightStore.setState({ _selectAll: false });
+    }
+  }, [selectAll, visible]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(e.target.value);
