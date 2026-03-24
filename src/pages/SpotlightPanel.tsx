@@ -187,9 +187,13 @@ export function SpotlightPanel() {
 
     const unlistenBlur = listen("tauri://blur", () => {
       cancelPendingHide();
-      blurTimerRef.current = window.setTimeout(() => {
+      blurTimerRef.current = window.setTimeout(async () => {
         blurTimerRef.current = null;
         if (!document.hasFocus()) {
+          const clearOnHide = (await getSetting("spotlight_clear_on_hide")) === "true";
+          if (clearOnHide) {
+            useSpotlightStore.setState({ query: "", results: [], selectedIndex: 0 });
+          }
           hide();
           hideSpotlightWindow();
         }
