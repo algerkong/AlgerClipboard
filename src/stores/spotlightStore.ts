@@ -27,6 +27,7 @@ interface SpotlightState {
   loading: boolean;
   modes: Map<string, SpotlightMode>;
   prefixes: Record<string, string>; // prefix → modeId
+  _selectAll: boolean; // internal flag: select all input text on next focus
 
   activate: (mode: string) => void;
   hide: () => void;
@@ -59,6 +60,7 @@ export const useSpotlightStore = create<SpotlightState>((set, get) => ({
   loading: false,
   modes: new Map(),
   prefixes: { ...DEFAULT_PREFIXES },
+  _selectAll: false,
 
   registerMode: (mode) => {
     set((state) => {
@@ -257,9 +259,14 @@ export const useSpotlightStore = create<SpotlightState>((set, get) => ({
   activate: (mode) => {
     const state = get();
     if (state.visible && state.mode === mode) {
+      // Already visible in same mode — clear to start fresh
       set({ query: "", results: [], selectedIndex: 0 });
+    } else if (state.visible) {
+      // Visible but switching mode — clear
+      set({ mode, query: "", results: [], selectedIndex: 0 });
     } else {
-      set({ visible: true, mode, query: "", results: [], selectedIndex: 0 });
+      // Was hidden — show and keep previous query/results, select all text for easy replacement
+      set({ visible: true, mode, selectedIndex: 0, _selectAll: true });
     }
   },
 

@@ -9,11 +9,13 @@ export function SpotlightInput() {
   const inputRef = useRef<HTMLInputElement>(null);
   const mode = useSpotlightStore((s) => s.mode);
   const query = useSpotlightStore((s) => s.query);
+  const visible = useSpotlightStore((s) => s.visible);
   const setQuery = useSpotlightStore((s) => s.setQuery);
   const resolveQuery = useSpotlightStore((s) => s.resolveQuery);
   const modes = useSpotlightStore((s) => s.modes);
   const switchMode = useSpotlightStore((s) => s.switchMode);
   const loading = useSpotlightStore((s) => s.loading);
+  const selectAll = useSpotlightStore((s) => s._selectAll);
 
   const resolved = resolveQuery(query);
   const displayMode = resolved.isGlobal ? null : modes.get(resolved.activeMode);
@@ -28,11 +30,26 @@ export function SpotlightInput() {
     ? t(displayMode.placeholder)
     : t("spotlight.placeholder.global", t("spotlight.placeholder.clipboard"));
 
+  // Focus and optionally select all when Spotlight becomes visible or mode changes
   useEffect(() => {
+    if (!visible) return;
+    // Use multiple rAF + setTimeout to ensure focus after window show/focus
+    const focusInput = () => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+        if (selectAll && query) {
+          inputRef.current.select();
+          useSpotlightStore.setState({ _selectAll: false });
+        }
+      }
+    };
     requestAnimationFrame(() => {
-      inputRef.current?.focus();
+      focusInput();
+      // Retry after a short delay in case the window hasn't fully focused yet
+      setTimeout(focusInput, 50);
+      setTimeout(focusInput, 150);
     });
-  }, [mode]);
+  }, [visible, mode, selectAll, query]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(e.target.value);
