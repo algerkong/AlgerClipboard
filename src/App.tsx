@@ -75,8 +75,11 @@ function App() {
 
   // Show window after React mounts to prevent flash of unstyled/unsized content.
   // All windows are created with visible: false and shown here after content is ready.
+  // Spotlight window stays hidden until activated by shortcut — don't show it on mount.
   useEffect(() => {
-    getCurrentWebviewWindow().show();
+    if (!isSpotlight) {
+      getCurrentWebviewWindow().show();
+    }
   }, []);
 
   useEffect(() => {
