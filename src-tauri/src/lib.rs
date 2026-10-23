@@ -2,6 +2,7 @@ mod ai;
 mod app_launcher;
 mod clipboard;
 mod commands;
+mod http_api;
 mod ocr;
 mod paste;
 mod storage;
@@ -269,6 +270,24 @@ pub fn run() {
             app.manage(AppPasteTargetState(std::sync::Mutex::new(
                 PasteTargetSnapshot::default(),
             )));
+
+            // Local HTTP API (disabled by default)
+            let http_api_manager =
+                Arc::new(http_api::server::HttpApiManager::new());
+            app.manage(commands::http_api_cmd::HttpApiManagerState(
+                http_api_manager.clone(),
+            ));
+            let http_api_app = app.handle().clone();
+            let http_api_db = db.clone();
+            let http_api_blob = blob_store.clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(error) = http_api_manager
+                    .apply_from_settings(http_api_app, http_api_db, http_api_blob)
+                    .await
+                {
+                    log::warn!("HTTP API initialization failed: {}", error);
+                }
+            });
 
             // Spotlight app launcher scanner
             let scanner = Arc::new(app_launcher::scanner::AppScanner::new());
@@ -734,6 +753,9 @@ pub fn run() {
             commands::smart_paste_cmd::save_smart_paste_config,
             commands::smart_paste_cmd::reset_smart_paste_config,
             commands::link_preview_cmd::refresh_link_preview,
+            commands::http_api_cmd::get_http_api_status,
+            commands::http_api_cmd::apply_http_api_config,
+            commands::http_api_cmd::regenerate_http_api_key,
             commands::settings_cmd::focus_main_window,
             commands::settings_cmd::get_window_size,
             commands::settings_cmd::get_recent_source_apps,

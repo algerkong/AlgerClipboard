@@ -341,6 +341,29 @@
         "text_html_google_docs": "Google Docs: Text → Rich Text",
         "text_html_outlook": "Outlook: Text → Rich Text"
       }
+    },
+    "httpApi": {
+      "title": "Local HTTP API",
+      "desc": "Allow other applications to read and write clipboard history through a local REST API. The server only listens on 127.0.0.1.",
+      "enable": "Enable HTTP API",
+      "enableDesc": "Changes take effect after clicking Save & Apply",
+      "port": "Port",
+      "portDesc": "Default 25483, accessible only from this machine",
+      "allowWrite": "Allow Write Operations",
+      "allowWriteDesc": "Allow creating/deleting entries and writing to the clipboard through the API. Writes require an API key",
+      "apiKey": "API Key",
+      "noKey": "Not generated",
+      "copyKey": "Copy API key",
+      "regenerate": "Regenerate",
+      "apply": "Save & Apply",
+      "applying": "Applying...",
+      "running": "Running · 127.0.0.1:{{port}}",
+      "stopped": "Stopped",
+      "invalidPort": "Port must be between 1 and 65535",
+      "applied": "HTTP API configuration applied",
+      "keyRegenerated": "API key regenerated",
+      "copied": "API key copied",
+      "curlExample": "Example request"
     }
   },
   "settingsLayout": {

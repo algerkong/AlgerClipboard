@@ -63,6 +63,18 @@ export interface LinkPreview {
   fetched_at: string;
 }
 
+export interface HttpApiConfig {
+  enabled: boolean;
+  port: number;
+  api_key: string;
+  allow_write: boolean;
+}
+
+export interface HttpApiStatus extends HttpApiConfig {
+  running: boolean;
+  error: string | null;
+}
+
 export interface HistoryQuery {
   limit?: number;
   offset?: number;

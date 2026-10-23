@@ -58,6 +58,7 @@ zip = "2"
 libloading = "0.8"
 html2md = "0.2"
 pulldown-cmark = "0.13"
+axum = "0.7"
 
 lnk = "0.6"
 

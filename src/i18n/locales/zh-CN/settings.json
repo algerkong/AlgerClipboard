@@ -341,6 +341,29 @@
         "text_html_google_docs": "Google Docs：文本 → 富文本",
         "text_html_outlook": "Outlook：文本 → 富文本"
       }
+    },
+    "httpApi": {
+      "title": "本地 HTTP API",
+      "desc": "允许其他程序通过本机 REST API 读写剪贴板历史。服务仅监听 127.0.0.1。",
+      "enable": "启用 HTTP API",
+      "enableDesc": "修改后需要点击「保存并应用」才会生效",
+      "port": "端口",
+      "portDesc": "默认 25483，仅本机可访问",
+      "allowWrite": "允许写入操作",
+      "allowWriteDesc": "开启后可通过 API 新增/删除条目和写入剪贴板，写入需要 API Key",
+      "apiKey": "API Key",
+      "noKey": "未生成",
+      "copyKey": "复制 API Key",
+      "regenerate": "重新生成",
+      "apply": "保存并应用",
+      "applying": "应用中...",
+      "running": "运行中 · 127.0.0.1:{{port}}",
+      "stopped": "已停止",
+      "invalidPort": "端口必须在 1-65535 之间",
+      "applied": "HTTP API 配置已应用",
+      "keyRegenerated": "API Key 已重新生成",
+      "copied": "API Key 已复制",
+      "curlExample": "请求示例"
     }
   },
   "settingsLayout": {

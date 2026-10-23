@@ -3,6 +3,7 @@ pub mod app_launcher_cmd;
 pub mod clipboard_cmd;
 pub mod favicon_cmd;
 pub mod file_cmd;
+pub mod http_api_cmd;
 pub mod link_preview_cmd;
 pub mod notification_cmd;
 pub mod ocr_cmd;
