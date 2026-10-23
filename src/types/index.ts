@@ -205,13 +205,3 @@ export interface ArchiveEntry {
   compressed_size: number;
   is_dir: boolean;
 }
-
-export interface Template {
-  id: string;
-  title: string;
-  content: string;
-  group_name: string;
-  sort_order: number;
-  created_at: string;
-  updated_at: string;
-}

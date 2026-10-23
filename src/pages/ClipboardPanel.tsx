@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import {
   ClipboardText,
-  FileText,
   ListChecks,
   SpinnerGap,
   Gear,
@@ -10,7 +9,6 @@ import {
 import { SearchBar } from "@/components/SearchBar";
 import { TypeFilter } from "@/components/TypeFilter";
 import { EntryCard } from "@/components/EntryCard";
-import { TemplateQuickPicker } from "@/components/TemplateQuickPicker";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { pasteEntry, handlePasteError } from "@/services/clipboardService";
 import { openImageViewer } from "@/services/imageViewerService";
@@ -46,7 +44,6 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
   const selectAll = useClipboardStore((s) => s.selectAll);
   const clearSelection = useClipboardStore((s) => s.clearSelection);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
-  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const [showMergeDialog, setShowMergeDialog] = useState(false);
   const [shortcutModifierPressed, setShortcutModifierPressed] = useState(false);
   const [visibleRange, setVisibleRange] = useState({ startIndex: 0, endIndex: 0 });
@@ -201,19 +198,6 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
       {/* Header: search + buttons */}
       <div className="flex items-center gap-1.5 px-2 pb-1.5 pt-1">
         <SearchBar />
-        <div className="relative shrink-0">
-          <button
-            onClick={() => setShowTemplatePicker((value) => !value)}
-            className="header-action-btn shrink-0"
-            title={t("template.title")}
-            aria-label={t("template.title")}
-          >
-            <FileText className="h-[15px] w-[15px]" />
-          </button>
-          {showTemplatePicker && (
-            <TemplateQuickPicker onClose={() => setShowTemplatePicker(false)} />
-          )}
-        </div>
         <button
           onClick={() => setMultiSelectMode(!isMultiSelectMode)}
           className={cn("header-action-btn shrink-0", isMultiSelectMode && "text-primary")}

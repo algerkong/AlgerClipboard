@@ -490,7 +490,7 @@ export function SyncTab() {
               }}
             >
               <X size={12} />
-              {t("template.cancel")}
+              {t("settings.cancel")}
             </SettingsButton>
             <SettingsButton
               onClick={handleSave}

@@ -76,7 +76,7 @@ Global search panel with unified search across all modes — clipboard, apps, bo
 | **AI** | Multi-provider (OpenAI, Claude, Gemini, DeepSeek, Ollama, custom) &bull; Auto-summary &bull; AI translation &bull; Ask AI panel |
 | **Cloud Sync** | WebDAV / Google Drive / OneDrive &bull; AES-256-GCM encryption &bull; Settings sync &bull; File size limits |
 | **Translation** | Baidu / Youdao / Google engines &bull; AI translation mode &bull; Language auto-detect &bull; One-click copy |
-| **Templates** | Reusable templates with variable substitution |
+| **Smart Paste** | Per-app format conversion (Rich Text → Markdown, Image → File, Text → HTML) &bull; Link preview cards &bull; Local HTTP API |
 | **Organization** | Pin & favorites &bull; Tag system with CRUD &bull; Content categories &bull; Language detection (19 languages) |
 | **Spotlight** | Unified global search &bull; Prefix routing &bull; Content-aware matching &bull; 10+ modes &bull; History (`!!`) &bull; Toggle shortcut &bull; Preserve query on reopen |
 | **Plugins** | 10+ built-in plugins &bull; Calculator (`=`) &bull; Color Toolbox (`cc`) &bull; Password Generator (`pw`) &bull; Timestamp (`ts`) &bull; URL Opener &bull; Web Search (`??`) &bull; Browser Bookmarks (`bm`) &bull; Network Info (`ip`) &bull; GitHub Search (`gh`) |

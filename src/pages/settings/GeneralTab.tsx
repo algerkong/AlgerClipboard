@@ -537,7 +537,7 @@ export function GeneralTab() {
                 </div>
               </SettingsField>
               <SettingsButton onClick={() => setIsRecordingShortcut((prev) => !prev)}>
-                {isRecordingShortcut ? t("template.cancel") : t("settings.shortcutRecord")}
+                {isRecordingShortcut ? t("settings.cancel") : t("settings.shortcutRecord")}
               </SettingsButton>
             </div>
           }
@@ -556,7 +556,7 @@ export function GeneralTab() {
                 </div>
               </SettingsField>
               <SettingsButton onClick={() => setIsRecordingIncognitoShortcut((prev) => !prev)}>
-                {isRecordingIncognitoShortcut ? t("template.cancel") : t("settings.shortcutRecord")}
+                {isRecordingIncognitoShortcut ? t("settings.cancel") : t("settings.shortcutRecord")}
               </SettingsButton>
             </div>
           }

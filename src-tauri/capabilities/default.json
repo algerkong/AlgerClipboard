@@ -5,8 +5,6 @@
   "windows": [
     "main",
     "image-viewer-*",
-    "template-manager",
-    "template-manager-*",
     "settings",
     "settings-*",
     "tag-manager",

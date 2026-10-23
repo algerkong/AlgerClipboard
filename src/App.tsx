@@ -7,7 +7,6 @@ import { useTranslation } from "react-i18next";
 import { TitleBar } from "@/components/TitleBar";
 import { ClipboardPanel } from "@/pages/ClipboardPanel";
 import { SettingsPage } from "@/pages/settings";
-import { TemplateManager } from "@/pages/TemplateManager";
 import { ImageViewerPage } from "@/components/ImageViewer";
 import { DetailPage } from "@/pages/DetailPage";
 import { TagManagerPage } from "@/pages/TagManager";
@@ -42,7 +41,6 @@ document.addEventListener("click", (e) => {
 // Detect window type from URL params
 const searchParams = new URLSearchParams(window.location.search);
 const isImageViewer = searchParams.get("window") === "image-viewer";
-const isTemplateManager = searchParams.get("window") === "template-manager";
 const isSettings = searchParams.get("window") === "settings";
 const isDetail = searchParams.get("window") === "detail";
 const isTagManager = searchParams.get("window") === "tag-manager";
@@ -54,7 +52,6 @@ const initialSettingsTab = searchParams.get("tab") || undefined;
 // The main window is the only one without a `window` query parameter.
 const isMainWindow =
   !isImageViewer &&
-  !isTemplateManager &&
   !isSettings &&
   !isDetail &&
   !isTagManager &&
@@ -151,15 +148,6 @@ function App() {
     );
   }
 
-  // If this is a template manager window, render standalone template manager
-  if (isTemplateManager) {
-    return (
-      <PlatformProvider>
-        <TemplateManagerWindow />
-      </PlatformProvider>
-    );
-  }
-
   // If this is a detail window, render standalone detail page
   if (isDetail) {
     return (
@@ -199,50 +187,6 @@ function App() {
     <PlatformProvider>
       <MainApp />
     </PlatformProvider>
-  );
-}
-
-function TemplateManagerWindow() {
-  const { i18n } = useTranslation();
-  const theme = useSettingsStore((s) => s.theme);
-  const locale = useSettingsStore((s) => s.locale);
-  const loadSettings = useSettingsStore((s) => s.loadSettings);
-
-  useEffect(() => {
-    loadSettings();
-  }, [loadSettings]);
-
-  useEffect(() => {
-    if (locale && i18n.language !== locale) {
-      i18n.changeLanguage(locale);
-    }
-  }, [locale, i18n]);
-
-  useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
-
-  // Escape key closes the window
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        getCurrentWebviewWindow().close();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
-  const handleClose = useCallback(() => {
-    getCurrentWebviewWindow().close();
-  }, []);
-
-  return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      <div className="flex-1 min-h-0">
-        <TemplateManager onBack={handleClose} />
-      </div>
-    </div>
   );
 }
 

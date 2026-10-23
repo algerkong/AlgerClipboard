@@ -53,7 +53,6 @@ pub fn build_router(
         .route("/api/v1/clipboard/current", get(get_clipboard))
         .route("/api/v1/paste/:id", post(paste_entry_handler))
         .route("/api/v1/tags", get(list_tags))
-        .route("/api/v1/templates", get(list_templates))
         .route("/api/v1/status", get(status))
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
@@ -329,11 +328,6 @@ async fn paste_entry_handler(
 async fn list_tags(State(state): State<ApiState>) -> ApiResult {
     let tags = internal(state.db.get_all_tags())?;
     Ok(ok(tags))
-}
-
-async fn list_templates(State(state): State<ApiState>) -> ApiResult {
-    let templates = internal(state.db.get_templates(None))?;
-    Ok(ok(templates))
 }
 
 async fn status(State(state): State<ApiState>) -> ApiResult {

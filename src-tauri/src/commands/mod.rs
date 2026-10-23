@@ -12,7 +12,6 @@ pub mod search_cmd;
 pub mod settings_cmd;
 pub mod smart_paste_cmd;
 pub mod sync_cmd;
-pub mod template_cmd;
 pub mod translate_cmd;
 pub mod plugin_cmd;
 pub mod spotlight_cmd;

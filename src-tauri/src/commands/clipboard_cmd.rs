@@ -70,19 +70,16 @@ pub fn clear_history(
 #[tauri::command]
 pub fn export_data(db: State<'_, AppDatabase>) -> Result<String, String> {
     let entries = db.0.export_all_entries()?;
-    let templates = db.0.get_templates(None)?;
 
     #[derive(serde::Serialize)]
     struct ExportData {
         version: String,
         entries: Vec<ClipboardEntry>,
-        templates: Vec<crate::storage::database::Template>,
     }
 
     let data = ExportData {
         version: "1.0".to_string(),
         entries,
-        templates,
     };
 
     serde_json::to_string_pretty(&data)

@@ -1,8 +1,8 @@
 {
   "settings": {
     "title": "Settings",
-    "tabGeneral": "General",
-    "tabSmartPaste": "Smart Paste",
+    "cancel": "Cancel",
+    "tabGeneral": "General",    "tabSmartPaste": "Smart Paste",
     "tabRichText": "Rich Text",
     "tabSync": "Sync",
     "tabTranslate": "Translate",

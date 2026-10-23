@@ -203,7 +203,7 @@ export function SpotlightTab() {
             </div>
           </SettingsField>
           <SettingsButton onClick={() => setRecording(recording === target ? null : target)}>
-            {recording === target ? t("template.cancel") : t("settings.shortcutRecord")}
+            {recording === target ? t("settings.cancel") : t("settings.shortcutRecord")}
           </SettingsButton>
         </div>
       }

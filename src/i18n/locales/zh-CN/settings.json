@@ -1,8 +1,8 @@
 {
   "settings": {
     "title": "设置",
-    "tabGeneral": "通用",
-    "tabSmartPaste": "智能粘贴",
+    "cancel": "取消",
+    "tabGeneral": "通用",    "tabSmartPaste": "智能粘贴",
     "tabRichText": "富文本",
     "tabSync": "同步",
     "tabTranslate": "翻译",

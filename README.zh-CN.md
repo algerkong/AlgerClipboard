@@ -76,7 +76,7 @@ CodeMirror 6 代码编辑器支持 12+ 种语言语法高亮，TipTap 2 所见�
 | **AI** | 多服务商（OpenAI、Claude、Gemini、DeepSeek、Ollama、自定义） &bull; 自动摘要 &bull; AI 翻译 &bull; Ask AI 面板 |
 | **云同步** | WebDAV / Google Drive / OneDrive &bull; AES-256-GCM 加密 &bull; 设置同步 &bull; 文件大小限制 |
 | **翻译** | 百度 / 有道 / Google 翻译引擎 &bull; AI 翻译模式 &bull; 语言自动检测 &bull; 一键复制 |
-| **模板** | 可复用模板，支持变量替换 |
+| **智能粘贴** | 按目标应用自动转换格式（富文本 → Markdown、图片 → 文件、文本 → HTML） &bull; 链接预览卡片 &bull; 本地 HTTP API |
 | **组织** | 置顶和收藏 &bull; 标签系统 &bull; 内容分类 &bull; 编程语言检测（19 种语言） |
 | **Spotlight** | 统一全局搜索 &bull; 前缀路由 &bull; 内容智能匹配 &bull; 10+ 模式 &bull; 历史记录 &bull; 快捷键切换 &bull; 重开保留输入 |
 | **插件** | 10+ 内置插件 &bull; 计算器 (`=`) &bull; 颜色工具 (`cc`) &bull; 密码生成器 (`pw`) &bull; 时间工具 (`ts`) &bull; URL 快开 &bull; 网页搜索 (`??`) &bull; 书签 (`bm`) &bull; 网络信息 (`ip`) &bull; GitHub 搜索 (`gh`) |

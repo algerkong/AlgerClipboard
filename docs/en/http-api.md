@@ -117,9 +117,8 @@ curl -H "X-API-Key: <key>" http://127.0.0.1:25483/api/v1/clipboard/current
 curl -X POST -H "X-API-Key: <key>" http://127.0.0.1:25483/api/v1/paste/<id>
 ```
 
-### Tags and templates
+### Tags
 
 ```bash
 curl -H "X-API-Key: <key>" http://127.0.0.1:25483/api/v1/tags
-curl -H "X-API-Key: <key>" http://127.0.0.1:25483/api/v1/templates
 ```
