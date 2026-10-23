@@ -1,5 +1,63 @@
 # Changelog
 
+## [1.11.0] - 2026-10-23
+
+### New Features
+
+- **Smart Paste**: Automatically convert clipboard content to the best format for the target app when pasting — rich text to Markdown/plain text, images to image files, text to HTML, and more. Rules are configured per app in Settings > Smart Paste. Hold Shift while pasting to force the original format
+- **Link Preview Cards**: Copied URLs now show a preview card with title, description, site name, and image. Preview fetching is enabled by default and can be disabled in Settings > General. Failed previews are cached to avoid repeated requests
+- **Local HTTP API**: Optional local REST API for automation and integrations. Listens on `127.0.0.1:25483`, requires an API key, allows read-only access without a key, and is rate-limited to 100 requests per minute. Configure in Settings > Data. See `docs/en/http-api.md`
+- **Ask AI Default Service**: Choose a default AI service in Settings > Ask AI. Defaults to DeepSeek and can be changed at any time; selecting a default automatically enables that service
+- **Ask AI Per-Service Windows**: The tabbed Ask AI panel has been replaced. Each AI service now opens in its own native window with an isolated session, so multiple services can stay open side by side
+- **Localized Ask AI Prompts**: Built-in Ask AI presets now use prompts in the app's UI language (Chinese or English). Custom and user-edited prompts are left untouched
+
+### Improvements
+
+- Redesigned the Ask AI settings page with a default-AI card, service cards, and card-based preset management
+- Redesigned the Ask AI preset popover: the configured default service is preselected, the active service is always visible, and enabled services can be switched inline
+- DeepSeek auto-send is now more reliable: the visible composer is targeted directly, framework-compatible input events are dispatched, and the send action falls back to Enter
+- The Ask AI popover now stays within the viewport and scrolls when needed
+
+### Changes
+
+- **Templates removed**: The template manager, quick picker, backend commands, database CRUD, export fields, and HTTP API endpoint have been removed. Existing template data in old databases is left untouched but is no longer used or displayed
+
+### Bug Fixes
+
+- Fixed Ask AI sending to DeepSeek failing silently because the wrong or hidden input/send button was targeted
+- Fixed Ask AI prompts always being sent in English regardless of the app language
+
+---
+
+## [1.11.0] - 2026-10-23 (中文)
+
+### 新功能
+
+- **智能粘贴**：粘贴时按目标应用自动选择最佳格式 —— 富文本 → Markdown/纯文本、图片 → 图片文件、文本 → HTML 等。规则按应用配置，可在「设置 > 智能粘贴」中管理。粘贴时按住 Shift 可强制使用原始格式
+- **链接预览卡片**：复制的 URL 会显示包含标题、描述、站点名称和图片的预览卡片。默认开启，可在「设置 > 通用」中关闭。抓取失败的链接会缓存失败状态，避免重复请求
+- **本地 HTTP API**：可选的本地 REST API，便于自动化和第三方集成。监听 `127.0.0.1:25483`，需要 API Key，无 Key 时只读，限流 100 请求/分钟。可在「设置 > 数据」中配置，详见 `docs/zh-CN/http-api.md`
+- **问 AI 默认服务**：可在「设置 > 问 AI」中配置默认 AI 服务，默认为 DeepSeek，随时可改；设为默认时会自动启用该服务
+- **问 AI 独立窗口**：移除顶部标签栏，每个 AI 服务改为独立原生窗口，会话互相隔离，可同时打开多个服务
+- **问 AI 提示词跟随语言**：内置预设会根据应用界面语言自动使用中文或英文提示词；用户自定义或手动编辑过的提示词保持原文
+
+### 改进
+
+- 重做「问 AI」设置页：默认 AI 卡片、服务卡片、卡片化预设管理
+- 重做问 AI 弹层：自动预选默认服务，始终显示当前服务，可直接切换已启用的服务
+- 提升 DeepSeek 自动发送可靠性：直接定位可见输入框，发送框架兼容的输入事件，找不到发送按钮时回退到 Enter 发送
+- 问 AI 弹层会自动适应窗口高度，内容过长时可滚动
+
+### 变更
+
+- **移除模板功能**：模板管理器、快速选择器、后端命令、数据库 CRUD、导出字段和 HTTP API 接口均已移除。旧数据库中的模板数据不会删除，但不再使用或显示
+
+### Bug 修复
+
+- 修复问 AI 发送到 DeepSeek 时因定位到错误或隐藏的输入框/发送按钮而静默失败的问题
+- 修复问 AI 提示词始终以英文发送、不跟随应用语言的问题
+
+---
+
 ## [1.10.0] - 2026-03-24
 
 ### New Features
