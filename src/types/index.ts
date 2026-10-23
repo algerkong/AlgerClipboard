@@ -51,6 +51,16 @@ export interface ClipboardEntry {
   ocr_text: string | null;
   is_sensitive: boolean;
   sensitive_types: string | null;
+  link_preview: string | null;
+}
+
+export interface LinkPreview {
+  url: string;
+  title: string | null;
+  description: string | null;
+  image_path: string | null;
+  favicon_url: string | null;
+  fetched_at: string;
 }
 
 export interface HistoryQuery {

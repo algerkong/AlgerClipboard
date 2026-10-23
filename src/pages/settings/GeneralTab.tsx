@@ -84,6 +84,7 @@ export function GeneralTab() {
   const [newExcludedApp, setNewExcludedApp] = useState("");
   const [recentApps, setRecentApps] = useState<string[]>([]);
   const [sensitiveRules, setSensitiveRules] = useState<string[]>([]);
+  const [linkPreviewEnabled, setLinkPreviewEnabled] = useState(true);
 
   useEffect(() => {
     if (!isRecordingShortcut) {
@@ -173,6 +174,13 @@ export function GeneralTab() {
       .catch(() => {});
     invoke<string[]>("get_recent_source_apps").then(setRecentApps).catch(() => {});
     invoke<string[]>("get_sensitive_rules").then(setSensitiveRules).catch(() => {});
+    invoke<string | null>("get_settings", { key: "link_preview_enabled" })
+      .then((value) => {
+        if (value !== null) {
+          setLinkPreviewEnabled(value !== "false");
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -398,6 +406,25 @@ export function GeneralTab() {
             <Toggle
               value={isIncognito}
               onChange={() => toggleIncognito()}
+            />
+          }
+        />
+      </SettingsSection>
+
+      {/* ─── Link Preview ─── */}
+      <SettingsSection title={t("settings.linkPreview")} description={t("settings.linkPreviewDesc")}>
+        <SettingsRow
+          title={t("settings.linkPreview")}
+          control={
+            <Toggle
+              value={linkPreviewEnabled}
+              onChange={(enabled) => {
+                setLinkPreviewEnabled(enabled);
+                invoke("update_settings", {
+                  key: "link_preview_enabled",
+                  value: String(enabled),
+                }).catch(() => toast.error(t("settings.linkPreviewFailed")));
+              }}
             />
           }
         />

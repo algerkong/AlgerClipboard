@@ -52,6 +52,7 @@ interface ClipboardState {
   renameTag: (oldTag: string, newTag: string) => Promise<void>;
   deleteTagEverywhere: (tag: string) => Promise<void>;
   updateEntrySummary: (id: string, summary: string) => void;
+  updateEntryLinkPreview: (id: string, linkPreview: string | null) => void;
   updateEntryText: (id: string, text: string) => void;
   resetView: () => void;
   isIncognito: boolean;
@@ -322,6 +323,14 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
     set((state) => ({
       entries: state.entries.map((e) =>
         e.id === id ? { ...e, ai_summary: summary } : e
+      ),
+    }));
+  },
+
+  updateEntryLinkPreview: (id: string, linkPreview: string | null) => {
+    set((state) => ({
+      entries: state.entries.map((e) =>
+        e.id === id ? { ...e, link_preview: linkPreview } : e
       ),
     }));
   },

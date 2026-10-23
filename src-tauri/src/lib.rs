@@ -320,7 +320,9 @@ pub fn run() {
             let app_handle = app.handle().clone();
             let db_for_ai = db.clone();
             let db_for_ocr = db.clone();
+            let db_for_link = db.clone();
             let blob_for_ocr = blob_store.clone();
+            let blob_for_link = blob_store.clone();
             monitor.start(db.clone(), blob_store, move |entry| {
                 // Check if this clipboard change was triggered by our own paste
                 // operation. If so, the frontend should skip the "Copied" toast.
@@ -334,6 +336,63 @@ pub fn run() {
                     "clipboard-changed",
                     ClipboardChangedPayload { entry: &entry, from_paste },
                 );
+
+                // Fetch link preview metadata for new URL text entries.
+                if matches!(
+                    entry.content_type,
+                    ContentType::PlainText | ContentType::RichText
+                ) && !entry.is_sensitive
+                    && entry.link_preview.is_none()
+                {
+                    if let Some(url) = entry
+                        .text_content
+                        .as_deref()
+                        .and_then(crate::clipboard::link_preview::extract_first_url)
+                    {
+                        let db = db_for_link.clone();
+                        let blob = blob_for_link.clone();
+                        let handle = app_handle.clone();
+                        let entry_id = entry.id.clone();
+
+                        tauri::async_runtime::spawn(async move {
+                            let enabled = db
+                                .get_setting("link_preview_enabled")
+                                .ok()
+                                .flatten()
+                                .map(|value| value != "false")
+                                .unwrap_or(true);
+                            if !enabled {
+                                return;
+                            }
+
+                            match crate::clipboard::link_preview::fetch_link_preview(
+                                &url, &blob,
+                            )
+                            .await
+                            {
+                                Ok(preview) => {
+                                    if let Ok(json) = serde_json::to_string(&preview) {
+                                        let _ = db.update_link_preview(&entry_id, Some(&json));
+                                        let _ = handle.emit(
+                                            "entry-link-preview-updated",
+                                            serde_json::json!({
+                                                "id": entry_id,
+                                                "link_preview": json,
+                                            }),
+                                        );
+                                    }
+                                }
+                                Err(error) => {
+                                    log::warn!("Link preview failed for {}: {}", url, error);
+                                    // Mark the entry so repeated copies of the same URL
+                                    // do not trigger another network request.
+                                    let _ =
+                                        db.update_link_preview(&entry_id, Some("{\"error\":true}"));
+                                }
+                            }
+                        });
+                    }
+                }
 
                 // Auto-summarize text entries if AI is configured
                 let has_text = entry.text_content.as_ref().map_or(false, |t| !t.is_empty());
@@ -674,6 +733,7 @@ pub fn run() {
             commands::smart_paste_cmd::get_smart_paste_config,
             commands::smart_paste_cmd::save_smart_paste_config,
             commands::smart_paste_cmd::reset_smart_paste_config,
+            commands::link_preview_cmd::refresh_link_preview,
             commands::settings_cmd::focus_main_window,
             commands::settings_cmd::get_window_size,
             commands::settings_cmd::get_recent_source_apps,

@@ -60,7 +60,9 @@
     "summarized": "Summary generated",
     "summarizeFailed": "Summary generation failed",
     "translateConfigRequired": "Configure a translation engine or AI first",
-    "summaryConfigRequired": "Configure AI first"
+    "summaryConfigRequired": "Configure AI first",
+    "linkPreviewRefreshed": "Link preview updated",
+    "linkPreviewFailed": "Failed to fetch link preview"
   },
   "contextMenu": {
     "viewFull": "View Full Text",
@@ -75,6 +77,7 @@
     "addTag": "Add Tag",
     "tagPlaceholder": "Enter tag name...",
     "openInBrowser": "Open in Browser",
+    "refreshLinkPreview": "Refresh Link Preview",
     "aiSummarize": "AI Summarize",
     "resummarize": "Re-summarize",
     "previewFile": "Preview File",

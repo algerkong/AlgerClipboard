@@ -522,6 +522,19 @@ function MainApp() {
     return () => { unlisten.then((fn) => fn()); };
   }, []);
 
+  // Listen for link preview updates from Rust backend
+  useEffect(() => {
+    const unlisten = listen<{ id: string; link_preview: string | null }>(
+      "entry-link-preview-updated",
+      (event) => {
+        useClipboardStore
+          .getState()
+          .updateEntryLinkPreview(event.payload.id, event.payload.link_preview);
+      }
+    );
+    return () => { unlisten.then((fn) => fn()); };
+  }, []);
+
   // Listen for clipboard-changed event from Rust backend
   // Use ref to avoid re-subscribing the listener when accounts change
   const realtimeSyncRef = useRef<() => void>(() => {});

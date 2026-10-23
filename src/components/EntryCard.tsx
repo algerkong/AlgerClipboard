@@ -1,15 +1,15 @@
 import { memo, useCallback, useState, useEffect, useMemo, useRef } from "react";
-import { Star, Trash, FileText, Image as ImageIcon, FolderOpen, Translate, PushPin, Eye, Copy, ClipboardText, ArrowsOut, Cloud, Upload, CloudWarning, Code, Tag, X, ArrowSquareOut, Brain, Sparkle, File, VideoCamera, MusicNote, Archive, FileCode, FileText as FileTypeIcon, Folder, QrCode, Prohibit, ShieldWarning, Check } from "@phosphor-icons/react";
+import { Star, Trash, FileText, Image as ImageIcon, FolderOpen, Translate, PushPin, Eye, Copy, ClipboardText, ArrowsOut, Cloud, Upload, CloudWarning, Code, Tag, X, ArrowSquareOut, Brain, Sparkle, File, VideoCamera, MusicNote, Archive, FileCode, FileText as FileTypeIcon, Folder, QrCode, Prohibit, ShieldWarning, Check, LinkSimple, ArrowsClockwise } from "@phosphor-icons/react";
 
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { useCapabilityStore } from "@/stores/capabilityStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { pasteEntry, getThumbnailBase64, handlePasteError } from "@/services/clipboardService";
 import { openUrl } from "@/services/settingsService";
-import type { ClipboardEntry, FileMeta } from "@/types";
+import type { ClipboardEntry, FileMeta, LinkPreview } from "@/types";
 import { invoke } from "@tauri-apps/api/core";
 import { openFileViewer } from "@/services/fileViewerService";
-import { openInFileExplorer, openFileDefault } from "@/services/clipboardService";
+import { openInFileExplorer, openFileDefault, refreshLinkPreview } from "@/services/clipboardService";
 import { cn } from "@/lib/utils";
 import { highlightText, getSearchSnippet } from "@/lib/highlightText";
 import { useTranslation } from "react-i18next";
@@ -109,6 +109,26 @@ function useImageSrc(entry: ClipboardEntry): string | null {
     }).catch(() => {});
     return () => { cancelled = true; };
   }, [entry.content_type, path]);
+
+  return src;
+}
+
+function useThumbnailSrc(path: string | null | undefined): string | null {
+  const [loadedImage, setLoadedImage] = useState<{ path: string; src: string } | null>(null);
+  const src = path
+    ? _thumbCache.get(path) ?? (loadedImage?.path === path ? loadedImage.src : null)
+    : null;
+
+  useEffect(() => {
+    if (!path || _thumbCache.has(path)) return;
+    let cancelled = false;
+    getThumbnailBase64(path).then((dataUrl) => {
+      if (cancelled) return;
+      _thumbCache.set(path, dataUrl);
+      setLoadedImage({ path, src: dataUrl });
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [path]);
 
   return src;
 }
@@ -297,6 +317,30 @@ export const EntryCard = memo(function EntryCard({
     ? isNonChinese(entry.text_content)
     : false;
   const imageSrc = useImageSrc(entry);
+  const linkPreview = useMemo<LinkPreview | null>(() => {
+    if (!entry.link_preview) return null;
+    try {
+      return JSON.parse(entry.link_preview) as LinkPreview;
+    } catch {
+      return null;
+    }
+  }, [entry.link_preview]);
+  const linkPreviewImage = useThumbnailSrc(linkPreview?.image_path);
+  const isUrlLike = useMemo(() => {
+    const text = (entry.text_content ?? "")
+      .trim()
+      .replace(/[)\]}>.,;!?。，！？；：]+$/g, "");
+    return text.length > 0 && text.length <= 4096 && /^https?:\/\/\S+$/i.test(text);
+  }, [entry.text_content]);
+  const linkPreviewHost = useMemo(() => {
+    if (!linkPreview?.url) return "";
+    try {
+      return new URL(linkPreview.url).hostname.replace(/^www\./, "");
+    } catch {
+      return "";
+    }
+  }, [linkPreview?.url]);
+  const [faviconFailed, setFaviconFailed] = useState(false);
   const dominantColor = useDominantColor(entry.source_icon);
   const typeLineColor = dominantColor || getTypeLineColor(entry.content_type);
   const availableTags = useMemo(() => {
@@ -466,6 +510,21 @@ export const EntryCard = memo(function EntryCard({
         });
       }
 
+      if (urls.length > 0) {
+        items.push({
+          label: t("contextMenu.refreshLinkPreview"),
+          icon: <ArrowsClockwise size={14} />,
+          onClick: async () => {
+            try {
+              await refreshLinkPreview(entry.id);
+              toast.success(t("toast.linkPreviewRefreshed"));
+            } catch {
+              toast.error(t("toast.linkPreviewFailed"));
+            }
+          },
+        });
+      }
+
     }
 
     items.push({
@@ -604,6 +663,66 @@ export const EntryCard = memo(function EntryCard({
               {formatFileSize(fileMetas.reduce((sum, f) => sum + f.size, 0))}
               {fileMetas.length === 1 && fileMetas[0].file_type !== "Other" && ` · ${fileMetas[0].file_type}`}
             </p>
+          </div>
+        </div>
+      );
+    }
+    // Link preview card
+    if (linkPreview && isUrlLike && !keyword && (linkPreview.title || linkPreview.description)) {
+      return (
+        <div
+          className="flex gap-2.5 rounded-lg border px-2 py-1.5"
+          style={{
+            background: "color-mix(in oklab, var(--muted) 30%, transparent)",
+            borderColor: "color-mix(in oklab, var(--border) 50%, transparent)",
+          }}
+        >
+          {linkPreviewImage ? (
+            <img
+              src={linkPreviewImage}
+              alt=""
+              className="h-[52px] w-[72px] shrink-0 rounded-md border border-border/30 object-cover"
+              draggable={false}
+            />
+          ) : (
+            <div className="flex h-[52px] w-[72px] shrink-0 items-center justify-center rounded-md bg-muted/50 text-muted-foreground">
+              <LinkSimple size={18} />
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="line-clamp-1 text-sm2 font-medium text-foreground">
+              {linkPreview.title || linkPreviewHost}
+            </p>
+            {linkPreview.description && (
+              <p className="mt-0.5 line-clamp-2 text-2xs leading-relaxed text-muted-foreground">
+                {linkPreview.description}
+              </p>
+            )}
+            <div className="mt-1 flex items-center gap-1 text-2xs text-muted-foreground">
+              {linkPreview.favicon_url && !faviconFailed && (
+                <img
+                  src={linkPreview.favicon_url}
+                  alt=""
+                  className="h-3 w-3 rounded-sm"
+                  draggable={false}
+                  onError={() => setFaviconFailed(true)}
+                />
+              )}
+              <span className="truncate">{linkPreviewHost}</span>
+              <button
+                type="button"
+                className="ml-auto shrink-0 rounded p-0.5 transition-colors hover:bg-muted hover:text-foreground"
+                title={t("contextMenu.openInBrowser")}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openUrl(linkPreview.url).catch(() =>
+                    toast.error(t("toast.openUrlFailed")),
+                  );
+                }}
+              >
+                <ArrowSquareOut size={12} />
+              </button>
+            </div>
           </div>
         </div>
       );

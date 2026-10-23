@@ -85,4 +85,6 @@ pub struct ClipboardEntry {
     pub ocr_text: Option<String>,
     pub is_sensitive: bool,
     pub sensitive_types: Option<String>,
+    #[serde(default)]
+    pub link_preview: Option<String>,
 }

@@ -118,6 +118,10 @@ export async function getThumbnailBase64(relativePath: string): Promise<string> 
   return invoke("get_thumbnail_base64", { relativePath });
 }
 
+export async function refreshLinkPreview(id: string): Promise<string | null> {
+  return invoke("refresh_link_preview", { id });
+}
+
 export async function extractTextFromImage(relativePath: string): Promise<OcrResult> {
   return invoke("extract_text_from_image", { relativePath });
 }

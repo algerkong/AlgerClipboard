@@ -1725,6 +1725,7 @@ impl ClipboardMonitor {
                                     ocr_text: None,
                                     is_sensitive: false,
                                     sensitive_types: None,
+                                    link_preview: None,
                                 };
 
                                 if let Err(e) = db.insert_entry(&entry) {
@@ -1842,6 +1843,7 @@ impl ClipboardMonitor {
                                         ocr_text: None,
                                         is_sensitive: false,
                                         sensitive_types: None,
+                                        link_preview: None,
                                     };
 
                                     if let Err(e) = db.insert_entry(&entry) {
@@ -1977,6 +1979,7 @@ impl ClipboardMonitor {
                                                 ocr_text: None,
                                                 is_sensitive,
                                                 sensitive_types: sensitive_types_json,
+                                                link_preview: None,
                                             };
 
                                             if let Err(e) = db.insert_entry(&entry) {

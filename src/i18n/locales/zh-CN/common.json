@@ -60,7 +60,9 @@
     "summarized": "摘要生成成功",
     "summarizeFailed": "摘要生成失败",
     "translateConfigRequired": "请先配置翻译引擎或 AI",
-    "summaryConfigRequired": "请先配置 AI 功能"
+    "summaryConfigRequired": "请先配置 AI 功能",
+    "linkPreviewRefreshed": "链接预览已更新",
+    "linkPreviewFailed": "链接预览获取失败"
   },
   "contextMenu": {
     "viewFull": "查看全文",
@@ -75,6 +77,7 @@
     "addTag": "添加标签",
     "tagPlaceholder": "输入标签名...",
     "openInBrowser": "在浏览器中打开",
+    "refreshLinkPreview": "刷新链接预览",
     "aiSummarize": "AI 摘要",
     "resummarize": "重新摘要",
     "previewFile": "预览文件",

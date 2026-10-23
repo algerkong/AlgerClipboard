@@ -154,7 +154,7 @@ impl BlobStore {
     pub fn cleanup_by_size_limit(
         &self,
         max_bytes: u64,
-        oldest_entries: &[(Option<String>, Option<String>)],
+        oldest_entries: &[(Option<String>, Option<String>, Option<String>)],
     ) -> Result<u64, String> {
         let info = self.get_cache_info()?;
         if info.total_size_bytes <= max_bytes {
@@ -164,7 +164,7 @@ impl BlobStore {
         let mut freed = 0u64;
         let mut current_size = info.total_size_bytes;
 
-        for (blob_path, thumb_path) in oldest_entries {
+        for (blob_path, thumb_path, link_image_path) in oldest_entries {
             if current_size <= max_bytes {
                 break;
             }
@@ -180,6 +180,16 @@ impl BlobStore {
             }
             if let Some(tp) = thumb_path {
                 let full = self.base_dir.join(tp);
+                if full.exists() {
+                    if let Ok(meta) = std::fs::metadata(&full) {
+                        freed += meta.len();
+                        current_size -= meta.len();
+                    }
+                    let _ = std::fs::remove_file(&full);
+                }
+            }
+            if let Some(lp) = link_image_path {
+                let full = self.base_dir.join(lp);
                 if full.exists() {
                     if let Ok(meta) = std::fs::metadata(&full) {
                         freed += meta.len();
