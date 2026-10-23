@@ -1,4 +1,6 @@
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::thread;
+use std::time::Duration;
 
 #[cfg(target_os = "macos")]
 pub(crate) mod macos;
@@ -6,6 +8,7 @@ pub(crate) mod macos;
 pub(crate) mod windows;
 #[cfg(target_os = "linux")]
 pub(crate) mod linux;
+pub mod smart_paste;
 
 // Re-export the active platform module as `simulator` so that existing
 // call-sites (`use crate::paste::simulator; simulator::paste_text(...)`)
@@ -36,4 +39,18 @@ pub fn begin_paste() {
 #[inline]
 pub fn take_paste_in_progress() -> bool {
     PASTE_IN_PROGRESS.swap(false, Ordering::Relaxed)
+}
+
+/// Set the clipboard to HTML (with a plain-text fallback) and simulate a paste.
+pub fn paste_html(html: &str, plain: &str) -> Result<(), String> {
+    begin_paste();
+    {
+        let mut clipboard =
+            arboard::Clipboard::new().map_err(|e| format!("Failed to open clipboard: {}", e))?;
+        clipboard
+            .set_html(html, Some(plain))
+            .map_err(|e| format!("Failed to set clipboard HTML: {}", e))?;
+    }
+    thread::sleep(Duration::from_millis(50));
+    simulator::simulate_paste()
 }

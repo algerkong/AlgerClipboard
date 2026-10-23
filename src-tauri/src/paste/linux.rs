@@ -117,7 +117,7 @@ pub fn prepare_paste_target(target_window_id: Option<String>) {
 ///
 /// Detects terminal emulators and uses Ctrl+Shift+V or Shift+Insert as needed.
 /// Tries xdotool (X11) first, falls back to wtype (Wayland).
-fn simulate_paste() -> Result<(), String> {
+pub(crate) fn simulate_paste() -> Result<(), String> {
     #[derive(Clone, Copy)]
     enum Shortcut {
         CtrlV,

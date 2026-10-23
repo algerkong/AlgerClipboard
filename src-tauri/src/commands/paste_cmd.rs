@@ -29,6 +29,11 @@ impl AppPasteTargetState {
     }
 
     #[cfg(target_os = "windows")]
+    pub fn peek_windows_hwnd(&self) -> Option<isize> {
+        self.0.lock().ok().and_then(|guard| guard.windows_hwnd)
+    }
+
+    #[cfg(target_os = "windows")]
     pub fn take_windows_hwnd(&self) -> Option<isize> {
         self.0
             .lock()
@@ -41,6 +46,11 @@ impl AppPasteTargetState {
         if let Ok(mut guard) = self.0.lock() {
             guard.mac_bundle_id = Some(bundle_id);
         }
+    }
+
+    #[cfg(target_os = "macos")]
+    pub fn peek_macos_bundle_id(&self) -> Option<String> {
+        self.0.lock().ok().and_then(|guard| guard.mac_bundle_id.clone())
     }
 
     #[cfg(target_os = "macos")]
@@ -59,11 +69,39 @@ impl AppPasteTargetState {
     }
 
     #[cfg(target_os = "linux")]
+    pub fn peek_linux_window_id(&self) -> Option<String> {
+        self.0.lock().ok().and_then(|guard| guard.linux_window_id.clone())
+    }
+
+    #[cfg(target_os = "linux")]
     pub fn take_linux_window_id(&self) -> Option<String> {
         self.0
             .lock()
             .ok()
             .and_then(|mut guard| guard.linux_window_id.take())
+    }
+}
+
+fn current_target_app_info(
+    paste_target: &AppPasteTargetState,
+) -> crate::paste::smart_paste::TargetAppInfo {
+    #[cfg(target_os = "windows")]
+    {
+        crate::paste::smart_paste::target_app_info_from_hwnd(
+            paste_target.peek_windows_hwnd().unwrap_or(0),
+        )
+    }
+    #[cfg(target_os = "macos")]
+    {
+        crate::paste::smart_paste::target_app_info_from_bundle_id(
+            paste_target.peek_macos_bundle_id(),
+        )
+    }
+    #[cfg(target_os = "linux")]
+    {
+        crate::paste::smart_paste::target_app_info_from_window_id(
+            paste_target.peek_linux_window_id(),
+        )
     }
 }
 
@@ -75,10 +113,23 @@ pub fn paste_entry(
     paste_target: State<'_, AppPasteTargetState>,
     id: String,
     mode: Option<String>,
+    force_original: Option<bool>,
 ) -> Result<(), String> {
     let entry =
         db.0.get_entry(&id)?
             .ok_or_else(|| "Entry not found".to_string())?;
+
+    // Resolve smart-paste conversion before consuming the target snapshot.
+    let smart_config = crate::paste::smart_paste::SmartPasteConfig::load(&db.0);
+    let target_info = current_target_app_info(&paste_target);
+    let smart_content = if force_original.unwrap_or(false) {
+        None
+    } else {
+        crate::paste::smart_paste::resolve_rule(&entry, &target_info, &smart_config)
+            .and_then(|rule| {
+                crate::paste::smart_paste::apply_rule(&entry, rule, &blob_store.0)
+            })
+    };
 
     // CRITICAL: Transfer focus to target BEFORE hiding our window.
     // We must still be the foreground process for SetForegroundWindow to succeed.
@@ -114,6 +165,18 @@ pub fn paste_entry(
     }
 
     let _mode = mode.unwrap_or_else(|| "default".to_string());
+
+    if let Some(content) = smart_content {
+        use crate::paste::smart_paste::ResolvedContent;
+        return match content {
+            ResolvedContent::Text(text) => simulator::paste_text(&text),
+            ResolvedContent::Html { html, plain } => crate::paste::paste_html(&html, &plain),
+            ResolvedContent::Files(paths) => {
+                let path_refs: Vec<&str> = paths.iter().map(String::as_str).collect();
+                simulator::paste_files(&path_refs)
+            }
+        };
+    }
 
     match entry.content_type {
         crate::clipboard::entry::ContentType::FilePaths => {

@@ -200,7 +200,7 @@ pub fn prepare_paste_target(target_hwnd: Option<isize>, source_hwnd: Option<isiz
 /// * Regular apps → Ctrl+V
 /// * PuTTY / mintty → Shift+Insert
 /// * Legacy console (cmd.exe / old PowerShell) → WM_COMMAND 0xfff1
-fn simulate_paste() -> Result<(), String> {
+pub(crate) fn simulate_paste() -> Result<(), String> {
     use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
         GetAsyncKeyState, MapVirtualKeyW, SendInput, INPUT, INPUT_KEYBOARD, KEYBDINPUT,
         KEYEVENTF_KEYUP, MAPVK_VK_TO_VSC, VK_CONTROL, VK_INSERT, VK_LCONTROL, VK_LMENU, VK_LWIN,

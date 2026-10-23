@@ -315,14 +315,17 @@ export const EntryCard = memo(function EntryCard({
     }
     selectEntry(entry.id);
   }, [entry.id, selectEntry, isMultiSelectMode, toggleSelect]);
-  const handlePaste = useCallback(() => {
-    pasteEntry(entry.id)
+  const handlePaste = useCallback((forceOriginal = false) => {
+    pasteEntry(entry.id, undefined, forceOriginal)
       .then(() => toast.success(t("toast.pasted")))
       .catch((err: unknown) => handlePasteError(err, t));
   }, [entry.id, t]);
-  const handleDoubleClick = useCallback(() => {
-    handlePaste();
-  }, [handlePaste]);
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      handlePaste(e.shiftKey);
+    },
+    [handlePaste],
+  );
 
   const handleOpenImageViewer = useCallback(() => {
     const blobPath = entry.blob_path;
@@ -468,7 +471,7 @@ export const EntryCard = memo(function EntryCard({
     items.push({
       label: t("contextMenu.paste"),
       icon: <ClipboardText size={14} />,
-      onClick: handlePaste,
+      onClick: () => handlePaste(),
     });
 
     items.push({
@@ -686,7 +689,7 @@ export const EntryCard = memo(function EntryCard({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  handlePaste();
+                  handlePaste(e.shiftKey);
                 }}
                 className="flex items-center justify-center min-w-7 min-h-7 rounded-md border border-transparent cursor-pointer text-muted-foreground transition-all hover:bg-primary/10 hover:text-primary hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 title={t("contextMenu.paste")}

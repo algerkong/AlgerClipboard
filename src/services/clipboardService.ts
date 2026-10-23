@@ -56,9 +56,10 @@ export async function clearHistory(keepFavorites: boolean): Promise<void> {
 
 export async function pasteEntry(
   id: string,
-  mode?: string
+  mode?: string,
+  forceOriginal = false
 ): Promise<void> {
-  return invoke("paste_entry", { id, mode: mode ?? null });
+  return invoke("paste_entry", { id, mode: mode ?? null, forceOriginal });
 }
 
 export async function exportData(): Promise<string> {

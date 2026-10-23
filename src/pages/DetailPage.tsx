@@ -155,10 +155,10 @@ export function DetailPage() {
     setTimeout(() => setCopied(false), 1500);
   }, [entry, t]);
 
-  const handlePaste = useCallback(async () => {
+  const handlePaste = useCallback(async (forceOriginal = false) => {
     if (!entry) return;
     try {
-      await pasteEntry(entry.id);
+      await pasteEntry(entry.id, undefined, forceOriginal);
       toast.success(t("toast.pasted"));
     } catch (err) {
       handlePasteError(err, t);
@@ -265,7 +265,7 @@ export function DetailPage() {
                   )}
                 </HintIconButton>
                 <HintIconButton
-                  onClick={handlePaste}
+                  onClick={(e) => void handlePaste(e.shiftKey)}
                   label={t("detail.paste")}
                   className="filter-pill min-h-0 p-1 transition-colors text-muted-foreground hover:text-foreground"
                 >

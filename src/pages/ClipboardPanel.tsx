@@ -118,7 +118,7 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
 
         e.preventDefault();
         setShortcutModifierPressed(false);
-        pasteEntry(entryId)
+        pasteEntry(entryId, undefined, e.shiftKey)
           .then(() => toast.success(t("toast.pasted")))
           .catch((err: unknown) => handlePasteError(err, t));
         return;
@@ -149,7 +149,7 @@ export function ClipboardPanel({ onOpenSettings }: Props) {
         virtuosoRef.current?.scrollIntoView({ index: prev, behavior: "auto" });
       } else if (e.key === "Enter" && selectedId) {
         e.preventDefault();
-        pasteEntry(selectedId)
+        pasteEntry(selectedId, undefined, e.shiftKey)
           .then(() => toast.success(t("toast.pasted")))
           .catch((err: unknown) => handlePasteError(err, t));
       } else if (e.key === " " && selectedId) {

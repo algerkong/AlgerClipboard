@@ -119,7 +119,7 @@ pub fn prepare_paste_target(target_bundle_id: Option<String>) {
 /// Returns `Err("ACCESSIBILITY_REQUIRED")` for any non-timeout failure —
 /// the only realistic failure mode for this hardcoded keystroke script on
 /// macOS is a missing Accessibility permission.
-fn simulate_paste() -> Result<(), String> {
+pub(crate) fn simulate_paste() -> Result<(), String> {
     use std::process::Stdio;
 
     let child = std::process::Command::new("osascript")

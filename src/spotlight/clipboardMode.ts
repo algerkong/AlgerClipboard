@@ -81,10 +81,10 @@ export const clipboardMode: SpotlightMode = {
     }));
   },
 
-  onSelect: async (result: SpotlightResult): Promise<void> => {
+  onSelect: async (result: SpotlightResult, modifiers): Promise<void> => {
     const behavior = (await getSetting("spotlight_enter_behavior")) ?? "paste";
     if (behavior === "paste") {
-      await pasteEntry(result.id);
+      await pasteEntry(result.id, undefined, modifiers?.shiftKey);
     } else {
       // Copy only: write to clipboard without simulating paste
       await invoke("paste_entry", { id: result.id, mode: "copy" });

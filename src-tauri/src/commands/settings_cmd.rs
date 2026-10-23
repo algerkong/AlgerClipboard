@@ -473,6 +473,7 @@ fn register_spotlight_shortcut(
                     if window.is_visible().unwrap_or(false) {
                         let _ = window.hide();
                     } else {
+                        remember_current_foreground_window(app);
                         crate::show_and_focus_spotlight(app, &window);
                         let _ = app.emit("spotlight-activate", serde_json::json!({
                             "mode": mode_str

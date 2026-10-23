@@ -1,6 +1,29 @@
 export type ContentType = "PlainText" | "RichText" | "Image" | "FilePaths";
 export type SyncStatus = "Local" | "Synced" | "PendingSync" | "Conflict";
 
+export type SmartPasteTargetFormat =
+  | "original"
+  | "plaintext"
+  | "markdown"
+  | "html"
+  | "file";
+
+export interface SmartPasteRule {
+  id: string;
+  name: string;
+  app_pattern: string;
+  title_pattern: string | null;
+  source_type: ContentType | "*";
+  target_format: SmartPasteTargetFormat;
+  enabled: boolean;
+  is_builtin: boolean;
+}
+
+export interface SmartPasteConfig {
+  enabled: boolean;
+  rules: SmartPasteRule[];
+}
+
 export interface ClipboardEntry {
   id: string;
   content_type: ContentType;

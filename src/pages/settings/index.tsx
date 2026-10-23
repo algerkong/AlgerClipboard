@@ -11,6 +11,7 @@ import {
   Scan,
   MagnifyingGlass,
   Gear,
+  MagicWand,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -24,10 +25,12 @@ import { AskAiTab } from "./AskAiTab";
 import { OcrTab } from "./OcrTab";
 import { SpotlightTab } from "./SpotlightTab";
 import { PluginsTab } from "./PluginsTab";
+import { SmartPasteTab } from "./SmartPasteTab";
 import { SettingsHero } from "./shared";
 
 type SettingsTab =
   | "general"
+  | "smartPaste"
   | "richText"
   | "sync"
   | "translate"
@@ -56,6 +59,13 @@ const TABS: {
     icon: <Gear size={16} />,
     eyebrow: "Core",
     descriptionKey: "settingsLayout.generalDesc",
+  },
+  {
+    key: "smartPaste",
+    labelKey: "settings.tabSmartPaste",
+    icon: <MagicWand size={16} />,
+    eyebrow: "Paste",
+    descriptionKey: "settingsLayout.smartPasteDesc",
   },
   {
     key: "richText",
@@ -170,6 +180,7 @@ export function SettingsPage({ onBack, initialTab }: Props) {
 
           <div className="animate-float-up space-y-5">
             {activeTab === "general" && <GeneralTab />}
+            {activeTab === "smartPaste" && <SmartPasteTab />}
             {activeTab === "richText" && <RichTextTab />}
             {activeTab === "sync" && <SyncTab />}
             {activeTab === "translate" && <TranslateTab />}
