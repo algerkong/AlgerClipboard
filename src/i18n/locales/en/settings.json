@@ -28,7 +28,7 @@
     "autoClose": "Auto-close after paste",
     "hidePanel": "Hide panel after pasting",
     "autoStart": "Start on Boot",
-    "autoStartDesc": "Launch automatically on system startup",
+    "autoStartDesc": "Launch automatically on system startup in the background without showing the main window",
     "toggleShortcut": "Toggle Shortcut",
     "toggleShortcutDesc": "Click Record, then press a key combo to save. Press Esc to cancel.",
     "shortcutRecord": "Record",

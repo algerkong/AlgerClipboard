@@ -28,7 +28,7 @@
     "autoClose": "粘贴后自动关闭",
     "hidePanel": "粘贴后隐藏面板",
     "autoStart": "开机自启",
-    "autoStartDesc": "系统启动时自动运行",
+    "autoStartDesc": "系统启动时自动运行，静默在后台启动，不显示主窗口",
     "toggleShortcut": "呼出快捷键",
     "toggleShortcutDesc": "点击「录制」后按下组合键即可保存，按 Esc 取消",
     "shortcutRecord": "录制",

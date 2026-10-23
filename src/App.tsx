@@ -51,6 +51,17 @@ const isFileViewer = searchParams.get("window") === "file-viewer";
 const isSpotlight = searchParams.get("window") === "spotlight";
 const initialSettingsTab = searchParams.get("tab") || undefined;
 
+// The main window is the only one without a `window` query parameter.
+const isMainWindow =
+  !isImageViewer &&
+  !isTemplateManager &&
+  !isSettings &&
+  !isDetail &&
+  !isTagManager &&
+  !isAskAi &&
+  !isFileViewer &&
+  !isSpotlight;
+
 function applyTheme(theme: "light" | "dark" | "system") {
   const root = document.documentElement;
   if (theme === "dark") {
@@ -76,10 +87,28 @@ function App() {
   // Show window after React mounts to prevent flash of unstyled/unsized content.
   // All windows are created with visible: false and shown here after content is ready.
   // Spotlight window stays hidden until activated by shortcut — don't show it on mount.
+  // When launched by the system autostart entry (`--minimized`), keep the main
+  // window hidden in the background; it can be opened from the tray or shortcut.
   useEffect(() => {
-    if (!isSpotlight) {
-      getCurrentWebviewWindow().show();
-    }
+    if (isSpotlight) return;
+
+    let cancelled = false;
+    const showWindow = async () => {
+      if (isMainWindow) {
+        const startupLaunch = await invoke<boolean>("is_startup_launch").catch(
+          () => false
+        );
+        if (cancelled || startupLaunch) return;
+      }
+      if (!cancelled) {
+        getCurrentWebviewWindow().show();
+      }
+    };
+    void showWindow();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {

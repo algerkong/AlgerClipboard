@@ -669,6 +669,16 @@ pub fn get_auto_start(app: tauri::AppHandle) -> Result<bool, String> {
         .map_err(|e| format!("Failed to check autostart: {}", e))
 }
 
+/// Whether this process was launched by the system autostart entry.
+///
+/// The autostart plugin is initialized with the `--minimized` argument, so a
+/// launch containing it should stay in the background instead of showing the
+/// main window.
+#[tauri::command]
+pub fn is_startup_launch() -> bool {
+    std::env::args().any(|arg| arg == "--minimized")
+}
+
 #[tauri::command]
 pub fn focus_main_window(app: tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {

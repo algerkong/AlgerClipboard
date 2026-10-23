@@ -670,6 +670,7 @@ pub fn run() {
             commands::settings_cmd::open_url,
             commands::settings_cmd::set_auto_start,
             commands::settings_cmd::get_auto_start,
+            commands::settings_cmd::is_startup_launch,
             commands::settings_cmd::focus_main_window,
             commands::settings_cmd::get_window_size,
             commands::settings_cmd::get_recent_source_apps,
