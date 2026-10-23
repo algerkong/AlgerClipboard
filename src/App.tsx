@@ -1,7 +1,6 @@
 import { useEffect, useCallback, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
 import { TitleBar } from "@/components/TitleBar";
@@ -10,7 +9,6 @@ import { SettingsPage } from "@/pages/settings";
 import { ImageViewerPage } from "@/components/ImageViewer";
 import { DetailPage } from "@/pages/DetailPage";
 import { TagManagerPage } from "@/pages/TagManager";
-import { AskAiPanel } from "@/pages/AskAiPanel";
 import { FileViewerPage } from "@/pages/FileViewerPage";
 import { SpotlightPanel } from "@/pages/SpotlightPanel";
 import { openSettingsWindow } from "@/services/settingsWindowService";
@@ -44,7 +42,6 @@ const isImageViewer = searchParams.get("window") === "image-viewer";
 const isSettings = searchParams.get("window") === "settings";
 const isDetail = searchParams.get("window") === "detail";
 const isTagManager = searchParams.get("window") === "tag-manager";
-const isAskAi = searchParams.get("window") === "ask-ai";
 const isFileViewer = searchParams.get("window") === "file-viewer";
 const isSpotlight = searchParams.get("window") === "spotlight";
 const initialSettingsTab = searchParams.get("tab") || undefined;
@@ -55,7 +52,6 @@ const isMainWindow =
   !isSettings &&
   !isDetail &&
   !isTagManager &&
-  !isAskAi &&
   !isFileViewer &&
   !isSpotlight;
 
@@ -161,15 +157,6 @@ function App() {
     return (
       <PlatformProvider>
         <TagManagerWindow />
-      </PlatformProvider>
-    );
-  }
-
-  // If this is an ask-ai window, render the AI panel
-  if (isAskAi) {
-    return (
-      <PlatformProvider>
-        <AskAiWindow />
       </PlatformProvider>
     );
   }
@@ -323,40 +310,6 @@ function TagManagerWindow() {
       </div>
     </div>
   );
-}
-
-function AskAiWindow() {
-  const { i18n } = useTranslation();
-  const theme = useSettingsStore((s) => s.theme);
-  const locale = useSettingsStore((s) => s.locale);
-  const loadSettings = useSettingsStore((s) => s.loadSettings);
-
-  useEffect(() => {
-    loadSettings();
-  }, [loadSettings]);
-
-  useEffect(() => {
-    if (locale && i18n.language !== locale) {
-      i18n.changeLanguage(locale);
-    }
-  }, [locale, i18n]);
-
-  useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
-
-  // Escape key closes the window (use getCurrentWindow for bare Window)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        getCurrentWindow().close();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
-  return <AskAiPanel />;
 }
 
 function FileViewerWindow() {

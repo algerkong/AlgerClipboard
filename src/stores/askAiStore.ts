@@ -9,9 +9,12 @@ import {
 
 const SETTING_KEY = "ask_ai_enabled_services";
 const PRESETS_KEY = "ask_ai_presets";
+const DEFAULT_SERVICE_KEY = "ask_ai_default_service";
+const DEFAULT_SERVICE_ID = "deepseek";
 
 interface AskAiState {
   enabledServiceIds: string[];
+  defaultServiceId: string;
   isLoading: boolean;
   favicons: Record<string, string>;
   askAiEntryId: string | null;
@@ -19,14 +22,14 @@ interface AskAiState {
   isSending: boolean;
   presets: AskAiPreset[];
   presetsLoaded: boolean;
-  activeServiceId: string | null;
 
   loadEnabledServices: () => Promise<void>;
   toggleService: (serviceId: string) => Promise<void>;
   isServiceEnabled: (serviceId: string) => boolean;
+  loadDefaultService: () => Promise<void>;
+  setDefaultService: (serviceId: string) => Promise<void>;
   loadFavicons: () => Promise<void>;
   getFavicon: (serviceId: string) => string | null;
-  setActiveServiceId: (id: string | null) => void;
   startAskAi: (entryId: string, anchor: { x: number; y: number }) => void;
   cancelAskAi: () => void;
   setIsSending: (v: boolean) => void;
@@ -40,7 +43,8 @@ interface AskAiState {
 }
 
 export const useAskAiStore = create<AskAiState>((set, get) => ({
-  enabledServiceIds: [],
+  enabledServiceIds: [DEFAULT_SERVICE_ID],
+  defaultServiceId: DEFAULT_SERVICE_ID,
   isLoading: false,
   favicons: {},
   askAiEntryId: null,
@@ -48,17 +52,29 @@ export const useAskAiStore = create<AskAiState>((set, get) => ({
   isSending: false,
   presets: DEFAULT_ASK_AI_PRESETS,
   presetsLoaded: false,
-  activeServiceId: null,
 
   loadEnabledServices: async () => {
     set({ isLoading: true });
     try {
       const raw = await getSetting(SETTING_KEY);
-      const ids: string[] = raw ? JSON.parse(raw) : [];
+      const parsed: unknown = raw ? JSON.parse(raw) : null;
+      const ids = Array.isArray(parsed)
+        ? parsed.filter(
+            (id): id is string =>
+              typeof id === "string" &&
+              AI_WEB_SERVICES.some((service) => service.id === id),
+          )
+        : [DEFAULT_SERVICE_ID];
+
+      // First run: DeepSeek is enabled by default.
+      if (!raw) {
+        await updateSetting(SETTING_KEY, JSON.stringify(ids));
+      }
+
       set({ enabledServiceIds: ids, isLoading: false });
     } catch (e) {
       console.error("Failed to load ask-ai enabled services:", e);
-      set({ isLoading: false });
+      set({ enabledServiceIds: [DEFAULT_SERVICE_ID], isLoading: false });
     }
   },
 
@@ -83,6 +99,40 @@ export const useAskAiStore = create<AskAiState>((set, get) => ({
     return get().enabledServiceIds.includes(serviceId);
   },
 
+  loadDefaultService: async () => {
+    try {
+      const raw = await getSetting(DEFAULT_SERVICE_KEY);
+      const id =
+        raw && AI_WEB_SERVICES.some((service) => service.id === raw)
+          ? raw
+          : DEFAULT_SERVICE_ID;
+      set({ defaultServiceId: id });
+    } catch (e) {
+      console.error("Failed to load ask-ai default service:", e);
+      set({ defaultServiceId: DEFAULT_SERVICE_ID });
+    }
+  },
+
+  setDefaultService: async (serviceId: string) => {
+    if (!AI_WEB_SERVICES.some((service) => service.id === serviceId)) return;
+
+    const previous = get().defaultServiceId;
+    set({ defaultServiceId: serviceId });
+
+    try {
+      await updateSetting(DEFAULT_SERVICE_KEY, serviceId);
+    } catch (e) {
+      console.error("Failed to persist ask-ai default service:", e);
+      set({ defaultServiceId: previous });
+      return;
+    }
+
+    // The default service must always be enabled.
+    if (!get().enabledServiceIds.includes(serviceId)) {
+      await get().toggleService(serviceId);
+    }
+  },
+
   loadFavicons: async () => {
     // Use direct iconUrl from service definitions (no Google API dependency)
     const favicons: Record<string, string> = {};
@@ -96,10 +146,6 @@ export const useAskAiStore = create<AskAiState>((set, get) => ({
 
   getFavicon: (serviceId: string) => {
     return get().favicons[serviceId] || null;
-  },
-
-  setActiveServiceId: (id: string | null) => {
-    set({ activeServiceId: id });
   },
 
   startAskAi: (entryId: string, anchor: { x: number; y: number }) => {
@@ -125,10 +171,26 @@ export const useAskAiStore = create<AskAiState>((set, get) => ({
         );
         const merged = parsed.map((p) => {
           const def = defaultMap.get(p.id);
-          if (def?.labelKey && !p.labelKey) {
-            return { ...p, labelKey: def.labelKey, builtin: true };
+          if (!def) {
+            return p;
           }
-          return p;
+
+          let next = p;
+          if (def.labelKey && !p.labelKey) {
+            next = { ...next, labelKey: def.labelKey, builtin: true };
+          }
+          if (
+            def.promptTemplates &&
+            !p.promptTemplates &&
+            p.promptTemplate === def.promptTemplate
+          ) {
+            next = {
+              ...next,
+              promptTemplates: def.promptTemplates,
+              builtin: true,
+            };
+          }
+          return next;
         });
         set({ presets: merged, presetsLoaded: true });
       } else {
@@ -155,9 +217,18 @@ export const useAskAiStore = create<AskAiState>((set, get) => ({
   },
 
   updatePreset: async (id: string, updates: Partial<AskAiPreset>) => {
-    const next = get().presets.map((p) =>
-      p.id === id ? { ...p, ...updates } : p,
-    );
+    const next = get().presets.map((p) => {
+      if (p.id !== id) {
+        return p;
+      }
+
+      const updated = { ...p, ...updates };
+      // Once the user edits the prompt, use their text for every language.
+      if (updates.promptTemplate !== undefined) {
+        delete updated.promptTemplates;
+      }
+      return updated;
+    });
     await get().savePresets(next);
   },
 

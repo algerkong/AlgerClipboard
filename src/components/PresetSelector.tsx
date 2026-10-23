@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Translate,
   FileText,
@@ -15,6 +15,7 @@ import {
   Lightbulb,
   MagnifyingGlass,
   Lightning,
+  Check,
 } from "@phosphor-icons/react";
 import { useTranslation } from "react-i18next";
 
@@ -45,6 +46,8 @@ const ICON_MAP: Record<string, React.FC<{ className?: string; size?: number }>> 
 
 export { ICON_MAP };
 
+const POPOVER_WIDTH = 300;
+
 export function PresetSelector() {
   const { t } = useTranslation();
   const askAiEntryId = useAskAiStore((s) => s.askAiEntryId);
@@ -53,8 +56,10 @@ export function PresetSelector() {
   const isSending = useAskAiStore((s) => s.isSending);
   const setIsSending = useAskAiStore((s) => s.setIsSending);
   const enabledServiceIds = useAskAiStore((s) => s.enabledServiceIds);
+  const defaultServiceId = useAskAiStore((s) => s.defaultServiceId);
   const getFavicon = useAskAiStore((s) => s.getFavicon);
   const loadEnabledServices = useAskAiStore((s) => s.loadEnabledServices);
+  const loadDefaultService = useAskAiStore((s) => s.loadDefaultService);
   const loadFavicons = useAskAiStore((s) => s.loadFavicons);
   const presets = useAskAiStore((s) => s.presets);
   const loadPresets = useAskAiStore((s) => s.loadPresets);
@@ -65,29 +70,37 @@ export function PresetSelector() {
   const [customPrompt, setCustomPrompt] = useState("");
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
 
-  const popoverRef = useRef<HTMLDivElement>(null);
-
-  // Auto-select service if only one is enabled
+  // Load data and reset transient state when the popover opens.
   useEffect(() => {
-    if (enabledServiceIds.length === 1) {
-      setSelectedServiceId(enabledServiceIds[0]);
-    } else {
+    if (!askAiEntryId) return;
+    setSelectedPreset(null);
+    setCustomPrompt("");
+    void loadEnabledServices();
+    void loadDefaultService();
+    void loadFavicons();
+    void loadPresets();
+  }, [
+    askAiEntryId,
+    loadEnabledServices,
+    loadDefaultService,
+    loadFavicons,
+    loadPresets,
+  ]);
+
+  // Preselect the configured default service (or the first enabled one).
+  useEffect(() => {
+    if (enabledServiceIds.length === 0) {
       setSelectedServiceId(null);
+      return;
     }
-  }, [enabledServiceIds]);
+    setSelectedServiceId(
+      enabledServiceIds.includes(defaultServiceId)
+        ? defaultServiceId
+        : enabledServiceIds[0],
+    );
+  }, [enabledServiceIds, defaultServiceId]);
 
-  // Load enabled services, favicons, and presets when popover opens
-  useEffect(() => {
-    if (askAiEntryId) {
-      setSelectedPreset(null);
-      setCustomPrompt("");
-      void loadEnabledServices();
-      void loadFavicons();
-      void loadPresets();
-    }
-  }, [askAiEntryId, loadEnabledServices, loadFavicons, loadPresets]);
-
-  // Close on Escape key
+  // Close on Escape key.
   useEffect(() => {
     if (!askAiEntryId) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -130,13 +143,11 @@ export function PresetSelector() {
         return;
       }
 
-      // If service already selected (auto or manual), send immediately
       if (selectedServiceId) {
         void handleSend(preset, selectedServiceId);
         return;
       }
 
-      // Otherwise select preset and wait for service selection
       setSelectedPreset(preset);
     },
     [selectedServiceId, handleSend],
@@ -146,7 +157,6 @@ export function PresetSelector() {
     (serviceId: string) => {
       setSelectedServiceId(serviceId);
 
-      // If a non-custom preset is already selected, send now
       if (selectedPreset && selectedPreset.id !== "custom") {
         void handleSend(selectedPreset, serviceId);
       }
@@ -164,12 +174,21 @@ export function PresetSelector() {
   const enabledServices = AI_WEB_SERVICES.filter((s) =>
     enabledServiceIds.includes(s.id),
   );
+  const activeService = enabledServices.find((s) => s.id === selectedServiceId);
 
-  // Compute popover position (keep within viewport)
+  // Compute popover position (keep within viewport).
+  const top = Math.max(
+    8,
+    Math.min(askAiAnchor.y + 8, window.innerHeight - 430),
+  );
   const popoverStyle: React.CSSProperties = {
     position: "fixed",
-    left: Math.min(askAiAnchor.x, window.innerWidth - 260),
-    top: Math.min(askAiAnchor.y + 8, window.innerHeight - 400),
+    left: Math.max(
+      8,
+      Math.min(askAiAnchor.x, window.innerWidth - POPOVER_WIDTH - 12),
+    ),
+    top,
+    maxHeight: Math.max(240, window.innerHeight - top - 8),
     zIndex: 51,
   };
 
@@ -182,24 +201,44 @@ export function PresetSelector() {
       }}
     >
       <div
-        ref={popoverRef}
         style={popoverStyle}
-        className="w-56 rounded-2xl border border-border/50 bg-card shadow-xl"
+        className="w-[300px] overflow-y-auto overflow-x-hidden rounded-2xl border border-border/60 bg-popover/95 shadow-2xl backdrop-blur-xl"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Header */}
+        <div className="flex items-center gap-2.5 border-b border-border/40 px-3.5 py-3">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Sparkle size={15} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[13px] font-semibold leading-tight">
+              {t("askAi.askAi")}
+            </div>
+            <div className="truncate text-[11px] text-muted-foreground">
+              {activeService?.name ?? t("askAi.selectService")}
+            </div>
+          </div>
+          {isSending && (
+            <SpinnerGap size={14} className="shrink-0 animate-spin text-primary" />
+          )}
+        </div>
+
         {isSending ? (
-          <div className="flex items-center justify-center gap-2 p-4 text-sm text-muted-foreground">
-            <SpinnerGap size={16} className="animate-spin" />
+          <div className="flex items-center justify-center gap-2 px-4 py-9 text-xs text-muted-foreground">
+            <SpinnerGap size={15} className="animate-spin" />
             {t("askAi.sending")}
           </div>
         ) : enabledServices.length === 0 ? (
-          <div className="p-3 text-xs text-muted-foreground">
+          <div className="px-5 py-7 text-center text-xs leading-relaxed text-muted-foreground">
             {t("askAi.noEnabledServices")}
           </div>
         ) : (
           <>
             {/* Preset list */}
-            <div className="p-1">
+            <div className="p-1.5">
+              <p className="px-2 pb-1 pt-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+                {t("askAi.presetsTitle")}
+              </p>
               {presets.map((preset) => {
                 const Icon = ICON_MAP[preset.iconName];
                 const isActive = selectedPreset?.id === preset.id;
@@ -208,14 +247,26 @@ export function PresetSelector() {
                     key={preset.id}
                     onClick={() => handlePresetClick(preset)}
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm transition-colors",
+                      "group flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors",
                       isActive
                         ? "bg-accent text-foreground"
                         : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
                     )}
                   >
-                    {Icon && <Icon size={16} className="shrink-0" />}
-                    <span>{preset.labelKey ? t(preset.labelKey) : preset.label}</span>
+                    <span
+                      className={cn(
+                        "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg transition-colors",
+                        isActive
+                          ? "bg-primary/15 text-primary"
+                          : "bg-muted/60 text-muted-foreground group-hover:text-foreground",
+                      )}
+                    >
+                      {Icon ? <Icon size={14} /> : <Sparkle size={14} />}
+                    </span>
+                    <span className="flex-1 truncate text-[13px]">
+                      {preset.labelKey ? t(preset.labelKey) : preset.label}
+                    </span>
+                    {isActive && <Check size={12} className="text-primary" />}
                   </button>
                 );
               })}
@@ -223,7 +274,7 @@ export function PresetSelector() {
 
             {/* Custom prompt input */}
             {selectedPreset?.id === "custom" && (
-              <div className="border-t border-border/30 p-2">
+              <div className="border-t border-border/40 p-2.5">
                 <textarea
                   autoFocus
                   value={customPrompt}
@@ -235,49 +286,64 @@ export function PresetSelector() {
                     }
                   }}
                   placeholder={t("askAi.customPromptPlaceholder")}
-                  className="w-full resize-none rounded-xl border border-border/60 bg-background/80 p-2 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ring/20"
+                  className="w-full resize-none rounded-xl border border-border/60 bg-background/80 p-2.5 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ring/20"
                   rows={3}
                 />
                 <button
                   onClick={handleCustomSend}
                   disabled={!customPrompt.trim() || !selectedServiceId}
-                  className="mt-1 w-full rounded-xl bg-primary/15 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/25 disabled:opacity-40"
+                  className="mt-1.5 w-full rounded-xl bg-primary/15 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/25 disabled:opacity-40"
                 >
                   {t("askAi.send")}
                 </button>
               </div>
             )}
 
-            {/* Service selector -- hidden if only one enabled */}
-            {enabledServices.length > 1 && (
-              <div className="border-t border-border/30 p-2">
-                <p className="mb-1.5 px-1 text-2xs text-muted-foreground">
+            {/* Service selector -- always visible so the target AI is clear */}
+            <div className="border-t border-border/40 p-2.5">
+              <div className="mb-1.5 flex items-center justify-between px-1">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
                   {t("askAi.selectService")}
                 </p>
-                <div className="flex flex-wrap gap-1">
-                  {enabledServices.map((service) => {
-                    const favicon = getFavicon(service.id);
-                    const isActive = selectedServiceId === service.id;
-                    return (
-                      <button
-                        key={service.id}
-                        onClick={() => handleServiceClick(service.id)}
-                        className={cn(
-                          "flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs transition-colors",
-                          isActive
-                            ? "bg-primary/15 text-primary"
-                            : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-                        )}
-                        title={service.name}
-                      >
-                        <FaviconImg url={favicon} name={service.name} size="h-3.5 w-3.5" />
-                        <span>{service.name}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+                <span className="text-[10px] text-muted-foreground/50">
+                  {t("askAi.opensInWindow")}
+                </span>
               </div>
-            )}
+              <div className="flex flex-wrap gap-1">
+                {enabledServices.map((service) => {
+                  const favicon = getFavicon(service.id);
+                  const isActive = selectedServiceId === service.id;
+                  const isDefault = defaultServiceId === service.id;
+                  return (
+                    <button
+                      key={service.id}
+                      onClick={() => handleServiceClick(service.id)}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[11px] transition-colors",
+                        isActive
+                          ? "border-primary/40 bg-primary/10 text-primary"
+                          : "border-transparent text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                      )}
+                      title={
+                        isDefault
+                          ? `${service.name} · ${t("settings.askAi.defaultBadge")}`
+                          : service.name
+                      }
+                    >
+                      <FaviconImg
+                        url={favicon}
+                        name={service.name}
+                        size="h-3.5 w-3.5"
+                      />
+                      <span>{service.name}</span>
+                      {isDefault && (
+                        <span className="h-1 w-1 rounded-full bg-primary/70" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </>
         )}
       </div>

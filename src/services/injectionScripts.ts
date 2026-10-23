@@ -31,23 +31,27 @@ export function getInjectionScript(serviceId: string, text: string): string {
       });
     case "deepseek":
       return buildScript(escaped, "deepseek", {
-        input: 'textarea, div[contenteditable="true"]',
-        send: 'div[class*="send"] button, button[aria-label*="Send"], textarea ~ button',
+        input: 'textarea[name="search"], textarea, div[contenteditable="true"]',
+        send:
+          'div[role="button"].ds-button--circle:not(.ds-button--disabled), div[role="button"][class*="ds-button--circle"]:not([class*="disabled"]), button[aria-label*="Send"], button[aria-label*="发送"], div[class*="send"] button, button[class*="send"], textarea ~ button, div[contenteditable="true"] ~ button',
       });
     case "qwen":
       return buildScript(escaped, "qwen", {
         input: 'textarea, div[contenteditable="true"]',
-        send: 'button[class*="send"], button[aria-label*="Send"], textarea ~ button',
+        send:
+          'button[class*="send"], button[aria-label*="Send"], button[aria-label*="发送"], textarea ~ button, div[contenteditable="true"] ~ button',
       });
     case "doubao":
       return buildScript(escaped, "doubao", {
         input: 'textarea, div[contenteditable="true"]',
-        send: 'button[class*="send"], button[data-testid*="send"], textarea ~ button',
+        send:
+          'button[class*="send"], button[data-testid*="send"], button[aria-label*="Send"], button[aria-label*="发送"], textarea ~ button, div[contenteditable="true"] ~ button',
       });
     default:
       return buildScript(escaped, serviceId, {
         input: 'textarea, div[contenteditable="true"], [role="textbox"]',
-        send: 'button[type="submit"], form button:last-of-type',
+        send:
+          'button[type="submit"], button[aria-label*="Send"], button[aria-label*="发送"], form button:last-of-type',
       });
   }
 }
@@ -78,54 +82,123 @@ function buildScript(
   var inputSelectors = ${JSON.stringify(inputSelectors)};
   var sendSelectors = ${JSON.stringify(sendSelectors)};
 
+  function isVisible(el) {
+    if (!el) return false;
+    var rect = el.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return false;
+    var style = window.getComputedStyle(el);
+    return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+  }
+
   function findElement(sels) {
     for (var i = 0; i < sels.length; i++) {
-      var el = document.querySelector(sels[i]);
-      if (el) return el;
+      var els = document.querySelectorAll(sels[i]);
+      for (var j = 0; j < els.length; j++) {
+        if (isVisible(els[j])) return els[j];
+      }
     }
     return null;
+  }
+
+  function findSendButton(inputEl) {
+    var selectors = sendSelectors.concat([
+      'div[role="button"].ds-button--circle:not(.ds-button--disabled)',
+      'div[role="button"][class*="ds-button--circle"]:not([class*="disabled"])',
+    ]);
+    var best = null;
+    var bestDistance = Infinity;
+    var inputRect = inputEl ? inputEl.getBoundingClientRect() : null;
+
+    for (var i = 0; i < selectors.length; i++) {
+      var candidates = document.querySelectorAll(selectors[i]);
+      for (var j = 0; j < candidates.length; j++) {
+        var candidate = candidates[j];
+        if (!isVisible(candidate)) continue;
+        if (candidate.classList && candidate.classList.contains('ds-button--disabled')) continue;
+        if (candidate.getAttribute && candidate.getAttribute('aria-disabled') === 'true') continue;
+
+        var distance = 0;
+        if (inputRect) {
+          var rect = candidate.getBoundingClientRect();
+          distance = Math.abs(rect.right - inputRect.right) + Math.abs(rect.bottom - inputRect.bottom);
+        }
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          best = candidate;
+        }
+      }
+    }
+
+    return best;
   }
 
   function fillElement(el) {
     var tag = el.tagName.toLowerCase();
     if (tag === 'textarea' || tag === 'input') {
       // Textarea / input: set value + dispatch input event for React
-      var nativeSetter = Object.getOwnPropertyDescriptor(
-        window.HTMLTextAreaElement.prototype, 'value'
-      ) || Object.getOwnPropertyDescriptor(
-        window.HTMLInputElement.prototype, 'value'
-      );
+      var proto = tag === 'textarea'
+        ? window.HTMLTextAreaElement.prototype
+        : window.HTMLInputElement.prototype;
+      var nativeSetter = Object.getOwnPropertyDescriptor(proto, 'value');
       if (nativeSetter && nativeSetter.set) {
         nativeSetter.set.call(el, text);
       } else {
         el.value = text;
       }
-      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new InputEvent('input', {
+        bubbles: true,
+        inputType: 'insertText',
+        data: text,
+      }));
       el.dispatchEvent(new Event('change', { bubbles: true }));
     } else {
-      // Contenteditable: use execCommand for framework compatibility
+      // Contenteditable: select the editor's contents and insert text so
+      // framework editors (ProseMirror/Lexical/React) receive an input event.
       el.focus();
-      document.execCommand('selectAll', false, null);
-      document.execCommand('insertText', false, text);
+      try {
+        var selection = window.getSelection();
+        var range = document.createRange();
+        range.selectNodeContents(el);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        document.execCommand('insertText', false, text);
+      } catch (err) {
+        el.textContent = text;
+      }
+      el.dispatchEvent(new InputEvent('input', {
+        bubbles: true,
+        inputType: 'insertText',
+        data: text,
+      }));
     }
   }
 
-  function clickSend() {
-    var btn = findElement(sendSelectors);
-    if (btn && !btn.disabled) {
+  function clickSend(inputEl) {
+    var btn = findSendButton(inputEl);
+    if (btn) {
       btn.click();
       console.log('AlgerClipboard: send button clicked');
-    } else if (btn) {
-      // Button found but disabled, retry once after short delay
-      setTimeout(function() {
-        var retryBtn = findElement(sendSelectors);
-        if (retryBtn && !retryBtn.disabled) {
-          retryBtn.click();
-          console.log('AlgerClipboard: send button clicked (retry)');
-        } else {
-          console.warn('AlgerClipboard: send button still disabled');
-        }
-      }, 500);
+      return;
+    }
+
+    // Fallback: most chat UIs send on Enter. This is also more reliable than
+    // guessing the send button's markup, which changes frequently.
+    if (inputEl) {
+      inputEl.focus();
+      ['keydown', 'keypress', 'keyup'].forEach(function(type) {
+        var ev = new KeyboardEvent(type, {
+          key: 'Enter',
+          code: 'Enter',
+          bubbles: true,
+          cancelable: true,
+        });
+        try {
+          Object.defineProperty(ev, 'keyCode', { get: function() { return 13; } });
+          Object.defineProperty(ev, 'which', { get: function() { return 13; } });
+        } catch (e) {}
+        inputEl.dispatchEvent(ev);
+      });
+      console.log('AlgerClipboard: send button not found, pressed Enter');
     } else {
       console.warn('AlgerClipboard: send button not found');
     }
@@ -148,7 +221,7 @@ function buildScript(
 
     // Wait for framework to process, then click send
     setTimeout(function() {
-      clickSend();
+      clickSend(el);
       console.log('AlgerClipboard: injection complete');
     }, 500);
   }

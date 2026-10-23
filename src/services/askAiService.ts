@@ -1,14 +1,11 @@
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
-import { emit } from "@tauri-apps/api/event";
+import { isMacOS } from "@/services/windowOptions";
 import type { AiWebService } from "@/constants/aiServices";
 import { AI_WEB_SERVICES } from "@/constants/aiServices";
-import type { AskAiPreset } from "@/constants/askAiPresets";
+import { getPresetPrompt, type AskAiPreset } from "@/constants/askAiPresets";
 import { getInjectionScript } from "@/services/injectionScripts";
-import { useAskAiStore } from "@/stores/askAiStore";
-import { getSavedWindowSize } from "@/lib/windowSize";
-import { ASK_AI_SIZE_KEY } from "@/pages/AskAiPanel";
-
-const TAB_BAR_HEIGHT = 40;
+import i18n from "@/i18n";
 
 /**
  * Create a deterministic 16-byte identifier from a service ID.
@@ -23,31 +20,44 @@ export function serviceIdToDataStoreId(serviceId: string): number[] {
 }
 
 /**
- * Open (or focus) the ask-ai-panel window.
- * Creates a bare window from Rust with the React tab bar as a child webview,
- * so it stays at the same z-level as service webviews (no overlap).
+ * Open (or focus) the standalone window for the given AI service.
+ * Every service gets its own native window and its own persistent session:
+ * - macOS: `dataStoreIdentifier` (WKWebsiteDataStore)
+ * - Windows/Linux: `dataDirectory` (per-service profile folder)
  */
-export async function openAskAiPanel() {
-  const enabledIds = useAskAiStore.getState().enabledServiceIds;
-  const singleService = enabledIds.length <= 1;
-  const saved = await getSavedWindowSize(ASK_AI_SIZE_KEY, { width: 1000, height: 700 });
+export async function openAiWebView(service: AiWebService): Promise<void> {
+  const label = `ai-webview-${service.id}`;
 
-  await invoke("create_ask_ai_panel", {
-    tabBarHeight: TAB_BAR_HEIGHT,
-    singleService,
-    width: saved.width,
-    height: saved.height,
+  const existing = await WebviewWindow.getByLabel(label);
+  if (existing) {
+    await existing.show();
+    await existing.unminimize().catch(() => undefined);
+    await existing.setFocus();
+    return;
+  }
+
+  const sessionOptions = isMacOS()
+    ? { dataStoreIdentifier: serviceIdToDataStoreId(service.id) }
+    : { dataDirectory: service.id };
+
+  const win = new WebviewWindow(label, {
+    url: service.url,
+    title: service.name,
+    width: 1100,
+    height: 760,
+    minWidth: 640,
+    minHeight: 480,
+    // External sites have no custom drag region, so use native window chrome.
+    decorations: true,
+    center: true,
+    shadow: true,
+    resizable: true,
+    ...sessionOptions,
   });
-}
 
-/**
- * Open (or focus) a WebView window for the given AI service.
- * @deprecated Use openAskAiPanel() instead. Kept for backward compat (settings page open button).
- */
-export async function openAiWebView(_service: AiWebService) {
-  void _service;
-  // Redirect to the new ask-ai-panel
-  await openAskAiPanel();
+  win.once("tauri://error", (e) => {
+    console.error(`Failed to create WebView window for ${service.name}:`, e);
+  });
 }
 
 /**
@@ -84,9 +94,10 @@ async function waitForWebview(label: string, timeoutMs = 8000) {
 }
 
 /**
- * Orchestrate the Ask AI flow: build prompt, open panel, inject fill+submit script.
+ * Orchestrate the Ask AI flow: build the prompt, open the service window,
+ * then inject the fill+submit script into that window.
  *
- * Best-effort auto-send -- errors are logged but not rethrown so the WebView
+ * Best-effort auto-send -- errors are logged but not rethrown so the window
  * remains open for manual interaction even if injection fails.
  */
 export async function askAi(
@@ -96,32 +107,28 @@ export async function askAi(
   customPrompt?: string,
 ): Promise<void> {
   try {
-    // 1. Build the full prompt from template
-    const fullPrompt = preset.promptTemplate
+    // 1. Build the full prompt from the preset template in the app language.
+    const template = getPresetPrompt(preset, i18n.language);
+    const fullPrompt = template
       .replace("{content}", clipboardText)
       .replace("{customPrompt}", customPrompt || "");
 
-    // 2. Find the service definition
+    // 2. Find the service definition.
     const service = AI_WEB_SERVICES.find((s) => s.id === serviceId);
     if (!service) {
       throw new Error(`Unknown AI service: ${serviceId}`);
     }
 
-    // 3. Open or focus the ask-ai-panel window
-    await openAskAiPanel();
+    // 3. Open or focus the standalone window for this service.
+    await openAiWebView(service);
 
-    // 4. Ask the panel to switch to the requested service tab.
-    // Emit twice to cover the first-open race where the tab-bar listener is still mounting.
-    await delay(250);
-    await emit("ask-ai:open-service", { serviceId });
-    await delay(600);
-    await emit("ask-ai:open-service", { serviceId });
-
-    // 5. Wait for the target child webview to exist before injecting.
-    const label = `ask-ai-svc-${serviceId}`;
+    // 4. Wait until the window exists, then give the page time to start loading.
+    //    The injection script polls the DOM for up to 6 seconds by itself.
+    const label = `ai-webview-${serviceId}`;
     await waitForWebview(label);
+    await delay(2000);
 
-    // 6. Build and inject the fill+submit script into the requested service.
+    // 5. Inject the fill+submit script.
     const script = getInjectionScript(serviceId, fullPrompt);
     await invoke("eval_webview_js", { label, js: script });
   } catch (e) {

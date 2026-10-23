@@ -11,6 +11,8 @@ import {
   CaretDown,
   Check,
   X,
+  Star,
+  Sparkle,
 } from "@phosphor-icons/react";
 import { useAskAiStore } from "@/stores/askAiStore";
 import { AI_WEB_SERVICES } from "@/constants/aiServices";
@@ -18,24 +20,33 @@ import { openAiWebView } from "@/services/askAiService";
 import {
   type AskAiPreset,
   PRESET_ICON_OPTIONS,
+  getPresetPrompt,
 } from "@/constants/askAiPresets";
 import { ICON_MAP } from "@/components/PresetSelector";
-import {
-  Toggle,
-  SettingsButton,
-  SettingsRow,
-  SettingsSection,
-} from "./shared";
+import { Toggle, SettingsButton, SettingsSection } from "./shared";
+import { StyledSelect } from "@/components/ui/styled-select";
 import { cn } from "@/lib/utils";
+
+function formatHost(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
 
 /* --- Ask AI Tab --- */
 export function AskAiTab() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const {
     enabledServiceIds,
+    defaultServiceId,
     loadEnabledServices,
+    loadDefaultService,
+    setDefaultService,
     toggleService,
     loadFavicons,
+    getFavicon,
     presets,
     loadPresets,
     addPreset,
@@ -56,23 +67,59 @@ export function AskAiTab() {
 
   useEffect(() => {
     loadEnabledServices();
+    loadDefaultService();
     loadFavicons();
     loadPresets();
-  }, [loadEnabledServices, loadFavicons, loadPresets]);
+  }, [loadEnabledServices, loadDefaultService, loadFavicons, loadPresets]);
+
+  const defaultService =
+    AI_WEB_SERVICES.find((service) => service.id === defaultServiceId) ??
+    AI_WEB_SERVICES[0];
+  const defaultEnabled = enabledServiceIds.includes(defaultService.id);
+
+  const handleToggleService = async (serviceId: string) => {
+    const enabled = enabledServiceIds.includes(serviceId);
+
+    // Keep the default pointing at an enabled service when possible.
+    if (enabled && serviceId === defaultServiceId) {
+      const remaining = enabledServiceIds.filter((id) => id !== serviceId);
+      if (remaining.length > 0) {
+        await setDefaultService(remaining[0]);
+      }
+    }
+
+    await toggleService(serviceId);
+  };
 
   const startEdit = (preset: AskAiPreset) => {
     setEditingId(preset.id);
     setEditForm({
       label: preset.label,
       iconName: preset.iconName,
-      promptTemplate: preset.promptTemplate,
+      promptTemplate: getPresetPrompt(preset, i18n.language),
     });
     setIsAdding(false);
   };
 
   const saveEdit = () => {
     if (!editingId || !editForm.label?.trim()) return;
-    void updatePreset(editingId, editForm);
+
+    const preset = presets.find((p) => p.id === editingId);
+    const updates: Partial<AskAiPreset> = {
+      label: editForm.label,
+      iconName: editForm.iconName,
+    };
+
+    // Only persist the prompt when the user actually changed it. Otherwise
+    // keep the built-in localized templates intact.
+    if (
+      !preset ||
+      editForm.promptTemplate !== getPresetPrompt(preset, i18n.language)
+    ) {
+      updates.promptTemplate = editForm.promptTemplate;
+    }
+
+    void updatePreset(editingId, updates);
     setEditingId(null);
     setEditForm({});
   };
@@ -105,39 +152,127 @@ export function AskAiTab() {
 
   return (
     <div className="space-y-5">
+      {/* ─── Default AI ─── */}
+      <SettingsSection
+        title={t("settings.askAi.defaultTitle")}
+        description={t("settings.askAi.defaultDesc")}
+      >
+        <div className="px-4 py-4">
+          <div className="flex items-center gap-3 rounded-xl border border-primary/25 bg-primary/[0.04] p-3.5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+              <FaviconImg
+                url={getFavicon(defaultService.id)}
+                name={defaultService.name}
+                size="h-6 w-6"
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold">
+                  {defaultService.name}
+                </span>
+                {!defaultEnabled && (
+                  <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-500">
+                    {t("settings.askAi.notEnabled")}
+                  </span>
+                )}
+              </div>
+              <div className="truncate text-[11px] text-muted-foreground">
+                {formatHost(defaultService.url)}
+              </div>
+            </div>
+            <StyledSelect
+              value={defaultServiceId}
+              onChange={(value) => void setDefaultService(value)}
+              options={AI_WEB_SERVICES.map((service) => ({
+                value: service.id,
+                label: service.name,
+              }))}
+              className="w-[9.5rem] shrink-0"
+            />
+          </div>
+          {!defaultEnabled && (
+            <p className="mt-2 text-[11px] text-amber-500/90">
+              {t("settings.askAi.defaultDisabledHint")}
+            </p>
+          )}
+        </div>
+      </SettingsSection>
+
       {/* ─── AI Web Services ─── */}
       <SettingsSection
-        title={t("settings.askAi.title") || "AI Services"}
-        description={t("settings.askAi.description")}
+        title={t("settings.askAi.servicesTitle")}
+        description={t("settings.askAi.servicesDesc")}
       >
-        {AI_WEB_SERVICES.map((service) => {
-          const enabled = enabledServiceIds.includes(service.id);
-          return (
-            <SettingsRow
-              key={service.id}
-              title={service.name}
-              description={service.url}
-              control={
-                <div className="flex items-center gap-2.5">
-                  {enabled && (
+        <div className="grid grid-cols-1 gap-2 px-4 py-4 sm:grid-cols-2">
+          {AI_WEB_SERVICES.map((service) => {
+            const enabled = enabledServiceIds.includes(service.id);
+            const isDefault = defaultServiceId === service.id;
+
+            return (
+              <div
+                key={service.id}
+                className={cn(
+                  "group flex items-center gap-3 rounded-xl border p-3 transition-colors",
+                  enabled
+                    ? "border-border/50 bg-[color-mix(in_oklab,var(--card)_88%,var(--background))]"
+                    : "border-border/30 bg-muted/20",
+                  isDefault && "border-primary/35 ring-1 ring-primary/10",
+                )}
+              >
+                <FaviconImg
+                  url={getFavicon(service.id)}
+                  name={service.name}
+                  size="h-9 w-9"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={cn(
+                        "truncate text-sm font-medium",
+                        !enabled && "text-muted-foreground",
+                      )}
+                    >
+                      {service.name}
+                    </span>
+                    {isDefault && (
+                      <span className="shrink-0 rounded-full bg-primary/12 px-1.5 py-px text-[10px] font-medium text-primary">
+                        {t("settings.askAi.defaultBadge")}
+                      </span>
+                    )}
+                  </div>
+                  <div className="truncate text-[11px] text-muted-foreground/70">
+                    {formatHost(service.url)}
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => void openAiWebView(service)}
+                    title={t("settings.askAi.open")}
+                    className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  >
+                    <ArrowSquareOut size={14} />
+                  </button>
+                  {!isDefault && enabled && (
                     <button
                       type="button"
-                      className="text-muted-foreground hover:text-primary"
-                      onClick={() => openAiWebView(service)}
-                      title={t("settings.askAi.open")}
+                      onClick={() => void setDefaultService(service.id)}
+                      title={t("settings.askAi.setDefault")}
+                      className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-primary"
                     >
-                      <ArrowSquareOut size={14} />
+                      <Star size={14} />
                     </button>
                   )}
                   <Toggle
                     value={enabled}
-                    onChange={() => toggleService(service.id)}
+                    onChange={() => void handleToggleService(service.id)}
                   />
                 </div>
-              }
-            />
-          );
-        })}
+              </div>
+            );
+          })}
+        </div>
       </SettingsSection>
 
       {/* ─── Preset Management ─── */}
@@ -148,103 +283,118 @@ export function AskAiTab() {
           <div className="flex items-center gap-1.5">
             <SettingsButton
               tone="ghost"
-              onClick={() => { setIsAdding(!isAdding); setEditingId(null); }}
+              onClick={() => {
+                setIsAdding(!isAdding);
+                setEditingId(null);
+              }}
             >
               <Plus size={12} />
               {t("settings.askAi.addPreset")}
             </SettingsButton>
             <SettingsButton
               tone="ghost"
-              onClick={() => { void resetPresets(); }}
+              onClick={() => {
+                void resetPresets();
+              }}
             >
               <ArrowCounterClockwise size={12} />
             </SettingsButton>
           </div>
         }
       >
-        {/* Add new preset form */}
-        {isAdding && (
-          <div className="px-5 py-4">
-            <PresetForm
-              form={newForm}
-              onChange={setNewForm}
-              onSave={handleAdd}
-              onCancel={() => setIsAdding(false)}
-              t={t}
-            />
-          </div>
-        )}
+        <div className="space-y-2 px-4 py-4">
+          {isAdding && (
+            <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 p-3">
+              <PresetForm
+                form={newForm}
+                onChange={setNewForm}
+                onSave={handleAdd}
+                onCancel={() => setIsAdding(false)}
+                t={t}
+              />
+            </div>
+          )}
 
-        {/* Preset list */}
-        {presets.map((preset, index) => {
-          const Icon = ICON_MAP[preset.iconName];
-          const isEditing = editingId === preset.id;
+          {presets.map((preset, index) => {
+            const Icon = ICON_MAP[preset.iconName];
+            const isEditing = editingId === preset.id;
 
-          if (isEditing) {
+            if (isEditing) {
+              return (
+                <div
+                  key={preset.id}
+                  className="rounded-xl border border-primary/30 bg-primary/[0.04] p-3"
+                >
+                  <PresetForm
+                    form={editForm}
+                    onChange={setEditForm}
+                    onSave={saveEdit}
+                    onCancel={cancelEdit}
+                    t={t}
+                  />
+                </div>
+              );
+            }
+
             return (
-              <div key={preset.id} className="px-5 py-4">
-                <PresetForm
-                  form={editForm}
-                  onChange={setEditForm}
-                  onSave={saveEdit}
-                  onCancel={cancelEdit}
-                  t={t}
+              <div
+                key={preset.id}
+                className="group flex items-center gap-2.5 rounded-xl border border-border/40 bg-[color-mix(in_oklab,var(--card)_88%,var(--background))] px-3 py-2.5 transition-colors hover:border-border/70"
+              >
+                <DotsSixVertical
+                  size={14}
+                  className="shrink-0 text-muted-foreground/30"
                 />
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground">
+                  {Icon ? <Icon size={15} /> : <Sparkle size={15} />}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px] font-medium">
+                    {preset.labelKey ? t(preset.labelKey) : preset.label}
+                  </span>
+                  <span className="block truncate text-[11px] text-muted-foreground/70">
+                    {getPresetPrompt(preset, i18n.language).slice(0, 70)}
+                    {getPresetPrompt(preset, i18n.language).length > 70
+                      ? "..."
+                      : ""}
+                  </span>
+                </div>
+                <div className="flex shrink-0 items-center gap-0.5 opacity-50 transition-opacity group-hover:opacity-100">
+                  <button
+                    type="button"
+                    onClick={() => handleMove(index, "up")}
+                    disabled={index === 0}
+                    className="rounded p-1 text-muted-foreground hover:text-foreground disabled:opacity-20"
+                  >
+                    <CaretUp size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleMove(index, "down")}
+                    disabled={index === presets.length - 1}
+                    className="rounded p-1 text-muted-foreground hover:text-foreground disabled:opacity-20"
+                  >
+                    <CaretDown size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => startEdit(preset)}
+                    className="rounded p-1 text-muted-foreground hover:text-foreground"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void removePreset(preset.id)}
+                    className="rounded p-1 text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash size={14} />
+                  </button>
+                </div>
               </div>
             );
-          }
-
-          return (
-            <div
-              key={preset.id}
-              className="group flex items-center gap-3 border-b border-[color-mix(in_oklab,var(--border)_76%,transparent)] px-5 py-3 last:border-b-0"
-            >
-              <DotsSixVertical size={14} className="shrink-0 text-muted-foreground/40" />
-              {Icon && <Icon size={16} className="shrink-0 text-muted-foreground" />}
-              <div className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">
-                  {preset.labelKey ? t(preset.labelKey) : preset.label}
-                </span>
-                <span className="block truncate text-xs text-muted-foreground">
-                  {preset.promptTemplate.slice(0, 60)}
-                  {preset.promptTemplate.length > 60 ? "..." : ""}
-                </span>
-              </div>
-              <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                <button
-                  type="button"
-                  onClick={() => handleMove(index, "up")}
-                  disabled={index === 0}
-                  className="rounded p-1 text-muted-foreground hover:text-foreground disabled:opacity-20"
-                >
-                  <CaretUp size={14} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleMove(index, "down")}
-                  disabled={index === presets.length - 1}
-                  className="rounded p-1 text-muted-foreground hover:text-foreground disabled:opacity-20"
-                >
-                  <CaretDown size={14} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => startEdit(preset)}
-                  className="rounded p-1 text-muted-foreground hover:text-foreground"
-                >
-                  <Pencil size={14} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void removePreset(preset.id)}
-                  className="rounded p-1 text-muted-foreground hover:text-destructive"
-                >
-                  <Trash size={14} />
-                </button>
-              </div>
-            </div>
-          );
-        })}
+          })}
+        </div>
       </SettingsSection>
     </div>
   );
@@ -349,7 +499,15 @@ function PresetForm({
 }
 
 /* --- Favicon with onError fallback --- */
-export function FaviconImg({ url, name, size = "w-4 h-4" }: { url: string | null; name: string; size?: string }) {
+export function FaviconImg({
+  url,
+  name,
+  size = "w-4 h-4",
+}: {
+  url: string | null;
+  name: string;
+  size?: string;
+}) {
   const [failed, setFailed] = useState(false);
   const onError = useCallback(() => setFailed(true), []);
 
@@ -365,7 +523,9 @@ export function FaviconImg({ url, name, size = "w-4 h-4" }: { url: string | null
   }
 
   return (
-    <div className={`${size} rounded-md bg-muted inline-flex items-center justify-center shrink-0`}>
+    <div
+      className={`${size} rounded-md bg-muted inline-flex items-center justify-center shrink-0`}
+    >
       <span className="text-[10px] font-medium leading-none text-muted-foreground">
         {name.charAt(0)}
       </span>

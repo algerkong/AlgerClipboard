@@ -9,10 +9,11 @@
       "continue": "续写",
       "custom": "自定义提示"
     },
-    "tabBar": "AI 服务",
+    "presetsTitle": "预设操作",
     "customPromptPlaceholder": "输入你的提示...",
     "send": "发送",
     "selectService": "选择 AI 服务",
+    "opensInWindow": "独立窗口",
     "sending": "正在发送...",
     "noEnabledServices": "没有启用的 AI 服务。请在设置 > 问 AI 中启用。"
   },

@@ -9,10 +9,11 @@
       "continue": "Continue Writing",
       "custom": "Custom Prompt"
     },
-    "tabBar": "AI Services",
+    "presetsTitle": "Preset actions",
     "customPromptPlaceholder": "Type your prompt...",
     "send": "Send",
     "selectService": "Select AI Service",
+    "opensInWindow": "New window",
     "sending": "Sending...",
     "noEnabledServices": "No AI services enabled. Enable services in Settings > Ask AI."
   },
