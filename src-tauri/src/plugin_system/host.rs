@@ -32,13 +32,23 @@ fn ctx_ref<'a>(ctx: *mut c_void) -> &'a HostContext {
     unsafe { &*(ctx as *const HostContext) }
 }
 
+/// Scope a setting key to the calling plugin. Some plugins pass the already
+/// scoped key ("plugin:{id}:{key}"), others pass the bare key; accept both.
+fn scoped_key(plugin_id: &str, key: &str) -> String {
+    if key.starts_with("plugin:") {
+        key.to_string()
+    } else {
+        format!("plugin:{}:{}", plugin_id, key)
+    }
+}
+
 extern "C" fn host_get_setting(ctx: *mut c_void, key: *const c_char) -> *mut c_char {
     let host = ctx_ref(ctx);
     if !permissions::check_permission(&host.db, &host.plugin_id, "settings:read") {
         return std::ptr::null_mut();
     }
     let key_str = unsafe { ffi::c_to_string(key) };
-    let full_key = format!("plugin:{}:{}", host.plugin_id, key_str);
+    let full_key = scoped_key(&host.plugin_id, &key_str);
     match host.db.get_setting(&full_key) {
         Ok(Some(val)) => CString::new(val).map(|c| c.into_raw()).unwrap_or(std::ptr::null_mut()),
         _ => std::ptr::null_mut(),
@@ -52,7 +62,7 @@ extern "C" fn host_set_setting(ctx: *mut c_void, key: *const c_char, value: *con
     }
     let key_str = unsafe { ffi::c_to_string(key) };
     let val_str = unsafe { ffi::c_to_string(value) };
-    let full_key = format!("plugin:{}:{}", host.plugin_id, key_str);
+    let full_key = scoped_key(&host.plugin_id, &key_str);
     match host.db.set_setting(&full_key, &val_str) {
         Ok(()) => 0,
         Err(_) => -1,
@@ -84,17 +94,63 @@ extern "C" fn host_write_clipboard(ctx: *mut c_void, content: *const c_char) -> 
 
 extern "C" fn host_http_request(
     ctx: *mut c_void,
-    _method: *const c_char,
-    _url: *const c_char,
-    _headers: *const c_char,
-    _body: *const c_char,
+    method: *const c_char,
+    url: *const c_char,
+    headers: *const c_char,
+    body: *const c_char,
 ) -> *mut c_char {
     let host = ctx_ref(ctx);
     if !permissions::check_permission(&host.db, &host.plugin_id, "http") {
         return std::ptr::null_mut();
     }
-    let result = r#"{"error":"http_request not yet implemented"}"#;
-    CString::new(result).map(|c| c.into_raw()).unwrap_or(std::ptr::null_mut())
+    let method = unsafe { ffi::c_to_string(method) };
+    let url = unsafe { ffi::c_to_string(url) };
+    let headers = unsafe { ffi::c_to_string(headers) };
+    let body = unsafe { ffi::c_to_string(body) };
+
+    // Plugin commands are called synchronously from the Tauri command
+    // thread, so run the request on a dedicated thread with its own runtime
+    // instead of blocking on the app's async runtime.
+    let result = std::thread::spawn(move || -> Option<String> {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .ok()?;
+        rt.block_on(async move {
+            let client = reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(20))
+                .build()
+                .ok()?;
+            let req_method = reqwest::Method::from_bytes(method.as_bytes()).ok()?;
+            let mut request = client.request(req_method, &url);
+
+            if !headers.trim().is_empty() {
+                if let Ok(map) = serde_json::from_str::<serde_json::Map<String, serde_json::Value>>(&headers) {
+                    for (key, value) in map {
+                        if let Some(value) = value.as_str() {
+                            request = request.header(&key, value);
+                        }
+                    }
+                }
+            }
+            if !body.is_empty() {
+                request = request.body(body);
+            }
+
+            let response = request.send().await.ok()?;
+            // Return the body regardless of status: plugins inspect API error
+            // payloads (e.g. GitHub's {"message": ...}) themselves.
+            response.text().await.ok()
+        })
+    })
+    .join()
+    .ok()
+    .flatten();
+
+    match result {
+        Some(text) => CString::new(text).map(|c| c.into_raw()).unwrap_or(std::ptr::null_mut()),
+        None => std::ptr::null_mut(),
+    }
 }
 
 extern "C" fn host_emit_event(ctx: *mut c_void, event: *const c_char, payload: *const c_char) -> c_int {

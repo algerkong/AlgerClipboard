@@ -9,7 +9,25 @@ pub const VALID_PERMISSIONS: &[&str] = &[
     "http",
     "events",
     "commands",
+    // Names documented in the plugin SDK (CONTRIBUTING.md). Only
+    // `network:*` maps onto a host-enforced capability; filesystem and
+    // shell access happen inside the plugin's own process and are
+    // declarative only.
+    "filesystem:read",
+    "filesystem:write",
+    "shell:execute",
+    "network:request",
+    "network:http",
+    "notification:send",
 ];
+
+/// Map a declared permission onto the capabilities the host enforces.
+fn host_capabilities_for(perm: &str) -> &'static [&'static str] {
+    match perm {
+        "network:request" | "network:http" => &["http"],
+        _ => &[],
+    }
+}
 
 pub fn load_granted_permissions(db: &Database, plugin_id: &str) -> HashSet<String> {
     let key = format!("plugin_permissions:{}", plugin_id);
@@ -27,11 +45,24 @@ pub fn save_granted_permissions(db: &Database, plugin_id: &str, perms: &HashSet<
 }
 
 pub fn grant_all_declared(db: &Database, plugin_id: &str, declared: &[String]) {
-    let perms: HashSet<String> = declared
+    let mut perms: HashSet<String> = declared
         .iter()
         .filter(|p| VALID_PERMISSIONS.contains(&p.as_str()))
         .cloned()
         .collect();
+
+    // The host vtable always exposes the plugin's own settings namespace and
+    // the system clipboard; existing plugin manifests don't declare these,
+    // so grant them implicitly or every backend plugin loses its settings.
+    for perm in ["settings:read", "settings:write", "clipboard:read", "clipboard:write"] {
+        perms.insert(perm.to_string());
+    }
+    for perm in declared {
+        for cap in host_capabilities_for(perm) {
+            perms.insert(cap.to_string());
+        }
+    }
+
     save_granted_permissions(db, plugin_id, &perms);
 }
 

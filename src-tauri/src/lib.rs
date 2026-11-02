@@ -734,6 +734,8 @@ pub fn run() {
             commands::clipboard_cmd::save_temp_blob,
             commands::clipboard_cmd::copy_image_to_clipboard,
             commands::clipboard_cmd::save_image_to_file,
+            commands::clipboard_cmd::write_clipboard_text,
+            commands::clipboard_cmd::read_clipboard_text,
             commands::notification_cmd::show_system_notification,
             commands::settings_cmd::get_settings,
             commands::settings_cmd::update_settings,

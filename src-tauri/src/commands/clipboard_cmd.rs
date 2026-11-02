@@ -429,6 +429,28 @@ pub fn copy_image_to_clipboard(base64_data: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Write plain text to the system clipboard. Used by Spotlight plugins
+/// (e.g. calculator, color-toolbox, history) through `invokeHost`.
+#[tauri::command]
+pub fn write_clipboard_text(text: String) -> Result<(), String> {
+    let mut clipboard = arboard::Clipboard::new()
+        .map_err(|e| format!("Clipboard error: {}", e))?;
+    clipboard
+        .set_text(text)
+        .map_err(|e| format!("Failed to set clipboard text: {}", e))?;
+    Ok(())
+}
+
+/// Read plain text from the system clipboard.
+#[tauri::command]
+pub fn read_clipboard_text() -> Result<String, String> {
+    let mut clipboard = arboard::Clipboard::new()
+        .map_err(|e| format!("Clipboard error: {}", e))?;
+    clipboard
+        .get_text()
+        .map_err(|e| format!("Failed to read clipboard text: {}", e))
+}
+
 #[tauri::command]
 pub fn save_image_to_file(base64_data: String, path: String) -> Result<(), String> {
     let raw_b64 = if let Some(pos) = base64_data.find(',') {
