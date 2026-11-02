@@ -2,10 +2,11 @@ import { useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { MagnifyingGlass } from "@phosphor-icons/react";
 import { useSpotlightStore } from "@/stores/spotlightStore";
+import { resolveI18n } from "@/services/pluginService";
 import { LucideIcon } from "./LucideIcon";
 
 export function SpotlightInput() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const mode = useSpotlightStore((s) => s.mode);
   const query = useSpotlightStore((s) => s.query);
@@ -26,8 +27,12 @@ export function SpotlightInput() {
   ) : (
     <MagnifyingGlass size={30} className="text-[var(--primary)]" />
   );
+  // Plugin placeholders may be a locale map like {en, "zh-CN"} instead of
+  // an i18n key, so resolve those directly instead of passing them to t().
   const placeholder = displayMode
-    ? t(displayMode.placeholder)
+    ? typeof displayMode.placeholder === "string"
+      ? t(displayMode.placeholder)
+      : resolveI18n(displayMode.placeholder, i18n.language)
     : t("spotlight.placeholder.global", t("spotlight.placeholder.clipboard"));
 
   // Focus when Spotlight becomes visible or mode changes

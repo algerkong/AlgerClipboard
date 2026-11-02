@@ -56,6 +56,10 @@ export interface AlgerPluginAPI {
   registerTrayMenuItem(item: PluginTrayMenuItem): void;
   invokeBackend(command: string, args?: unknown): Promise<unknown>;
   invokeHost(command: string, args?: unknown): Promise<unknown>;
+  /** Copy text to the system clipboard. */
+  writeClipboard(text: string): Promise<void>;
+  /** Read plain text from the system clipboard. */
+  readClipboard(): Promise<string>;
   on(event: string, handler: (payload: unknown) => void): () => void;
   emit(event: string, payload?: unknown): void;
   getSetting(key: string): Promise<unknown>;

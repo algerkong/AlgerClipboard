@@ -1,6 +1,9 @@
 export interface SpotlightFooterHint {
-  kbd: string;
-  label: string;
+  /** Key label, e.g. "Ctrl+↵". `key` is accepted as a legacy alias. */
+  kbd?: string;
+  key?: string;
+  /** Plain text, an i18n key resolved via t(), or a locale map. */
+  label: string | Record<string, string>;
 }
 
 export interface SpotlightModifiers {
@@ -13,10 +16,13 @@ export interface SpotlightMode {
   id: string;
   name: string;
   icon: string;
-  placeholder: string;
+  placeholder: string | Record<string, string>;
   shortcutSettingKey?: string;
   onQuery: (query: string) => Promise<SpotlightResult[]>;
-  onSelect: (result: SpotlightResult, modifiers?: SpotlightModifiers) => Promise<void>;
+  onSelect: (
+    result: SpotlightResult,
+    modifiers?: SpotlightModifiers
+  ) => Promise<unknown>;
   debounceMs?: number;
   footerHints?: SpotlightFooterHint[];
   globalSearch?: boolean;

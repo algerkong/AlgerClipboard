@@ -14,12 +14,12 @@ import {
   getPluginPermissions,
   getPluginDir,
   setPluginSetting,
+  getPluginSetting,
   resolveI18n,
   type PluginInfo,
   type PluginSettingDef,
 } from "@/services/pluginService";
 import { pluginRegistry } from "@/plugin_system/registry";
-import { getSetting } from "@/services/settingsService";
 import {
   SettingsSection,
   SettingsButton,
@@ -232,8 +232,15 @@ function PluginSettingsPanel({
       const loaded: Record<string, string> = {};
       for (const [key, def] of Object.entries(settings)) {
         try {
-          const val = await getSetting(`plugin:${pluginId}:${key}`);
-          loaded[key] = val ?? (def.default != null ? String(def.default) : "");
+          // Read through getPluginSetting so the JSON-encoded value written
+          // by setPluginSetting is decoded back to its original type.
+          const val = await getPluginSetting(pluginId, key);
+          loaded[key] =
+            val == null
+              ? (def.default != null ? String(def.default) : "")
+              : typeof val === "string"
+                ? val
+                : JSON.stringify(val);
         } catch {
           loaded[key] = def.default != null ? String(def.default) : "";
         }

@@ -45,6 +45,14 @@ export function createPluginAPI(
       return invokePluginCommand(pluginId, command, args);
     },
 
+    async writeClipboard(text) {
+      return invoke("write_clipboard_text", { text });
+    },
+
+    async readClipboard() {
+      return invoke<string>("read_clipboard_text");
+    },
+
     async invokeHost(command, args) {
       return invoke(command, args as Record<string, unknown>);
     },

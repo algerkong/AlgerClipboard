@@ -36,7 +36,7 @@ interface SpotlightState {
   setLoading: (loading: boolean) => void;
   selectNext: () => void;
   selectPrev: () => void;
-  executeSelected: (modifiers?: SpotlightModifiers) => Promise<void>;
+  executeSelected: (modifiers?: SpotlightModifiers) => Promise<unknown>;
   switchMode: (direction: 1 | -1) => void;
   registerMode: (mode: SpotlightMode) => void;
   unregisterMode: (modeId: string) => void;
@@ -302,15 +302,27 @@ export const useSpotlightStore = create<SpotlightState>((set, get) => ({
   executeSelected: async (modifiers) => {
     const { query, modes, results, selectedIndex } = get();
     const result = results[selectedIndex];
-    if (!result) return;
+    if (!result) return undefined;
 
     // For global search results, use _modeId; for prefix mode, use resolveQuery
     const modeId = result._modeId ?? get().resolveQuery(query).activeMode;
     const m = modes.get(modeId);
     if (m) {
-      await m.onSelect(result, modifiers);
+      const outcome = await m.onSelect(result, modifiers);
+      // Plugins may return { refresh: true } (e.g. deleting a history entry)
+      // to ask the host to re-run the current query.
+      const wantsRefresh =
+        !!outcome &&
+        typeof outcome === "object" &&
+        !!(outcome as { refresh?: boolean }).refresh;
 
-      // Record to history (fire-and-forget)
+      if (wantsRefresh) {
+        get().executeQuery(get().query);
+        return outcome;
+      }
+
+      // Record to history (fire-and-forget). Skipped for refresh actions,
+      // which are destructive (deletion) rather than a selection to remember.
       invoke("add_spotlight_history", {
         entry: {
           id: `${Date.now()}-${result.id}`,
@@ -323,7 +335,9 @@ export const useSpotlightStore = create<SpotlightState>((set, get) => ({
           timestamp: new Date().toISOString(),
         },
       }).catch(() => { /* ignore history errors */ });
+      return outcome;
     }
+    return undefined;
   },
 
   switchMode: (direction) => {

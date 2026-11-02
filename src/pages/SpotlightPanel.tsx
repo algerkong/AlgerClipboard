@@ -6,10 +6,11 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { SpotlightInput } from "@/components/spotlight/SpotlightInput";
 import { SpotlightResultList } from "@/components/spotlight/SpotlightResultList";
 import { SpotlightFooter } from "@/components/spotlight/SpotlightFooter";
+import { SpotlightErrorBoundary } from "@/components/spotlight/SpotlightErrorBoundary";
 import { clipboardMode } from "@/spotlight/clipboardMode";
 import { appMode } from "@/spotlight/appMode";
 import { translateMode } from "@/spotlight/translateMode";
-import { loadAllPlugins, reloadAllPlugins } from "@/plugin_system/loader";
+import { loadAllPlugins, reloadAllPlugins, syncPluginModesToStore } from "@/plugin_system/loader";
 import { hideSpotlightWindow } from "@/services/spotlightWindowService";
 import { getSetting } from "@/services/settingsService";
 
@@ -63,13 +64,25 @@ export function SpotlightPanel() {
     registerMode(clipboardMode);
     registerMode(appMode);
     registerMode(translateMode);
-    loadPrefixes();
-    loadAllPlugins();
+    // Load stored prefixes first, then plugins: plugin prefix merging reads
+    // the store, so loading them in parallel could let the DB value clobber
+    // plugin prefixes.
+    void loadPrefixes().then(() => loadAllPlugins());
 
     const unlisten = listen("plugins-changed", () => {
       reloadAllPlugins();
     });
-    return () => { unlisten.then((fn) => fn()); };
+    // The Spotlight window is pre-created at startup and only hidden, so
+    // prefix edits made in the settings window must be re-read here.
+    // loadPrefixes replaces the whole map with the stored JSON, so re-apply
+    // plugin prefixes afterwards or they would disappear from the store.
+    const unlistenSettings = listen("settings-changed", () => {
+      void loadPrefixes().then(() => syncPluginModesToStore());
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+      unlistenSettings.then((fn) => fn());
+    };
   }, [registerMode, loadPrefixes]);
 
   useEffect(() => {
@@ -150,11 +163,25 @@ export function SpotlightPanel() {
           break;
         case "Enter":
           e.preventDefault();
-          await executeSelected({
-            ctrlKey: e.ctrlKey || e.metaKey,
-            shiftKey: e.shiftKey,
-            altKey: e.altKey,
-          });
+          try {
+            const outcome = await executeSelected({
+              ctrlKey: e.ctrlKey || e.metaKey,
+              shiftKey: e.shiftKey,
+              altKey: e.altKey,
+            });
+            // Plugins can return { refresh: true } (e.g. history deletion)
+            // to stay open and re-run the query instead of dismissing.
+            if (
+              outcome &&
+              typeof outcome === "object" &&
+              (outcome as { refresh?: boolean }).refresh
+            ) {
+              break;
+            }
+          } catch (err) {
+            // A failing plugin onSelect must not trap the Spotlight window
+            console.error("Spotlight execute error:", err);
+          }
           await dismissSpotlight();
           break;
         case "Tab":
@@ -227,8 +254,13 @@ export function SpotlightPanel() {
     >
       <div className="spotlight-panel">
         <SpotlightInput />
-        <SpotlightResultList />
-        {results.length > 0 && <SpotlightFooter modeHints={modes.get(resolveQuery(query).activeMode)?.footerHints} />}
+        {/* Plugin data drives the result list and footer; a malformed value
+            must not unmount the whole panel. The boundary retries when the
+            query or mode changes. */}
+        <SpotlightErrorBoundary resetKey={`${resolveQuery(query).activeMode}:${query}`}>
+          <SpotlightResultList />
+          {results.length > 0 && <SpotlightFooter modeHints={modes.get(resolveQuery(query).activeMode)?.footerHints} />}
+        </SpotlightErrorBoundary>
       </div>
     </div>
   );
