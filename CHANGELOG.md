@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.11.1] - 2026-11-02
+
+### Bug Fixes
+
+- Fixed Spotlight flickering while typing: results are no longer cleared on every keystroke, so the panel no longer collapses and expands on each input
+- Fixed Spotlight plugin modes failing to render or leaving a blank window: footer hints now accept locale maps and the legacy `key` field, malformed plugin data is contained by an error boundary, locale-map placeholders resolve correctly, and Lucide icon names are mapped onto Phosphor icons
+- Fixed plugin settings showing empty or quoted values in Settings > Plugins after saving
+- Fixed plugin prefixes silently overriding built-in Spotlight prefixes (such as `cc`); plugin prefix settings now take effect immediately
+- Fixed backend plugins losing settings access and network requests: the host now implements HTTP requests, accepts both bare and prefixed setting keys, and grants declared permissions correctly
+- Added `write_clipboard_text` and `read_clipboard_text` host commands used by Spotlight plugins
+- Fixed plugin scripts being injected twice in development builds
+
+---
+
+## [1.11.1] - 2026-11-02 (中文)
+
+### 问题修复
+
+- 修复 Spotlight 输入时闪烁的问题：不再在每次按键时清空结果，面板不会反复塌缩和展开
+- 修复 Spotlight 插件模式无法渲染或窗口变空白的问题：footer 提示支持语言对象和旧版 `key` 字段，插件数据异常由错误边界兜底，占位符支持语言对象，Lucide 图标名映射到 Phosphor 图标
+- 修复插件设置在「设置 > 插件」中保存后显示为空或带引号的问题
+- 修复插件前缀静默覆盖内置 Spotlight 前缀（如 `cc`）的问题；插件前缀设置现在即时生效
+- 修复后端插件无法读取设置和发起网络请求的问题：宿主实现了 HTTP 请求，兼容带与不带前缀的设置 key，并正确授予 manifest 声明的权限
+- 新增 Spotlight 插件使用的 `write_clipboard_text` 和 `read_clipboard_text` 宿主命令
+- 修复开发模式下插件脚本被重复注入的问题
+
+---
+
 ## [1.11.0] - 2026-10-23
 
 ### New Features
