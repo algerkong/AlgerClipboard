@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.11.2] - 2026-11-02
+
+### Bug Fixes
+
+- Fixed the main window closing right after opening: the window is shown without being activated on Windows, which the blur-to-hide handler treated as losing focus. The window now requests focus when shown and ignores blur events until it has been focused
+
+---
+
+## [1.11.2] - 2026-11-02 (中文)
+
+### 问题修复
+
+- 修复主窗口打开后立即关闭的问题：Windows 上窗口显示时未被激活，失焦自动隐藏逻辑将其误判为失去焦点。现在窗口显示后会主动请求焦点，并在真正获得焦点前忽略失焦事件
+
+---
+
 ## [1.11.1] - 2026-11-02
 
 ### Bug Fixes
