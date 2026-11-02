@@ -94,7 +94,14 @@ function App() {
         if (cancelled || startupLaunch) return;
       }
       if (!cancelled) {
-        getCurrentWebviewWindow().show();
+        const win = getCurrentWebviewWindow();
+        await win.show();
+        if (isMainWindow) {
+          // On Windows `show()` does not always activate the window. The
+          // main window auto-hides on blur, so ask for focus explicitly;
+          // otherwise it opens unfocused and can be closed right away.
+          await win.setFocus().catch(() => {});
+        }
       }
     };
     void showWindow();
@@ -519,8 +526,16 @@ function MainApp() {
     return () => { unlisten.then((fn) => fn()); };
   }, [setSyncStatus, fetchHistory]);
 
+  // When the window was last shown, and whether it has received focus since.
+  // On Windows a window shown without activation emits a blur event right
+  // away; the blur handler below must not treat that as "user clicked away"
+  // or the main window would close immediately after opening.
+  const shownAtRef = useRef(0);
+  const hasFocusSinceShowRef = useRef(false);
+
   const hideMainWindow = useCallback(() => {
     shouldResetOnNextFocusRef.current = true;
+    hasFocusSinceShowRef.current = false;
     getCurrentWebviewWindow().hide();
   }, []);
 
@@ -541,6 +556,12 @@ function MainApp() {
   useEffect(() => {
     const unlisten = listen("main-window-opened", () => {
       shouldResetOnNextFocusRef.current = true;
+      // The backend shows the window directly (shortcut/tray/single
+      // instance), bypassing hideMainWindow, so reset the focus tracking
+      // here too: only blur events after the window has been focused again
+      // should auto-hide it.
+      shownAtRef.current = Date.now();
+      hasFocusSinceShowRef.current = false;
 
       if (document.hasFocus()) {
         shouldResetOnNextFocusRef.current = false;
@@ -557,9 +578,10 @@ function MainApp() {
   // We debounce the hide and cancel it if focus returns quickly, because the
   // show_and_focus_main_window ALT-key trick can cause a transient blur event
   // before focus is fully established.
-  const isPinned = useSettingsStore((s) => s.isPinned);
   const blurTimerRef = useRef<number | null>(null);
   useEffect(() => {
+    if (shownAtRef.current === 0) shownAtRef.current = Date.now();
+
     const cancelPendingHide = () => {
       if (blurTimerRef.current !== null) {
         window.clearTimeout(blurTimerRef.current);
@@ -568,7 +590,20 @@ function MainApp() {
     };
 
     const unlistenBlur = listen("tauri://blur", () => {
-      if (!isPinned) {
+      // Read the pin state from the store instead of the component closure:
+      // depending on `isPinned` here would re-subscribe the listeners, and
+      // unlisten/relisten races with focus events delivered in the gap.
+      if (!useSettingsStore.getState().isPinned) {
+        // A window shown without focus (startup `show()` on Windows) emits
+        // a blur immediately. Ignore blur until the window has been focused
+        // at least once, or a short grace period after being shown has
+        // passed. Without this the main window closed right after opening.
+        if (
+          !hasFocusSinceShowRef.current &&
+          Date.now() - shownAtRef.current < 800
+        ) {
+          return;
+        }
         cancelPendingHide();
         blurTimerRef.current = window.setTimeout(() => {
           blurTimerRef.current = null;
@@ -582,6 +617,7 @@ function MainApp() {
 
     // If focus returns before the timer fires, cancel the pending hide
     const unlistenFocus = listen("tauri://focus", () => {
+      hasFocusSinceShowRef.current = true;
       cancelPendingHide();
     });
 
@@ -590,7 +626,7 @@ function MainApp() {
       unlistenBlur.then((fn) => fn());
       unlistenFocus.then((fn) => fn());
     };
-  }, [hideMainWindow, isPinned]);
+  }, [hideMainWindow]);
 
   // Escape key hides the window
   useEffect(() => {
