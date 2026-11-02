@@ -192,8 +192,17 @@ export const useSpotlightStore = create<SpotlightState>((set, get) => ({
         Math.min(...globalModes.map((m) => m.debounceMs ?? 200))
       );
 
-      // Clear results for fresh global search
-      set({ results: [] });
+      // Keep results from modes that still participate in this search while
+      // the new query is debouncing. Clearing them here collapsed the panel
+      // to just the input row on every keystroke, so the window appeared to
+      // close and reopen (flicker). Stale per-mode results are replaced as
+      // each mode's new results arrive below.
+      const activeModeIds = new Set(globalModes.map((m) => m.id));
+      set((state) => ({
+        results: state.results.filter(
+          (r) => r._modeId != null && activeModeIds.has(r._modeId)
+        ),
+      }));
 
       debounceTimer = setTimeout(() => {
         let completed = 0;
